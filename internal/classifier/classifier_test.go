@@ -10,81 +10,68 @@ func intPtr(i int) *int {
 	return &i
 }
 
-/*
-var movieFile = metadata.Entry{
-	Parent: nil,
-	Children: nil,
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"TEST",
-			"MOVIE",
-		},
-		Year:		intPtr(2025),
-		Episode:	nil,
-		Season:		nil,
-		Resolution:	"1080p",
-		Codec:		"x264",
-		Source:		"REMUX",
-		Audio:		"Atmos",
-		Language:	"ENGLISH",
+var movieFileMediaInfo = metadata.MediaInfo{
+	Title:		[]string{
+		"TEST",
+		"MOVIE",
 	},
-	PathInfo: metadata.PathInfo{
-		Dest: "",
-		Source: "/test movie 2025 1080p.x264.remux.atmos.english.mp4",
-		Ext: "MP4",	
-		Type: metadata.Video,
-	},
+	Year:		intPtr(2025),
+	Episode:	nil,
+	Season:		nil,
+	Resolution:	"1080p",
+	Codec:		"x264",
+	Source:		"REMUX",
+	Audio:		"Atmos",
+	Language:	"ENGLISH",
 }
-var episodeFile = metadata.Entry{
-	Parent: nil,
-	Children: nil,
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"TEST",
-			"EPISODE",
-		},
-		Year:		intPtr(2025),
-		Episode:	intPtr(1),
-		Season:		intPtr(1),
-		Resolution:	"1080p",
-		Codec:		"x264",
-		Source:		"REMUX",
-		Audio:		"Atmos",
-		Language:	"ENGLISH",
-	},
-	PathInfo: metadata.PathInfo{
-		Dest: "",
-		Source: "/test episode S1E1 2025 1080p.x264.remux.atmos.english.mp4",
-		Ext: "MP4",	
-		Type: metadata.Video,
-	},
-}
-var bonusFile = metadata.Entry{
-	Parent: nil,
-	Children: nil,
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"TEST",
-			"BONUS",
-		},
-		Year:		intPtr(2025),
-		Episode:	nil,
-		Season:		nil,
-		Resolution:	"1080p",
-		Codec:		"x264",
-		Source:		"REMUX",
-		Audio:		"Atmos",
-		Language:	"ENGLISH",
-	},
-	PathInfo: metadata.PathInfo{
-		Dest: "",
-		Source: "/test bonus 2025 1080p.x264.remux.atmos.english.mp4",
-		Ext: "MP4",	
-		Type: metadata.Video,
-	},
-}
-*/
 
+
+var episodeFileMediaInfo = metadata.MediaInfo{
+	Title:		[]string{
+		"TEST",
+		"EPISODE",
+	},
+	Year:		intPtr(2025),
+	Episode:	intPtr(1),
+	Season:		intPtr(1),
+	Resolution:	"1080p",
+	Codec:		"x264",
+	Source:		"REMUX",
+	Audio:		"Atmos",
+	Language:	"ENGLISH",
+}
+
+var subtitleFileMediaInfo = metadata.MediaInfo{
+	Title:		[]string{
+		"SUBTITLE",
+	},
+	Year:		nil,
+	Episode:	nil,
+	Season:		nil,
+	Resolution:	"",
+	Codec:		"",
+	Source:		"",
+	Audio:		"",
+	Language:	"ENGLISH",
+}
+
+
+var bonusFileMediaInfo = metadata.MediaInfo{
+	Title:		[]string{
+		"TEST",
+		"BONUS",
+	},
+	Year:		intPtr(2025),
+	Episode:	nil,
+	Season:		nil,
+	Resolution:	"1080p",
+	Codec:		"x264",
+	Source:		"REMUX",
+	Audio:		"Atmos",
+	Language:	"ENGLISH",
+}
+
+/*
 // Structure of media torrents
 /*
 Movie File
@@ -121,20 +108,7 @@ func TestIsSubtitleDir(t *testing.T) {
 	movieFile := metadata.Entry{
 		Parent: nil,
 		Children: nil,
-		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-				"TEST",
-				"MOVIE",
-			},
-			Year:		intPtr(2025),
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"1080p",
-			Codec:		"x264",
-			Source:		"REMUX",
-			Audio:		"Atmos",
-			Language:	"ENGLISH",
-		},
+		MediaInfo: movieFileMediaInfo,
 		PathInfo: metadata.PathInfo{
 			Dest: "",
 			Source: "/test movie 2025 1080p.x264.remux.atmos.english.mp4",
@@ -146,19 +120,7 @@ func TestIsSubtitleDir(t *testing.T) {
 	subtitleFile := metadata.Entry{
 		Parent: nil,
 		Children: nil,
-		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-				"SUBTITLE",
-			},
-			Year:		nil,
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"",
-			Codec:		"",
-			Source:		"",
-			Audio:		"",
-			Language:	"ENGLISH",
-		},
+		MediaInfo: 	subtitleFileMediaInfo,
 		PathInfo: metadata.PathInfo{
 			Dest: "",
 			Source: "/test movie/subtitles/subtitle english.srt",
