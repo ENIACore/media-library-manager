@@ -5,8 +5,8 @@ type Entry struct {
 	Children	[]*Entry
 	Depth		int			// Root level entry should be Depth 0
 
-	MediaInfo
-	PathInfo
+	MediaInfo	MediaInfo
+	PathInfo	PathInfo
 }
 
 func (entry *Entry) Height() int {

@@ -10,7 +10,7 @@ Subtitle Directory
 └── Subtitle File(s)
 */
 func isSubtitleDir(entry *metadata.Entry) bool {
-	if !entry.IsDir {
+	if !entry.PathInfo.IsDir {
 		return false
 	}
 	// Subtitle directory cannot have nested directories
@@ -20,7 +20,7 @@ func isSubtitleDir(entry *metadata.Entry) bool {
 
 	// All files in subtitle directory should be of type subtitle
 	for _, child := range entry.Children {
-		if child.Type != metadata.Subtitle {
+		if child.PathInfo.Type != metadata.Subtitle {
 			return false;
 		}
 	}
@@ -34,21 +34,21 @@ Bonus Directory
 └── Subtitle File(s) (optional)
 */
 func isBonusDir(entry *metadata.Entry) bool {
-	if !entry.IsDir {
+	if !entry.PathInfo.IsDir {
 		return false
 	}
 	// Bonus directory cannot have nested directories
 	if entry.Height() > 1 {
-		fmt.Printf("For entry %v returning false due to height greater than 1", entry.Source)	
+		fmt.Printf("For entry %v returning false due to height greater than 1", entry.PathInfo.Source)	
 		return false;
 	}
 
 	// All files must be type subtitle or type video with either the directory or file containing a 'bonus' pattern
 	for _, child := range entry.Children {
-		if child.Type == metadata.Subtitle {
+		if child.PathInfo.Type == metadata.Subtitle {
 			continue
 		}
-		if child.Type != metadata.Video && (entry.Bonus == "" && child.Bonus == ""){
+		if child.PathInfo.Type != metadata.Video && (entry.MediaInfo.Bonus == "" && child.MediaInfo.Bonus == ""){
 			return false
 		}
 	}
