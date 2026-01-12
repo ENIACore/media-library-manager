@@ -2,7 +2,6 @@ package classifier
 
 import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
-	"fmt"
 )
 
 /*
@@ -34,26 +33,27 @@ Bonus Directory
 └── Subtitle File(s) (optional)
 */
 func isBonusDir(entry *metadata.Entry) bool {
-	if !entry.PathInfo.IsDir {
+	if !entry.PathInfo.IsDir || entry.Height() > 1 {
 		return false
 	}
-	// Bonus directory cannot have nested directories
-	if entry.Height() > 1 {
-		fmt.Printf("For entry %v returning false due to height greater than 1", entry.PathInfo.Source)	
-		return false;
-	}
 
-	// All files must be type subtitle or type video with either the directory or file containing a 'bonus' pattern
+	hasBonus := false
 	for _, child := range entry.Children {
-		if child.PathInfo.Type == metadata.Subtitle {
-			continue
-		}
-		if child.PathInfo.Type != metadata.Video && (entry.MediaInfo.Bonus == "" && child.MediaInfo.Bonus == ""){
-			return false
+		switch child.PathInfo.Type {
+			case metadata.Subtitle:
+				// Subtitles are allowed, continue
+			case metadata.Video:
+				// Videos must have bonus pattern on either file or parent dir
+				if entry.MediaInfo.Bonus == "" && child.MediaInfo.Bonus == "" {
+					return false
+				}
+				hasBonus = true
+			default:
+				return false
 		}
 	}
 
-	return true
+	return hasBonus
 }
 
 /*
