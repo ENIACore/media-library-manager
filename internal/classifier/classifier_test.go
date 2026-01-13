@@ -802,3 +802,83 @@ func TestIsSeriesDir(t *testing.T) {
 		})
 	}
 }
+
+func TestClassifyEntryFile(t *testing.T) {
+	tests := []struct{
+		name		string
+		node		metadata.Entry
+		expected	metadata.EntryRole
+	}{
+		{
+			name:		"movie file",
+			node:		movieFile,
+			expected:	metadata.MovieFile,
+		},
+		{
+			name:		"episode file",
+			node:		episodeFile,
+			expected:	metadata.EpisodeFile,
+		},
+		{
+			name:		"subtitle file",
+			node:		subtitleFile,
+			expected:	metadata.SubtitleFile,
+		},
+		{
+			name:		"bonus file",
+			node:		bonusFile,
+			expected:	metadata.BonusFile,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := classifyEntryFile(&test.node)
+			if res != test.expected {
+				t.Errorf("classifyEntryFile = %v, want %v", res, test.expected)
+			}
+		})
+	}
+}
+
+
+func TestClassifyEntryDir(t *testing.T) {
+	tests := []struct{
+		name		string
+		node		metadata.Entry
+		expected	metadata.EntryRole
+	}{
+		{
+			name:		"movie directory", 
+			node: movieDir,
+			expected:	metadata.MovieDir,
+		},
+		{
+			name:		"series directory", 
+			node: seriesDir,
+			expected:	metadata.SeriesDir,
+		},
+		{
+			name:		"season directory", 
+			node: seasonDir,
+			expected:	metadata.SeasonDir,
+		},
+		{
+			name:		"subtitle directory", 
+			node: subtitleDir,
+			expected:	metadata.SubtitleDir,
+		},
+		{
+			name:		"bonus directory", 
+			node:		bonusDir,
+			expected:	metadata.BonusDir,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := classifyEntryDir(&test.node)
+			if res != test.expected {
+				t.Errorf("classifyEntryDir = %v, want %v", res, test.expected)
+			}
+		})
+	}
+}

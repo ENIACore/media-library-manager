@@ -7,6 +7,8 @@ type Entry struct {
 
 	MediaInfo	MediaInfo
 	PathInfo	PathInfo
+
+	Role		EntryRole
 }
 
 func (entry *Entry) Height() int {
