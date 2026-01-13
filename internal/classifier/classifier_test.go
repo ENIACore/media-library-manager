@@ -2,7 +2,6 @@ package classifier
 
 import (
 	"testing"
-
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
@@ -240,6 +239,259 @@ var bonusDir = metadata.Entry{
 	},
 }
 
+func TestIsMovieFile(t *testing.T) {
+
+	tests := []struct{
+		name		string
+		node		metadata.Entry
+		expected	bool
+	}{
+		{
+			name:		"movie file",
+			node:		movieFile,
+			expected:	true,
+		},
+		{
+			name:		"episode file",
+			node:		episodeFile,
+			expected:	false,
+		},
+		{
+			name:		"subtitle file",
+			node:		subtitleFile,
+			expected:	false,
+		},
+		{
+			name:		"bonus file",
+			node:		bonusFile,
+			expected:	false,
+		},
+		{
+			name:		"movie directory", 
+			node: movieDir,
+			expected:	false,
+		},
+		{
+			name:		"series directory", 
+			node: seriesDir,
+			expected:	false,
+		},
+		{
+			name:		"season directory", 
+			node: seasonDir,
+			expected:	false,
+		},
+		{
+			name:		"subtitle directory", 
+			node: subtitleDir,
+			expected:	false,
+		},
+		{
+			name:		"bonus directory", 
+			node:		bonusDir,
+			expected:	false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := isMovieFile(&test.node)
+			if res != test.expected {
+				t.Errorf("isMovieFile = %v, want %v", res, test.expected)
+			}
+		})
+	}
+
+}
+func TestIsEpisodeFile(t *testing.T) {
+
+	tests := []struct{
+		name		string
+		node		metadata.Entry
+		expected	bool
+	}{
+		{
+			name:		"movie file",
+			node:		movieFile,
+			expected:	false,
+		},
+		{
+			name:		"episode file",
+			node:		episodeFile,
+			expected:	true,
+		},
+		{
+			name:		"subtitle file",
+			node:		subtitleFile,
+			expected:	false,
+		},
+		{
+			name:		"bonus file",
+			node:		bonusFile,
+			expected:	false,
+		},
+		{
+			name:		"movie directory", 
+			node: movieDir,
+			expected:	false,
+		},
+		{
+			name:		"series directory", 
+			node: seriesDir,
+			expected:	false,
+		},
+		{
+			name:		"season directory", 
+			node: seasonDir,
+			expected:	false,
+		},
+		{
+			name:		"subtitle directory", 
+			node: subtitleDir,
+			expected:	false,
+		},
+		{
+			name:		"bonus directory", 
+			node:		bonusDir,
+			expected:	false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := isEpisodeFile(&test.node)
+			if res != test.expected {
+				t.Errorf("isEpisodeFile = %v, want %v", res, test.expected)
+			}
+		})
+	}
+
+}
+func TestIsSubtitleFile(t *testing.T) {
+
+	tests := []struct{
+		name		string
+		node		metadata.Entry
+		expected	bool
+	}{
+		{
+			name:		"movie file",
+			node:		movieFile,
+			expected:	false,
+		},
+		{
+			name:		"episode file",
+			node:		episodeFile,
+			expected:	false,
+		},
+		{
+			name:		"subtitle file",
+			node:		subtitleFile,
+			expected:	true,
+		},
+		{
+			name:		"bonus file",
+			node:		bonusFile,
+			expected:	false,
+		},
+		{
+			name:		"movie directory", 
+			node: movieDir,
+			expected:	false,
+		},
+		{
+			name:		"series directory", 
+			node: seriesDir,
+			expected:	false,
+		},
+		{
+			name:		"season directory", 
+			node: seasonDir,
+			expected:	false,
+		},
+		{
+			name:		"subtitle directory", 
+			node: subtitleDir,
+			expected:	false,
+		},
+		{
+			name:		"bonus directory", 
+			node:		bonusDir,
+			expected:	false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := isSubtitleFile(&test.node)
+			if res != test.expected {
+				t.Errorf("isSubtitleFile = %v, want %v", res, test.expected)
+			}
+		})
+	}
+
+}
+func TestIsBonusFile(t *testing.T) {
+
+	tests := []struct{
+		name		string
+		node		metadata.Entry
+		expected	bool
+	}{
+		{
+			name:		"movie file",
+			node:		movieFile,
+			expected:	false,
+		},
+		{
+			name:		"episode file",
+			node:		episodeFile,
+			expected:	false,
+		},
+		{
+			name:		"subtitle file",
+			node:		subtitleFile,
+			expected:	false,
+		},
+		{
+			name:		"bonus file",
+			node:		bonusFile,
+			expected:	true,
+		},
+		{
+			name:		"movie directory", 
+			node: movieDir,
+			expected:	false,
+		},
+		{
+			name:		"series directory", 
+			node: seriesDir,
+			expected:	false,
+		},
+		{
+			name:		"season directory", 
+			node: seasonDir,
+			expected:	false,
+		},
+		{
+			name:		"subtitle directory", 
+			node: subtitleDir,
+			expected:	false,
+		},
+		{
+			name:		"bonus directory", 
+			node:		bonusDir,
+			expected:	false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := isBonusFile(&test.node)
+			if res != test.expected {
+				t.Errorf("isBonusFile = %v, want %v", res, test.expected)
+			}
+		})
+	}
+
+}
+
 func TestIsSubtitleDir(t *testing.T) {
 
 	tests := []struct{
@@ -259,12 +511,12 @@ func TestIsSubtitleDir(t *testing.T) {
 		},
 		{
 			name:		"subtitle file",
-			node:		movieFile,
+			node:		subtitleFile,
 			expected:	false,
 		},
 		{
 			name:		"bonus file",
-			node:		movieFile,
+			node:		bonusFile,
 			expected:	false,
 		},
 		{
@@ -321,12 +573,12 @@ func TestIsBonusDir(t *testing.T) {
 		},
 		{
 			name:		"subtitle file",
-			node:		movieFile,
+			node:		subtitleFile,
 			expected:	false,
 		},
 		{
 			name:		"bonus file",
-			node:		movieFile,
+			node:		bonusFile,
 			expected:	false,
 		},
 		{
@@ -383,33 +635,33 @@ func TestIsMovieDir(t *testing.T) {
 		},
 		{
 			name:		"subtitle file",
-			node:		movieFile,
+			node:		subtitleFile,
 			expected:	false,
 		},
 		{
 			name:		"bonus file",
-			node:		movieFile,
+			node:		bonusFile,
 			expected:	false,
 		},
 		{
 			name:		"movie directory", 
-			node: movieDir,
-			expected:	false,
+			node: 		movieDir,
+			expected:	true,
 		},
 		{
 			name:		"series directory", 
-			node: seriesDir,
+			node: 		seriesDir,
 			expected:	false,
 		},
 		{
 			name:		"season directory", 
-			node: seasonDir,
+			node: 		seasonDir,
 			expected:	false,
 		},
 		{
 			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	true,
+			node: 		subtitleDir,
+			expected:	false,
 		},
 		{
 			name:		"bonus directory", 
@@ -419,6 +671,10 @@ func TestIsMovieDir(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			res := isMovieDir(&test.node)
+			if res != test.expected {
+				t.Errorf("isMovieDir = %v, want %v", res, test.expected)
+			}
 		})
 	}
 }
@@ -441,33 +697,33 @@ func TestIsSeasonDir(t *testing.T) {
 		},
 		{
 			name:		"subtitle file",
-			node:		movieFile,
+			node:		subtitleFile,
 			expected:	false,
 		},
 		{
 			name:		"bonus file",
-			node:		movieFile,
+			node:		bonusFile,
 			expected:	false,
 		},
 		{
 			name:		"movie directory", 
-			node: movieDir,
+			node: 		movieDir,
 			expected:	false,
 		},
 		{
 			name:		"series directory", 
-			node: seriesDir,
+			node: 		seriesDir,
 			expected:	false,
 		},
 		{
 			name:		"season directory", 
-			node: seasonDir,
-			expected:	false,
+			node: 		seasonDir,
+			expected:	true,
 		},
 		{
 			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	true,
+			node: 		subtitleDir,
+			expected:	false,
 		},
 		{
 			name:		"bonus directory", 
@@ -477,6 +733,10 @@ func TestIsSeasonDir(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			res := isSeasonDir(&test.node)
+			if res != test.expected {
+				t.Errorf("isSeasonDir = %v, want %v", res, test.expected)
+			}
 		})
 	}
 }
@@ -499,12 +759,12 @@ func TestIsSeriesDir(t *testing.T) {
 		},
 		{
 			name:		"subtitle file",
-			node:		movieFile,
+			node:		subtitleFile,
 			expected:	false,
 		},
 		{
 			name:		"bonus file",
-			node:		movieFile,
+			node:		bonusFile,
 			expected:	false,
 		},
 		{
@@ -515,7 +775,7 @@ func TestIsSeriesDir(t *testing.T) {
 		{
 			name:		"series directory", 
 			node: seriesDir,
-			expected:	false,
+			expected:	true,
 		},
 		{
 			name:		"season directory", 
@@ -525,7 +785,7 @@ func TestIsSeriesDir(t *testing.T) {
 		{
 			name:		"subtitle directory", 
 			node: subtitleDir,
-			expected:	true,
+			expected:	false,
 		},
 		{
 			name:		"bonus directory", 
@@ -535,6 +795,10 @@ func TestIsSeriesDir(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			res := isSeriesDir(&test.node)
+			if res != test.expected {
+				t.Errorf("isSeriesDir = %v, want %v", res, test.expected)
+			}
 		})
 	}
 }
