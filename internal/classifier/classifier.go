@@ -32,7 +32,7 @@ func ClassifyEntries(root *metadata.Entry) error {
 	} else {
 		role := classifyFile(root)
 
-		if role == metadata.Unknown {
+		if role == metadata.UnknownRole {
 			return fmt.Errorf("root entry %v is a dir that could not be classified", root.PathInfo.Source)
 		} else {
 			root.Role = role
@@ -52,7 +52,7 @@ func classifySubtitleDir(entry *metadata.Entry) error {
 		if isSubtitleFile(child) {
 			child.Role = metadata.SubtitleFile
 		} else {
-			entry.Role = metadata.Unknown
+			entry.Role = metadata.UnknownRole
 			return fmt.Errorf("entry %v could not be classified as a subtitle dir child", child.PathInfo.Source)
 		}
 	}
@@ -182,7 +182,7 @@ func classifyFile(entry *metadata.Entry) metadata.EntryRole {
 	}
 
 	// 5. Fallback
-	return metadata.Unknown
+	return metadata.UnknownRole
 }
 
 func classifyDir(entry *metadata.Entry) metadata.EntryRole {
@@ -212,7 +212,7 @@ func classifyDir(entry *metadata.Entry) metadata.EntryRole {
 	}
 
 	// 6. Fallback
-	return metadata.Unknown
+	return metadata.UnknownRole
 }
 
 

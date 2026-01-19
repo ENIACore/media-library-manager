@@ -34,11 +34,10 @@ Movie Directory
 
 type EntryRole int8
 
-const Unknown = -1
-
 // Classification of node that describes purpose of file or directory
 const (
-	SubtitleFile	EntryRole = iota
+	UnknownRole		EntryRole = iota
+	SubtitleFile	
 	BonusFile
 	EpisodeFile
 	MovieFile			
@@ -55,7 +54,8 @@ type ContentType int8
 
 // Type of file
 const (
-    Video			ContentType = iota
+	UnknownType		ContentType = iota
+    Video			
     Subtitle		
 	//Audio			- Audio classification not yet included		
 )

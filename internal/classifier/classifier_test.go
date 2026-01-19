@@ -1036,7 +1036,7 @@ var subtitleDir = metadata.Entry{
 	PathInfo: metadata.PathInfo{
 		IsDir: true,
 		Source: "/test movie/subtitles",
-		Type: metadata.Unknown,
+		Type: metadata.UnknownType,
 	},
 }
 
@@ -1055,7 +1055,7 @@ var bonusDir = metadata.Entry{
 	PathInfo: metadata.PathInfo{
 		IsDir: true,
 		Source: "/test movie/extras",
-		Type: metadata.Unknown,
+		Type: metadata.UnknownType,
 	},
 }
 
@@ -1072,7 +1072,7 @@ var seasonDir = metadata.Entry{
 	PathInfo: metadata.PathInfo{
 		IsDir: true,
 		Source: "/test show/season 01",
-		Type: metadata.Unknown,
+		Type: metadata.UnknownType,
 	},
 }
 
@@ -1091,7 +1091,7 @@ var seriesDir = metadata.Entry{
 	PathInfo: metadata.PathInfo{
 		IsDir: true,
 		Source: "/test show",
-		Type: metadata.Unknown,
+		Type: metadata.UnknownType,
 	},
 }
 
@@ -1111,6 +1111,6 @@ var movieDir = metadata.Entry{
 	PathInfo: metadata.PathInfo{
 		IsDir: true,
 		Source: "/test movie",
-		Type: metadata.Unknown,
+		Type: metadata.UnknownType,
 	},
 }
