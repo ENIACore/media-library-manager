@@ -41,11 +41,11 @@ func classifySubtitleDir(entry *metadata.Entry) error {
 			child.Role = metadata.SubtitleFile
 		} else {
 			entry.Role = metadata.Unknown
-			return fmt.Errorf("file %v is not a subtitle file, failed to classify all children of suspected subtitle dir", child.PathInfo.Source)
+			return fmt.Errorf("file %v could not be classified as a subtitle dir child", child.PathInfo.Source)
 		}
 	}
-	entry.Role = metadata.SubtitleDir
 
+	entry.Role = metadata.SubtitleDir
 	return nil
 }
 
@@ -59,21 +59,43 @@ func classifyBonusDir(entry *metadata.Entry) error {
 		} else if isSubtitleFile(child) {
 			child.Role = metadata.SubtitleFile
 		} else {
-			return fmt.Errorf("file %v is not a bonus or subtitle file, failed to classify all children of suspected bonus dir", child.PathInfo.Source)
+			return fmt.Errorf("file %v could not be classified as a bonus dir child", child.PathInfo.Source)
 		}
 	}
 
 	if !bonus {
-		return fmt.Errorf("no bonus file found, failed to classify all children of suspected bonus dir")
+		return fmt.Errorf("no required children of bonus dir found")
 	}
 
 	entry.Role = metadata.BonusDir	
 	return nil
 }
 
+/*
 func classifySeasonDir(entry *metadata.Entry) error {
+
+	episode := false
+	for _, child := range entry.Children {
+		if isEpisodeFile(child) {
+			episode = true
+			child.Role = metadata.EpisodeFile
+		} else if isSubtitleFile(child) {
+			child.Role = metadata.SubtitleFile
+		} else if isSubtitleDir(child) {
+			classifySubtitleDir(child)
+		} else {
+			return fmt.Errorf("file %v could not be classified as a season dir child", child.PathInfo.Source)
+		}
+	}
+
+	if !episode {
+		return fmt.Errorf("no required children of season dir found")
+	}
+
+	entry.Role = metadata.SeasonDir	
 	return nil
 }
+*/
 
 func classifyFile(entry *metadata.Entry) metadata.EntryRole {
 
