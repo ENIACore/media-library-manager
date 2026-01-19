@@ -8,23 +8,35 @@ import (
 func ClassifyEntries(root *metadata.Entry) error {
 
 	if root.PathInfo.IsDir {
+		var err error
+
 		switch role := classifyDir(root); role {
 			case metadata.SubtitleDir:
-				classifySubtitleDir(root)
+				err = classifySubtitleDir(root)
 			case metadata.BonusDir:
-				classifyBonusDir(root)
+				err = classifyBonusDir(root)
 			case metadata.SeasonDir:
-				//nothing
+				err = classifySeasonDir(root)
 			case metadata.SeriesDir:
-				//nothing
+				err = classifySeriesDir(root)
 			case metadata.MovieDir:
-				//nothing
+				err = classifyMovieDir(root)
 			default:
-				//nothing
-
+				return fmt.Errorf("root entry %v is a dir that could not be classified", root.PathInfo.Source)
 		}
+
+		if err != nil {
+			return fmt.Errorf("failed to classify root %v: %w", root.PathInfo.Source, err)
+		}
+
 	} else {
-		root.Role = classifyFile(root)
+		role := classifyFile(root)
+
+		if role == metadata.Unknown {
+			return fmt.Errorf("root entry %v is a dir that could not be classified", root.PathInfo.Source)
+		} else {
+			root.Role = role
+		}
 	}
 	
 	return nil
@@ -41,7 +53,7 @@ func classifySubtitleDir(entry *metadata.Entry) error {
 			child.Role = metadata.SubtitleFile
 		} else {
 			entry.Role = metadata.Unknown
-			return fmt.Errorf("file %v could not be classified as a subtitle dir child", child.PathInfo.Source)
+			return fmt.Errorf("entry %v could not be classified as a subtitle dir child", child.PathInfo.Source)
 		}
 	}
 
@@ -59,7 +71,7 @@ func classifyBonusDir(entry *metadata.Entry) error {
 		} else if isSubtitleFile(child) {
 			child.Role = metadata.SubtitleFile
 		} else {
-			return fmt.Errorf("file %v could not be classified as a bonus dir child", child.PathInfo.Source)
+			return fmt.Errorf("entry %v could not be classified as a bonus dir child", child.PathInfo.Source)
 		}
 	}
 
@@ -71,20 +83,19 @@ func classifyBonusDir(entry *metadata.Entry) error {
 	return nil
 }
 
-/*
 func classifySeasonDir(entry *metadata.Entry) error {
 
 	episode := false
 	for _, child := range entry.Children {
-		if isEpisodeFile(child) {
-			episode = true
-			child.Role = metadata.EpisodeFile
-		} else if isSubtitleFile(child) {
+		if isSubtitleFile(child) {
 			child.Role = metadata.SubtitleFile
 		} else if isSubtitleDir(child) {
 			classifySubtitleDir(child)
+		} else if child.PathInfo.Type == metadata.Video && (isEpisodeFile(child) || entry.MediaInfo.Season != nil) {
+			child.Role = metadata.EpisodeFile
+			episode = true
 		} else {
-			return fmt.Errorf("file %v could not be classified as a season dir child", child.PathInfo.Source)
+			return fmt.Errorf("entry %v could not be classified as a season dir child", child.PathInfo.Source)
 		}
 	}
 
@@ -95,7 +106,58 @@ func classifySeasonDir(entry *metadata.Entry) error {
 	entry.Role = metadata.SeasonDir	
 	return nil
 }
-*/
+
+func classifySeriesDir(entry *metadata.Entry) error {
+
+	season := false
+	for _, child := range entry.Children {
+		if isSeasonDir(child) {
+			season = true
+			classifySeasonDir(child)
+		} else if isBonusDir(child) {
+			classifyBonusDir(child)
+		} else if isSubtitleDir(child) {
+			classifySubtitleDir(child)
+		} else {
+			return fmt.Errorf("entry %v could not be classified as a series dir child", child.PathInfo.Source)
+		}
+	}
+
+	if !season {
+		return fmt.Errorf("no required children of series dir found")
+	}
+
+	entry.Role = metadata.SeriesDir
+	return nil
+}
+
+func classifyMovieDir(entry *metadata.Entry) error {
+
+	movie := false
+	for _, child := range entry.Children {
+		if isSubtitleFile(child) {
+			child.Role = metadata.SubtitleFile
+		} else if isSubtitleDir(child) {
+			classifySubtitleDir(child)
+		} else if isBonusFile(child) {
+			child.Role = metadata.BonusFile
+		} else if isBonusDir(child) {
+			classifyBonusDir(child)
+		} else if isMovieFile(child) {
+			movie = true
+			child.Role = metadata.MovieFile
+		} else {
+			return fmt.Errorf("entry %v could not be classified as a movie dir child", child.PathInfo.Source)
+		}
+	}
+
+	if !movie {
+		return fmt.Errorf("no required children of movie dir found")
+	}
+
+	entry.Role = metadata.MovieDir
+	return nil
+}
 
 func classifyFile(entry *metadata.Entry) metadata.EntryRole {
 

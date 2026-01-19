@@ -5,6 +5,126 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
+func TestClassifyEntries(t *testing.T) {
+	/*
+		Testing movie file
+	*/
+	err := ClassifyEntries(&movieFile)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", movieFile.PathInfo.Source)
+	}
+	if movieFile.Role != metadata.MovieFile {
+		t.Errorf("Role = %v, want %v", movieFile.Role, metadata.MovieFile)
+	}
+
+	/*
+		Testing episode file
+	*/
+	err = ClassifyEntries(&episodeFile)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", episodeFile.PathInfo.Source)
+	}
+	if episodeFile.Role != metadata.EpisodeFile {
+		t.Errorf("Role = %v, want %v", episodeFile.Role, metadata.EpisodeFile)
+	}
+
+	/*
+		Testing subtitle file
+	*/
+	err = ClassifyEntries(&subtitleFile)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", subtitleFile.PathInfo.Source)
+	}
+	if subtitleFile.Role != metadata.SubtitleFile {
+		t.Errorf("Role = %v, want %v", subtitleFile.Role, metadata.SubtitleFile)
+	}
+	
+	/*
+		Testing bonus file
+	*/
+	err = ClassifyEntries(&bonusFile)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", bonusFile.PathInfo.Source)
+	}
+	if bonusFile.Role != metadata.BonusFile {
+		t.Errorf("Role = %v, want %v", bonusFile.Role, metadata.BonusFile)
+	}
+
+
+
+	/*
+		Testing movie dir
+		Movie Dir Children: movieFile, bonusFile, subtitleFile, subtitleFile
+	*/
+	err = ClassifyEntries(&movieDir)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", movieDir.PathInfo.Source)
+	}
+	if movieDir.Role != metadata.MovieDir || movieDir.Children[0].Role != metadata.MovieFile || movieDir.Children[1].Role != metadata.BonusFile || movieDir.Children[2].Role != metadata.SubtitleFile || movieDir.Children[3].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", movieDir.PathInfo.Source)
+	}
+
+	/*
+		Testing season dir
+		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
+	*/
+	err = ClassifyEntries(&seasonDir)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", seasonDir.PathInfo.Source)
+	}
+	if seasonDir.Role != metadata.SeasonDir || seasonDir.Children[0].Role != metadata.EpisodeFile || seasonDir.Children[1].Role != metadata.EpisodeFile || seasonDir.Children[2].Role != metadata.SubtitleFile || seasonDir.Children[3].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", seasonDir.PathInfo.Source)
+	}
+
+	/*
+		Testing series dir
+		Series Dir Children: seasonDir, bonusDir, subtitleDir,
+		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
+		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
+		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
+	*/
+	err = ClassifyEntries(&seriesDir)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", seriesDir.PathInfo.Source)
+	}
+	if seriesDir.Role != metadata.SeriesDir || seriesDir.Children[0].Role != metadata.SeasonDir || seriesDir.Children[1].Role != metadata.BonusDir || seriesDir.Children[2].Role != metadata.SubtitleDir {
+		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.PathInfo.Source)
+	}
+	if seriesDir.Children[0].Role != metadata.SeasonDir || seriesDir.Children[0].Children[0].Role != metadata.EpisodeFile || seriesDir.Children[0].Children[1].Role != metadata.EpisodeFile || seriesDir.Children[0].Children[2].Role != metadata.SubtitleFile || seriesDir.Children[0].Children[3].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[0].PathInfo.Source)
+	}
+	if seriesDir.Children[1].Role != metadata.BonusDir || seriesDir.Children[1].Children[0].Role != metadata.BonusFile  || seriesDir.Children[1].Children[1].Role != metadata.SubtitleFile  || seriesDir.Children[1].Children[2].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[1].PathInfo.Source)
+	}
+	if seriesDir.Children[2].Role != metadata.SubtitleDir || seriesDir.Children[2].Children[0].Role != metadata.SubtitleFile || seriesDir.Children[2].Children[1].Role != metadata.SubtitleFile || seriesDir.Children[2].Children[2].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[2].PathInfo.Source)
+	}
+
+	/*
+		Testing subtitle dir
+		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
+	*/
+	err = ClassifyEntries(&subtitleDir)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", subtitleDir.PathInfo.Source)
+	}
+	if subtitleDir.Role != metadata.SubtitleDir || subtitleDir.Children[0].Role != metadata.SubtitleFile || subtitleDir.Children[1].Role != metadata.SubtitleFile || subtitleDir.Children[2].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", subtitleDir.PathInfo.Source)
+	}
+	
+	/*
+		Testing bonus dir
+		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
+	*/
+	err = ClassifyEntries(&bonusDir)
+	if err != nil {
+		t.Errorf("ClassifyEntries has err for %v, want no error", bonusDir.PathInfo.Source)
+	}
+	if bonusDir.Role != metadata.BonusDir || bonusDir.Children[0].Role != metadata.BonusFile  || bonusDir.Children[1].Role != metadata.SubtitleFile  || bonusDir.Children[2].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", bonusDir.PathInfo.Source)
+	}
+}
+
 /*
 	Classifier helper function tests
 */
@@ -48,13 +168,13 @@ func TestClassifyBonusDir(t *testing.T) {
 	}
 }
 
+
+func TestClassifySeasonDir(t *testing.T) {
+
 	/*
 		Testing season dir
 		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
 	*/
-/*
-func TestClassifySeasonDir(t *testing.T) {
-
 	err := classifySeasonDir(&seasonDir)
 	if err != nil {
 		t.Errorf("classifySeasonDir has err for %v, want no error", seasonDir.PathInfo.Source)
@@ -69,7 +189,56 @@ func TestClassifySeasonDir(t *testing.T) {
 		t.Errorf("classifySeasonDir has no error, expected error")
 	}
 }
-*/
+
+func TestClassifySeriesDir(t *testing.T) {
+	/*
+		Testing series dir
+		Series Dir Children: seasonDir, bonusDir, subtitleDir,
+		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
+		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
+		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
+	*/
+	err := classifySeriesDir(&seriesDir)
+	if err != nil {
+		t.Errorf("classifySeriesDir has err for %v, want no error", seriesDir.PathInfo.Source)
+	}
+	if seriesDir.Role != metadata.SeriesDir || seriesDir.Children[0].Role != metadata.SeasonDir || seriesDir.Children[1].Role != metadata.BonusDir || seriesDir.Children[2].Role != metadata.SubtitleDir {
+		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.PathInfo.Source)
+	}
+	if seriesDir.Children[0].Role != metadata.SeasonDir || seriesDir.Children[0].Children[0].Role != metadata.EpisodeFile || seriesDir.Children[0].Children[1].Role != metadata.EpisodeFile || seriesDir.Children[0].Children[2].Role != metadata.SubtitleFile || seriesDir.Children[0].Children[3].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[0].PathInfo.Source)
+	}
+	if seriesDir.Children[1].Role != metadata.BonusDir || seriesDir.Children[1].Children[0].Role != metadata.BonusFile  || seriesDir.Children[1].Children[1].Role != metadata.SubtitleFile  || seriesDir.Children[1].Children[2].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[1].PathInfo.Source)
+	}
+	if seriesDir.Children[2].Role != metadata.SubtitleDir || seriesDir.Children[2].Children[0].Role != metadata.SubtitleFile || seriesDir.Children[2].Children[1].Role != metadata.SubtitleFile || seriesDir.Children[2].Children[2].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[2].PathInfo.Source)
+	}
+
+	err = classifySeriesDir(&seasonDir)
+	if err == nil {
+		t.Errorf("classifySeriesDir has no error, expected error")
+	}
+}
+
+func TestClassifyMovieDir(t *testing.T) {
+	/*
+		Testing movie dir
+		Movie Dir Children: movieFile, bonusFile, subtitleFile, subtitleFile
+	*/
+	err := classifyMovieDir(&movieDir)
+	if err != nil {
+		t.Errorf("classifyMovieDir has err for %v, want no error", movieDir.PathInfo.Source)
+	}
+	if movieDir.Role != metadata.MovieDir || movieDir.Children[0].Role != metadata.MovieFile || movieDir.Children[1].Role != metadata.BonusFile || movieDir.Children[2].Role != metadata.SubtitleFile || movieDir.Children[3].Role != metadata.SubtitleFile {
+		t.Errorf("Classification for %v failed, view logging for more information", movieDir.PathInfo.Source)
+	}
+
+	err = classifyMovieDir(&seasonDir)
+	if err == nil {
+		t.Errorf("classifyMovieDir has no error, expected error")
+	}
+}
 
 func TestClassifyFile(t *testing.T) {
 	tests := []struct{
@@ -729,6 +898,9 @@ func TestIsMovieDir(t *testing.T) {
 /*
 	test helper functions
 */
+func resetEntryRoles(entry *metadata.Entry) {
+	entry.Role = 0
+}
 
 func intPtr(i int) *int {
 	return &i
