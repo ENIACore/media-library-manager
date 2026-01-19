@@ -3,29 +3,34 @@ package classifier
 import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"fmt"
+	"log/slog"
 )
 
-func ClassifyEntries(root *metadata.Entry) error {
+func ClassifyEntries(root *metadata.Entry, logger *slog.Logger) error {
+	log := logger.With("func", "ClassifyEntries")
+	log.Info("classifying root", "path", root.PathInfo.Source)
 
 	if root.PathInfo.IsDir {
 		var err error
 
 		switch role := classifyDir(root); role {
 			case metadata.SubtitleDir:
-				err = classifySubtitleDir(root)
+				err = classifySubtitleDir(root, logger)
 			case metadata.BonusDir:
-				err = classifyBonusDir(root)
+				err = classifyBonusDir(root, logger)
 			case metadata.SeasonDir:
-				err = classifySeasonDir(root)
+				err = classifySeasonDir(root, logger)
 			case metadata.SeriesDir:
-				err = classifySeriesDir(root)
+				err = classifySeriesDir(root, logger)
 			case metadata.MovieDir:
-				err = classifyMovieDir(root)
+				err = classifyMovieDir(root, logger)
 			default:
+				log.Error("unclassifiable dir", "path", root.PathInfo.Source)
 				return fmt.Errorf("root entry %v is a dir that could not be classified", root.PathInfo.Source)
 		}
 
 		if err != nil {
+			log.Error("classification failed", "path", root.PathInfo.Source, "err", err)
 			return fmt.Errorf("failed to classify root %v: %w", root.PathInfo.Source, err)
 		}
 
@@ -33,12 +38,14 @@ func ClassifyEntries(root *metadata.Entry) error {
 		role := classifyFile(root)
 
 		if role == metadata.UnknownRole {
+			log.Error("unclassifiable file", "path", root.PathInfo.Source)
 			return fmt.Errorf("root entry %v is a dir that could not be classified", root.PathInfo.Source)
 		} else {
 			root.Role = role
 		}
 	}
 	
+	log.Info("classified root", "path", root.PathInfo.Source, "role", root.Role)
 	return nil
 }
 
@@ -47,114 +54,143 @@ func ClassifyEntries(root *metadata.Entry) error {
 */
 
 
-func classifySubtitleDir(entry *metadata.Entry) error {
+func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) error {
+	log := logger.With("func", "classifySubtitleDir")
+
 	for _, child := range entry.Children {
 		if isSubtitleFile(child) {
+			log.Debug("classified child", "path", child.PathInfo.Source, "role", metadata.SubtitleFile)
 			child.Role = metadata.SubtitleFile
 		} else {
+			log.Debug("unknown child", "path", child.PathInfo.Source)
 			entry.Role = metadata.UnknownRole
 			return fmt.Errorf("entry %v could not be classified as a subtitle dir child", child.PathInfo.Source)
 		}
 	}
 
+
+	log.Debug("classified dir", "path", entry.PathInfo.Source, "role", metadata.SubtitleDir)
 	entry.Role = metadata.SubtitleDir
 	return nil
 }
 
-func classifyBonusDir(entry *metadata.Entry) error {
+func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) error {
+	log := logger.With("func", "classifyBonusDir")
 
 	bonus := false
 	for _, child := range entry.Children {
 		if isBonusFile(child) {
+			log.Debug("classified child", "path", child.PathInfo.Source, "role", metadata.BonusFile)
 			bonus = true
 			child.Role = metadata.BonusFile
 		} else if isSubtitleFile(child) {
+			log.Debug("classified child", "path", child.PathInfo.Source, "role", metadata.SubtitleFile)
 			child.Role = metadata.SubtitleFile
 		} else {
+			log.Debug("unknown child", "path", child.PathInfo.Source)
 			return fmt.Errorf("entry %v could not be classified as a bonus dir child", child.PathInfo.Source)
 		}
 	}
 
 	if !bonus {
+		log.Debug("missing required child", "path", entry.PathInfo.Source)
 		return fmt.Errorf("no required children of bonus dir found")
 	}
 
+	log.Debug("classified dir", "path", entry.PathInfo.Source, "role", metadata.BonusDir)
 	entry.Role = metadata.BonusDir	
 	return nil
 }
 
-func classifySeasonDir(entry *metadata.Entry) error {
+func classifySeasonDir(entry *metadata.Entry, logger *slog.Logger) error {
+	log := logger.With("func", "classifySeasonDir")
 
 	episode := false
 	for _, child := range entry.Children {
 		if isSubtitleFile(child) {
+			log.Debug("classified child", "path", child.PathInfo.Source, "role", metadata.SubtitleFile)
 			child.Role = metadata.SubtitleFile
 		} else if isSubtitleDir(child) {
-			classifySubtitleDir(child)
+			classifySubtitleDir(child, logger)
 		} else if child.PathInfo.Type == metadata.Video && (isEpisodeFile(child) || entry.MediaInfo.Season != nil) {
+			log.Debug("classified child", "path", child.PathInfo.Source, "role", metadata.EpisodeFile)
 			child.Role = metadata.EpisodeFile
 			episode = true
 		} else {
+			log.Debug("unknown child", "path", child.PathInfo.Source)
 			return fmt.Errorf("entry %v could not be classified as a season dir child", child.PathInfo.Source)
 		}
 	}
 
 	if !episode {
+		log.Debug("missing required child", "path", entry.PathInfo.Source)
 		return fmt.Errorf("no required children of season dir found")
 	}
 
+	log.Debug("classified dir", "path", entry.PathInfo.Source, "role", metadata.SeasonDir)
 	entry.Role = metadata.SeasonDir	
 	return nil
 }
 
-func classifySeriesDir(entry *metadata.Entry) error {
+func classifySeriesDir(entry *metadata.Entry, logger *slog.Logger) error {
+	log := logger.With("func", "classifySeriesDir")
 
 	season := false
 	for _, child := range entry.Children {
 		if isSeasonDir(child) {
 			season = true
-			classifySeasonDir(child)
+			classifySeasonDir(child, logger)
 		} else if isBonusDir(child) {
-			classifyBonusDir(child)
+			classifyBonusDir(child, logger)
 		} else if isSubtitleDir(child) {
-			classifySubtitleDir(child)
+			classifySubtitleDir(child, logger)
 		} else {
+			log.Debug("unknown child", "path", child.PathInfo.Source)
 			return fmt.Errorf("entry %v could not be classified as a series dir child", child.PathInfo.Source)
 		}
 	}
 
 	if !season {
+		log.Debug("missing required child", "path", entry.PathInfo.Source)
 		return fmt.Errorf("no required children of series dir found")
 	}
 
+	log.Debug("classified dir", "path", entry.PathInfo.Source, "role", metadata.SeriesDir)
 	entry.Role = metadata.SeriesDir
 	return nil
 }
 
-func classifyMovieDir(entry *metadata.Entry) error {
+func classifyMovieDir(entry *metadata.Entry, logger *slog.Logger) error {
+	log := logger.With("func", "classifyMovieDir")
 
 	movie := false
 	for _, child := range entry.Children {
 		if isSubtitleFile(child) {
+			log.Debug("classified child", "path", child.PathInfo.Source, "role", metadata.SubtitleFile)
 			child.Role = metadata.SubtitleFile
 		} else if isSubtitleDir(child) {
-			classifySubtitleDir(child)
+			classifySubtitleDir(child, logger)
 		} else if isBonusFile(child) {
+			log.Debug("classified child", "path", child.PathInfo.Source, "role", metadata.BonusFile)
 			child.Role = metadata.BonusFile
 		} else if isBonusDir(child) {
-			classifyBonusDir(child)
+			classifyBonusDir(child, logger)
 		} else if isMovieFile(child) {
+			log.Debug("classified child", "path", child.PathInfo.Source, "role", metadata.MovieFile)
 			movie = true
 			child.Role = metadata.MovieFile
 		} else {
+			log.Debug("unknown child", "path", child.PathInfo.Source)
 			return fmt.Errorf("entry %v could not be classified as a movie dir child", child.PathInfo.Source)
 		}
 	}
 
 	if !movie {
+		log.Debug("missing required child", "path", entry.PathInfo.Source)
 		return fmt.Errorf("no required children of movie dir found")
 	}
 
+	log.Debug("classified dir", "path", entry.PathInfo.Source, "role", metadata.MovieDir)
 	entry.Role = metadata.MovieDir
 	return nil
 }
