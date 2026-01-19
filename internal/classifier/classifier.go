@@ -233,10 +233,10 @@ func isSeasonDir(entry *metadata.Entry) bool {
 			continue
 		}
 
-		if isEpisodeFile(child) {
+		if child.PathInfo.Type == metadata.Video && (isEpisodeFile(child) || entry.MediaInfo.Season != nil) {
 			episode = true
 		} else {
-			return false	
+			return false
 		}
 	}
 
