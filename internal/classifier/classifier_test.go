@@ -9,6 +9,7 @@ func TestClassifyEntries(t *testing.T) {
 	/*
 		Testing movie file
 	*/
+	resetEntryRoles(&movieFile)
 	err := ClassifyEntries(&movieFile)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", movieFile.PathInfo.Source)
@@ -20,6 +21,7 @@ func TestClassifyEntries(t *testing.T) {
 	/*
 		Testing episode file
 	*/
+	resetEntryRoles(&episodeFile)
 	err = ClassifyEntries(&episodeFile)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", episodeFile.PathInfo.Source)
@@ -31,6 +33,7 @@ func TestClassifyEntries(t *testing.T) {
 	/*
 		Testing subtitle file
 	*/
+	resetEntryRoles(&subtitleFile)
 	err = ClassifyEntries(&subtitleFile)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", subtitleFile.PathInfo.Source)
@@ -42,6 +45,7 @@ func TestClassifyEntries(t *testing.T) {
 	/*
 		Testing bonus file
 	*/
+	resetEntryRoles(&bonusFile)
 	err = ClassifyEntries(&bonusFile)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", bonusFile.PathInfo.Source)
@@ -56,6 +60,7 @@ func TestClassifyEntries(t *testing.T) {
 		Testing movie dir
 		Movie Dir Children: movieFile, bonusFile, subtitleFile, subtitleFile
 	*/
+	resetEntryRoles(&movieDir)
 	err = ClassifyEntries(&movieDir)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", movieDir.PathInfo.Source)
@@ -68,6 +73,7 @@ func TestClassifyEntries(t *testing.T) {
 		Testing season dir
 		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
 	*/
+	resetEntryRoles(&seasonDir)
 	err = ClassifyEntries(&seasonDir)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", seasonDir.PathInfo.Source)
@@ -83,6 +89,7 @@ func TestClassifyEntries(t *testing.T) {
 		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
 		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
 	*/
+	resetEntryRoles(&seriesDir)
 	err = ClassifyEntries(&seriesDir)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", seriesDir.PathInfo.Source)
@@ -104,6 +111,7 @@ func TestClassifyEntries(t *testing.T) {
 		Testing subtitle dir
 		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
 	*/
+	resetEntryRoles(&subtitleDir)
 	err = ClassifyEntries(&subtitleDir)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", subtitleDir.PathInfo.Source)
@@ -116,6 +124,7 @@ func TestClassifyEntries(t *testing.T) {
 		Testing bonus dir
 		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
 	*/
+	resetEntryRoles(&bonusDir)
 	err = ClassifyEntries(&bonusDir)
 	if err != nil {
 		t.Errorf("ClassifyEntries has err for %v, want no error", bonusDir.PathInfo.Source)
@@ -134,6 +143,7 @@ func TestClassifySubtitleDir(t *testing.T) {
 		Testing subtitle dir
 		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
 	*/
+	resetEntryRoles(&subtitleDir)
 	err := classifySubtitleDir(&subtitleDir)
 	if err != nil {
 		t.Errorf("classifySubtitleDir has err for %v, want no error", subtitleDir.PathInfo.Source)
@@ -142,6 +152,7 @@ func TestClassifySubtitleDir(t *testing.T) {
 		t.Errorf("Classification for %v failed, view logging for more information", subtitleDir.PathInfo.Source)
 	}
 
+	resetEntryRoles(&movieDir)
 	err = classifySubtitleDir(&movieDir)
 	if err == nil {
 		t.Errorf("classifySubtitleDir has no error, expected error")
@@ -153,6 +164,7 @@ func TestClassifyBonusDir(t *testing.T) {
 		Testing bonus dir
 		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
 	*/
+	resetEntryRoles(&bonusDir)
 	err := classifyBonusDir(&bonusDir)
 	if err != nil {
 		t.Errorf("classifyBonusDir has err for %v, want no error", bonusDir.PathInfo.Source)
@@ -162,6 +174,7 @@ func TestClassifyBonusDir(t *testing.T) {
 	}
 
 
+	resetEntryRoles(&movieDir)
 	err = classifyBonusDir(&movieDir)
 	if err == nil {
 		t.Errorf("classifyBonusDir has no error, expected error")
@@ -175,6 +188,7 @@ func TestClassifySeasonDir(t *testing.T) {
 		Testing season dir
 		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
 	*/
+	resetEntryRoles(&seasonDir)
 	err := classifySeasonDir(&seasonDir)
 	if err != nil {
 		t.Errorf("classifySeasonDir has err for %v, want no error", seasonDir.PathInfo.Source)
@@ -184,6 +198,7 @@ func TestClassifySeasonDir(t *testing.T) {
 	}
 
 
+	resetEntryRoles(&movieDir)
 	err = classifySeasonDir(&movieDir)
 	if err == nil {
 		t.Errorf("classifySeasonDir has no error, expected error")
@@ -198,6 +213,7 @@ func TestClassifySeriesDir(t *testing.T) {
 		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
 		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
 	*/
+	resetEntryRoles(&seriesDir)
 	err := classifySeriesDir(&seriesDir)
 	if err != nil {
 		t.Errorf("classifySeriesDir has err for %v, want no error", seriesDir.PathInfo.Source)
@@ -215,6 +231,7 @@ func TestClassifySeriesDir(t *testing.T) {
 		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[2].PathInfo.Source)
 	}
 
+	resetEntryRoles(&seasonDir)
 	err = classifySeriesDir(&seasonDir)
 	if err == nil {
 		t.Errorf("classifySeriesDir has no error, expected error")
@@ -226,6 +243,7 @@ func TestClassifyMovieDir(t *testing.T) {
 		Testing movie dir
 		Movie Dir Children: movieFile, bonusFile, subtitleFile, subtitleFile
 	*/
+	resetEntryRoles(&movieDir)
 	err := classifyMovieDir(&movieDir)
 	if err != nil {
 		t.Errorf("classifyMovieDir has err for %v, want no error", movieDir.PathInfo.Source)
@@ -234,6 +252,7 @@ func TestClassifyMovieDir(t *testing.T) {
 		t.Errorf("Classification for %v failed, view logging for more information", movieDir.PathInfo.Source)
 	}
 
+	resetEntryRoles(&seasonDir)
 	err = classifyMovieDir(&seasonDir)
 	if err == nil {
 		t.Errorf("classifyMovieDir has no error, expected error")
@@ -899,7 +918,11 @@ func TestIsMovieDir(t *testing.T) {
 	test helper functions
 */
 func resetEntryRoles(entry *metadata.Entry) {
-	entry.Role = 0
+	entry.Role = metadata.UnknownRole
+	for _, child := range entry.Children {
+		child.Role = metadata.UnknownRole
+		resetEntryRoles(child)
+	}
 }
 
 func intPtr(i int) *int {
