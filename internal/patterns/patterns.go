@@ -126,86 +126,77 @@ var MiscPatterns = []Pattern{
 }
 
 var LanguagePatternGroups = []PatternGroup{
-	{Key: `ENGLISH`, Patterns: []Pattern{`ENGLISH`, `ENG`, `EN`}},
-	{Key: `SPANISH`, Patterns: []Pattern{`SPANISH`, `CASTELLANO`, `SPA`, `ES`, `ESPAÑOL`}},
-	{Key: `FRENCH`, Patterns: []Pattern{`FRENCH`, `FRA`, `FR`}},
-	{Key: `GERMAN`, Patterns: []Pattern{`GERMAN`, `DEUTSCH`, `GER`, `DE`, `GERMAN`}},
-	{Key: `ITALIAN`, Patterns: []Pattern{`ITALIAN`, `ITA`, `ITALIANO`}},
-	{Key: `PORTUGUESE`, Patterns: []Pattern{`PORTUGUESE`, `PORTUGUES`, `POR`, `PT`}},
-	{Key: `BRAZILIAN_PORTUGUESE`, Patterns: []Pattern{`BRAZILIAN`, `BRAZIL`, `BR`, `PORTUGUESE.BR`, `PT.BR`}},
-	{Key: `RUSSIAN`, Patterns: []Pattern{`RUSSIAN`, `RUS`, `RU`}},
-	{Key: `JAPANESE`, Patterns: []Pattern{`JAPANESE`, `JAP`, `JPN`, `JP`, `JA`}},
-	{Key: `KOREAN`, Patterns: []Pattern{`KOREAN`, `KOR`, `KO`, `KR`}},
-	{Key: `ARABIC`, Patterns: []Pattern{`ARABIC`, `ARA`, `AR`}},
-	{Key: `HEBREW`, Patterns: []Pattern{`HEBREW`, `HEB`, `HE`}},
-	{Key: `THAI`, Patterns: []Pattern{`THAI`, `THA`, `TH`}},
-	{Key: `TURKISH`, Patterns: []Pattern{`TURKISH`, `TUR`, `TR`}},
-	{Key: `GREEK`, Patterns: []Pattern{`GREEK`, `GRE`, `EL`}},
-	{Key: `POLISH`, Patterns: []Pattern{`POLISH`, `POL`, `PL`, `POLSKI`}},
-	{Key: `HUNGARIAN`, Patterns: []Pattern{`HUNGARIAN`, `HUN`, `HU`, `MAGYAR`}},
-	{Key: `CZECH`, Patterns: []Pattern{`CZECH`, `CZE`, `CS`}},
-	{Key: `CHINESE`, Patterns: []Pattern{`CHINESE`, `CHI`, `ZH`}},
+	{Key: `English`, Patterns: []Pattern{`ENGLISH`, `ENG`, `EN`}},
+	{Key: `Spanish`, Patterns: []Pattern{`SPANISH`, `CASTELLANO`, `SPA`, `ES`, `ESPAÑOL`}},
+	{Key: `French`, Patterns: []Pattern{`FRENCH`, `FRA`, `FR`}},
+	{Key: `German`, Patterns: []Pattern{`GERMAN`, `DEUTSCH`, `GER`, `DE`, `GERMAN`}},
+	{Key: `Italian`, Patterns: []Pattern{`ITALIAN`, `ITA`, `ITALIANO`}},
+	{Key: `Portuguese`, Patterns: []Pattern{`PORTUGUESE`, `PORTUGUES`, `POR`, `PT`}},
+	{Key: `Brazilian Portuguese`, Patterns: []Pattern{`BRAZILIAN`, `BRAZIL`, `BR`, `PORTUGUESE.BR`, `PT.BR`}},
+	{Key: `Russian`, Patterns: []Pattern{`RUSSIAN`, `RUS`, `RU`}},
+	{Key: `Japanese`, Patterns: []Pattern{`JAPANESE`, `JAP`, `JPN`, `JP`, `JA`}},
+	{Key: `Korean`, Patterns: []Pattern{`KOREAN`, `KOR`, `KO`, `KR`}},
+	{Key: `Arabic`, Patterns: []Pattern{`ARABIC`, `ARA`, `AR`}},
+	{Key: `Hebrew`, Patterns: []Pattern{`HEBREW`, `HEB`, `HE`}},
+	{Key: `Thai`, Patterns: []Pattern{`THAI`, `THA`, `TH`}},
+	{Key: `Turkish`, Patterns: []Pattern{`TURKISH`, `TUR`, `TR`}},
+	{Key: `Greek`, Patterns: []Pattern{`GREEK`, `GRE`, `EL`}},
+	{Key: `Polish`, Patterns: []Pattern{`POLISH`, `POL`, `PL`, `POLSKI`}},
+	{Key: `Hungarian`, Patterns: []Pattern{`HUNGARIAN`, `HUN`, `HU`, `MAGYAR`}},
+	{Key: `Czech`, Patterns: []Pattern{`CZECH`, `CZE`, `CS`}},
+	{Key: `Chinese`, Patterns: []Pattern{`CHINESE`, `CHI`, `ZH`}},
 }
 
 var BonusPatternGroups = []PatternGroup{
-	// Behind the scenes / Making of
-	{Key: `BEHIND_THE_SCENES`, Patterns: []Pattern{
+	{Key: `Behind.The.Scenes`, Patterns: []Pattern{
 		`BEHIND\.THE\.SCENE[S]?`,
 		`BTS`,
 		`MAKING\.OF`,
 		`MAKING`,
 		`THE\.MAKING\.OF`,
 	}},
-	// Deleted / Extended scenes
-	{Key: `DELETED_SCENE`, Patterns: []Pattern{
+	{Key: `Deleted.Scenes`, Patterns: []Pattern{
 		`DELETED\.SCENE[S]?`,
 		`DELETED`,
 		`EXTENDED\.SCENE[S]?`,
 		`ALTERNATE\.SCENE[S]?`,
 		`ADDITIONAL\.SCENE[S]?`,
 	}},
-	// Featurettes
-	{Key: `FEATURETTE`, Patterns: []Pattern{
+	{Key: `Featurette`, Patterns: []Pattern{
 		`FEATURETTE[S]?`,
 		`FEATURE[S]?`,
 		`SHORT[S]?`,
 		`MINI\.FEATURE[S]?`,
 	}},
-	// Interviews
-	{Key: `INTERVIEW`, Patterns: []Pattern{
+	{Key: `Interview`, Patterns: []Pattern{
 		`INTERVIEW[S]?`,
 		`CAST\.INTERVIEW[S]?`,
 		`Q\.?AND\.?A`,
 		`QA`,
 	}},
-	// Bloopers / Gag reel
-	{Key: `BLOOPER`, Patterns: []Pattern{
+	{Key: `Blooper`, Patterns: []Pattern{
 		`BLOOPER[S]?`,
 		`GAG\.?REEL[S]?`,
 		`OUTTAKE[S]?`,
 	}},
-	// Trailers / Promos
-	{Key: `TRAILER`, Patterns: []Pattern{
+	{Key: `Trailer`, Patterns: []Pattern{
 		`TRAILER[S]?`,
 		`TEASER[S]?`,
 		`PROMO[S]?`,
 		`TV\.SPOT[S]?`,
 		`TVSPOT[S]?`,
 	}},
-	// Commentary
-	{Key: `COMMENTARY`, Patterns: []Pattern{
+	{Key: `Commentary`, Patterns: []Pattern{
 		`COMMENTARY`,
 		`AUDIO\.COMMENTARY`,
 		`DIRECTOR[S]?\.COMMENTARY`,
 	}},
-	// Documentary
-	{Key: `DOCUMENTARY`, Patterns: []Pattern{
+	{Key: `Documentary`, Patterns: []Pattern{
 		`DOCUMENTARY`,
 		`DOCUMENTARIES`,
 		`DOC[S]?`,
 	}},
-	// General extras / bonus
-	{Key: `EXTRA`, Patterns: []Pattern{
+	{Key: `Extra`, Patterns: []Pattern{
 		`EXTRA[S]?`,
 		`BONUS`,
 		`BONUS\.CONTENT`,
@@ -215,6 +206,7 @@ var BonusPatternGroups = []PatternGroup{
 		`SUPPLEMENT[S]?`,
 	}},
 }
+
 
 var (
 	GetLanguagePatternGroups = sync.OnceValue(func() []CompiledPatternGroup {

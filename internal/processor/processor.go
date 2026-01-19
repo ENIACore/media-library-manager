@@ -1,10 +1,10 @@
 package processor
 
-import "fmt"
+import (
+	"github.com/ENIACore/media_library_manager/internal/metadata"
+)
 
-// Main class
-func Main(input string) string {
-	var message string
-	message = fmt.Sprintf("Input string is, %v", input)
-	return message
+func ResolveEntries(root *metadata.Entry) error {
+	return nil
 }
+

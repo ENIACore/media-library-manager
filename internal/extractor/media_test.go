@@ -30,11 +30,11 @@ func TestExtractMedia(t *testing.T) {
 				Year: intPtr(2025),
 				Season: intPtr(1),
 				Episode: intPtr(1),
-				Resolution: "1080P",
-				Codec: "X265",
-				Source: "BLURAY",
-				Audio: "ATMOS",
-				Language: "ENGLISH",
+				Resolution: "1080p",
+				Codec: "x265",
+				Source: "BluRay",
+				Audio: "Atmos",
+				Language: "English",
 			},
 		},
 	}
@@ -408,7 +408,7 @@ func TestExtractResolution(t *testing.T) {
 				"1080P",
 				"MP4",
 			},
-			expected:	"1080P",
+			expected:	"1080p",
 		},
 		{
 			name:		"no resolution",
@@ -445,7 +445,7 @@ func TestExtractCodec(t *testing.T) {
 				"X265",
 				"MP4",
 			},
-			expected:	"X265",
+			expected:	"x265",
 		},
 		{
 			name:		"no codec",
@@ -483,7 +483,7 @@ func TestExtractSource(t *testing.T) {
 				"RIP",
 				"MP4",
 			},
-			expected:	"BLURAY",
+			expected:	"BluRay",
 		},
 		{
 			name:		"no source",
@@ -521,7 +521,7 @@ func TestExtractAudio(t *testing.T) {
 				"ATMOS",
 				"MP4",
 			},
-			expected:	"ATMOS",
+			expected:	"Atmos",
 		},
 		{
 			name:		"no audio",
@@ -560,7 +560,7 @@ func TestExtractLanguage(t *testing.T) {
 				"ENG",	
 				"SRT",	
 			},
-			expected:	"ENGLISH",
+			expected:	"English",
 		},
 		{
 			name:		"missing language",
@@ -601,7 +601,7 @@ func TestExtractBonus(t *testing.T) {
 				"THE",	
 				"SCENES",	
 			},
-			expected:	"BEHIND_THE_SCENES",
+			expected:	"Behind.The.Scenes",
 		},
 		{
 			name:		"invalid bonus",
@@ -719,7 +719,7 @@ func TestParseSource(t *testing.T) {
 			input:		[]string{
 				"BLURAY",
 			},
-			expected:	"BLURAY",
+			expected:	"BluRay",
 		},
 		{
 			name:		"source with seperators",
@@ -727,7 +727,7 @@ func TestParseSource(t *testing.T) {
 				"BD",
 				"RIP",
 			},
-			expected:	"BLURAY",
+			expected:	"BluRay",
 		},
 		{
 			name:		"invalid source with seperators",
@@ -751,7 +751,7 @@ func TestParseSource(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res := parseSource(test.input)
 			if	res != test.expected {
-				t.Errorf("parseCodec = %v, want %v", res, test.expected)
+				t.Errorf("parseSource = %v, want %v", res, test.expected)
 			}
 		})
 	}
@@ -799,7 +799,7 @@ func TestParseAudio(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res := parseAudio(test.input)
 			if	res != test.expected {
-				t.Errorf("parseCodec = %v, want %v", res, test.expected)
+				t.Errorf("parseAudio = %v, want %v", res, test.expected)
 			}
 		})
 	}
@@ -970,7 +970,7 @@ func TestParseLanguage(t *testing.T) {
 				"ENG",
 				"SRT",
 			},
-			expected: "ENGLISH",
+			expected: "English",
 		},
 		{
 			name:		"no language",
@@ -1004,7 +1004,7 @@ func TestParseBonus(t *testing.T) {
 				"THE",
 				"SCENES",
 			},
-			expected:	"BEHIND_THE_SCENES",
+			expected:	"Behind.The.Scenes",
 		},
 		{
 			name:		"invalid bonus",
