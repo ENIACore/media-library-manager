@@ -2,27 +2,10 @@ package metadata
 
 // Structure of media torrents
 /*
-Movie File
-Episode File
 Subtitle File
 Bonus File
-
-Movie Directory
-├── Movie File
-├── Subtitle File(s) (optional)
-├── Bonus File(s) (optional)
-├── Subtitle Directory (optional)
-└── Bonus Directory (optional)
-
-Series Directory
-├── Season Directory(s)
-├── Bonus Directory (optional)
-└── Subtitle Directory (optional)
-
-Season Directory
-├── Episode File(s)
-├── Subtitle File(s) (optional)
-└── Subtitle Directory (optional)
+Episode File
+Movie File
 
 Subtitle Directory
 └── Subtitle File(s)
@@ -30,6 +13,23 @@ Subtitle Directory
 Bonus Directory
 ├── Bonus File(s)
 └── Subtitle File(s) (optional)
+
+Season Directory
+├── Episode File(s)
+├── Subtitle File(s) (optional)
+└── Subtitle Directory (optional)
+
+Series Directory
+├── Season Directory(s)
+├── Bonus Directory (optional)
+└── Subtitle Directory (optional)
+
+Movie Directory
+├── Movie File
+├── Subtitle File(s) (optional)
+├── Bonus File(s) (optional)
+├── Subtitle Directory (optional)
+└── Bonus Directory (optional)
 */
 
 type EntryRole int8
@@ -38,16 +38,16 @@ const Unknown = -1
 
 // Classification of node that describes purpose of file or directory
 const (
-	MovieFile		EntryRole = iota	
-	EpisodeFile
-	SubtitleFile
+	SubtitleFile	EntryRole = iota
 	BonusFile
+	EpisodeFile
+	MovieFile			
 	
 	SubtitleDir
 	BonusDir
-	MovieDir
 	SeasonDir
 	SeriesDir
+	MovieDir
 )
 
 

@@ -2,14 +2,80 @@ package classifier
 
 import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
+	"fmt"
 )
 
 func ClassifyEntries(root *metadata.Entry) error {
+
+	if root.PathInfo.IsDir {
+		switch role := classifyDir(root); role {
+			case metadata.SubtitleDir:
+				classifySubtitleDir(root)
+			case metadata.BonusDir:
+				classifyBonusDir(root)
+			case metadata.SeasonDir:
+				//nothing
+			case metadata.SeriesDir:
+				//nothing
+			case metadata.MovieDir:
+				//nothing
+			default:
+				//nothing
+
+		}
+	} else {
+		root.Role = classifyFile(root)
+	}
+	
 	return nil
 }
 
-// returns classification of entry or Unknown otherwise
-func classifyEntryFile(entry *metadata.Entry) metadata.EntryRole {
+/*
+	classifier helper functions
+*/
+
+
+func classifySubtitleDir(entry *metadata.Entry) error {
+	for _, child := range entry.Children {
+		if isSubtitleFile(child) {
+			child.Role = metadata.SubtitleFile
+		} else {
+			entry.Role = metadata.Unknown
+			return fmt.Errorf("file %v is not a subtitle file, failed to classify all children of suspected subtitle dir", child.PathInfo.Source)
+		}
+	}
+	entry.Role = metadata.SubtitleDir
+
+	return nil
+}
+
+func classifyBonusDir(entry *metadata.Entry) error {
+
+	bonus := false
+	for _, child := range entry.Children {
+		if isBonusFile(child) {
+			bonus = true
+			child.Role = metadata.BonusFile
+		} else if isSubtitleFile(child) {
+			child.Role = metadata.SubtitleFile
+		} else {
+			return fmt.Errorf("file %v is not a bonus or subtitle file, failed to classify all children of suspected bonus dir", child.PathInfo.Source)
+		}
+	}
+
+	if !bonus {
+		return fmt.Errorf("no bonus file found, failed to classify all children of suspected bonus dir")
+	}
+
+	entry.Role = metadata.BonusDir	
+	return nil
+}
+
+func classifySeasonDir(entry *metadata.Entry) error {
+	return nil
+}
+
+func classifyFile(entry *metadata.Entry) metadata.EntryRole {
 
 	// 1. Completely distinct type
 	if isSubtitleFile(entry) {
@@ -35,8 +101,7 @@ func classifyEntryFile(entry *metadata.Entry) metadata.EntryRole {
 	return metadata.Unknown
 }
 
-// returns classification of entry or Unknown otherwise
-func classifyEntryDir(entry *metadata.Entry) metadata.EntryRole {
+func classifyDir(entry *metadata.Entry) metadata.EntryRole {
 	// 1. Completely distinct type
 	if isSubtitleDir(entry) {
 		return metadata.SubtitleDir
@@ -66,15 +131,11 @@ func classifyEntryDir(entry *metadata.Entry) metadata.EntryRole {
 	return metadata.Unknown
 }
 
-// Helper function, not completely accurate by itself and must be used in conjunction with other functions to accureately determine file type
-func isMovieFile(entry *metadata.Entry) bool {
-	return entry.PathInfo.Type == metadata.Video && entry.MediaInfo.Episode == nil && entry.MediaInfo.Season == nil && entry.MediaInfo.Bonus == ""
-}
 
-// Helper function, not completely accurate by itself and must be used in conjunction with other functions to accureately determine file type
-func isEpisodeFile(entry *metadata.Entry) bool {
-	return entry.PathInfo.Type == metadata.Video && (entry.MediaInfo.Episode != nil || entry.MediaInfo.Season != nil) && entry.MediaInfo.Bonus == ""
-}
+/*
+	file helpers
+*/
+
 
 // Helper function, not completely accurate by itself and must be used in conjunction with other functions to accureately determine file type
 func isSubtitleFile(entry *metadata.Entry) bool {
@@ -86,11 +147,21 @@ func isBonusFile(entry *metadata.Entry) bool {
 	return entry.PathInfo.Type == metadata.Video && entry.MediaInfo.Bonus != ""
 }
 
+// Helper function, not completely accurate by itself and must be used in conjunction with other functions to accureately determine file type
+func isEpisodeFile(entry *metadata.Entry) bool {
+	return entry.PathInfo.Type == metadata.Video && (entry.MediaInfo.Episode != nil || entry.MediaInfo.Season != nil) && entry.MediaInfo.Bonus == ""
+}
+
+// Helper function, not completely accurate by itself and must be used in conjunction with other functions to accureately determine file type
+func isMovieFile(entry *metadata.Entry) bool {
+	return entry.PathInfo.Type == metadata.Video && entry.MediaInfo.Episode == nil && entry.MediaInfo.Season == nil && entry.MediaInfo.Bonus == ""
+}
+
+
 /*
-Subtitle Directory
-└── Subtitle File(s)
+	dir helpers
 */
-// Returns true if atleast one subtitle file and all child entries are subtitle files
+
 func isSubtitleDir(entry *metadata.Entry) bool {
 	if !entry.PathInfo.IsDir || entry.Height() > 1 {
 		return false
@@ -108,12 +179,6 @@ func isSubtitleDir(entry *metadata.Entry) bool {
 	return subtitle
 }
 
-/*
-Bonus Directory
-├── Bonus File(s)
-└── Subtitle File(s) (optional)
-*/
-// Returns true if atleast one bonus file, and all child entries are bonus or subtitle files
 func isBonusDir(entry *metadata.Entry) bool {
 	if !entry.PathInfo.IsDir || entry.Height() > 1 {
 		return false
@@ -135,15 +200,48 @@ func isBonusDir(entry *metadata.Entry) bool {
 	return bonus
 }
 
-/*
-Movie Directory
-├── Movie File
-├── Subtitle File(s) (optional)
-├── Bonus File(s) (optional)
-├── Subtitle Directory (optional)
-└── Bonus Directory (optional)
-*/
-// Returns true if there is exactly one movie file, and all child entries are movie file, subtitle file, bonus file, subtitle directory or bonus directory 
+func isSeasonDir(entry *metadata.Entry) bool {
+	if !entry.PathInfo.IsDir || entry.Height() > 2 {
+		return false
+	}
+
+	episode := false
+	for _, child := range entry.Children {
+		if isSubtitleFile(child) || isSubtitleDir(child) {
+			continue
+		}
+
+		if isEpisodeFile(child) {
+			episode = true
+		} else {
+			return false	
+		}
+	}
+
+	return entry.MediaInfo.Season != nil || episode
+}
+
+func isSeriesDir(entry *metadata.Entry) bool {
+	if !entry.PathInfo.IsDir || entry.Height() > 3 {
+		return false
+	}
+	
+	season := false
+	for _, child := range entry.Children {
+		if isSubtitleDir(child) || isBonusDir(child) {
+			continue
+		}
+
+		if isSeasonDir(child) {
+			season = true
+		} else {
+			return false
+		}
+	}
+
+	return season
+}
+
 func isMovieDir(entry *metadata.Entry) bool {
 	if !entry.PathInfo.IsDir || entry.Height() > 2 {
 		return false
@@ -167,58 +265,4 @@ func isMovieDir(entry *metadata.Entry) bool {
 		}
 	}
 	return movie
-}
-
-/*
-Season Directory
-├── Episode File(s)
-├── Subtitle File(s) (optional)
-└── Subtitle Directory (optional)
-*/
-func isSeasonDir(entry *metadata.Entry) bool {
-	if !entry.PathInfo.IsDir || entry.Height() > 2 {
-		return false
-	}
-
-	episode := false
-	for _, child := range entry.Children {
-		if isSubtitleFile(child) || isSubtitleDir(child) {
-			continue
-		}
-
-		if isEpisodeFile(child) {
-			episode = true
-		} else {
-			return false	
-		}
-	}
-
-	return entry.MediaInfo.Season != nil || episode
-}
-
-/*
-Series Directory
-├── Season Directory(s)
-├── Bonus Directory (optional)
-└── Subtitle Directory (optional)
-*/
-func isSeriesDir(entry *metadata.Entry) bool {
-	if !entry.PathInfo.IsDir || entry.Height() > 3 {
-		return false
-	}
-	
-	season := false
-	for _, child := range entry.Children {
-		if isSubtitleDir(child) || isBonusDir(child) {
-			continue
-		}
-
-		if isSeasonDir(child) {
-			season = true
-		} else {
-			return false
-		}
-	}
-
-	return season
 }
