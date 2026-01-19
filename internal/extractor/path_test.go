@@ -83,7 +83,7 @@ func TestExtractType(t *testing.T) {
 				"VIDEO",
 				"MP45",
 			},
-			expectedType: metadata.ContentType(metadata.Unknown),
+			expectedType: metadata.ContentType(metadata.UnknownType),
 			expectedExt: "",
 		},
 	}

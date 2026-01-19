@@ -24,6 +24,8 @@ func ParseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
     }
 	if !info.IsDir() {
 		return node, nil
+	} else if node.PathInfo.Type == metadata.UnknownType && !node.PathInfo.IsDir {
+		return nil, nil
 	}
 
 	entries, err := os.ReadDir(path)
@@ -37,8 +39,9 @@ func ParseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
 		child, err := ParseTree(childPath, node, depth + 1, logger)
 		if err != nil {
 			return nil, err
+		} else if child != nil {
+			children = append(children, child)
 		}
-		children = append(children, child)
 	}
 	node.Children = children
     

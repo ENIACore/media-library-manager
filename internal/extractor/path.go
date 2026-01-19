@@ -20,7 +20,7 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	pathInfo := metadata.PathInfo{}
 	pathInfo.Source = path
 	pathInfo.Type, pathInfo.Ext = extractType(sanitizedName)
-	if pathInfo.Ext == "" && pathInfo.Type == metadata.Unknown {
+	if pathInfo.Ext == "" && pathInfo.Type == metadata.UnknownType {
 		pathInfo.IsDir = true
 	}
 
@@ -45,7 +45,7 @@ func extractType(segments []string) (metadata.ContentType, string) {
 		}
 		*/
 	}
-	return metadata.Unknown, ""
+	return metadata.UnknownType, ""
 }
 
 func parseVideoExt(segments []string) string {

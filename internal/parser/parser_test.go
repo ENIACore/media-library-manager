@@ -101,5 +101,17 @@ func createDummyLibrary(t *testing.T) string {
 		t.Fatalf("Unable to create dummy file %v, error %v", dummyFile, err)
 	}
 
+	invalidFile := filepath.Join(dummyDir, "invalid.jpg")
+	_, err = os.Create(invalidFile)
+	if err != nil {
+		t.Fatalf("Unable to create invalid file %v, error %v", invalidFile, err)
+	}
+	invalidFile = filepath.Join(dummyDir, "invalid.txt")
+	_, err = os.Create(invalidFile)
+	if err != nil {
+		t.Fatalf("Unable to create invalid file %v, error %v", invalidFile, err)
+	}
+
+
 	return dir
 }
