@@ -1,16 +1,20 @@
 package main
 
 import (
+	/*
 	"os"
 	"path/filepath"
-	"log/slog"
+
 
 	"github.com/ENIACore/media_library_manager/internal/config"
 	"github.com/ENIACore/media_library_manager/internal/logger"
 	"github.com/ENIACore/media_library_manager/internal/parser"
+	*/
+
+	/*
+	"log/slog"
 	"github.com/ENIACore/media_library_manager/internal/processor"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
-	/*
 
 
 		"github.com/ENIACore/media_library_manager/internal/classifier"
@@ -23,6 +27,7 @@ var dryRun *bool
 var mediaPath *string
 
 func main() {
+	/*
 	cfg := config.Load()
 	logger := logger.NewLogger(cfg)
 
@@ -33,14 +38,15 @@ func main() {
 
 	errorPath := filepath.Join(cfg.ManagerPath, "error")
 
-	//numSuccessful := 0
-	//numError := 0
+	numSuccessful := 0
+	numError := 0
 
 	for _, entry := range entries {
 		entryPath := filepath.Join(cfg.TorrentPath, entry.Name())
 
 		root, err := parser.Parse(entryPath, logger)
 	}
+	*/
 	/*
 
 

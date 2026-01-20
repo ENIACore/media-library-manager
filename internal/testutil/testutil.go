@@ -1,5 +1,13 @@
 package testutil
 
+import (
+	"log/slog"
+	"testing"
+
+	"github.com/ENIACore/media_library_manager/internal/config"
+	"github.com/ENIACore/media_library_manager/internal/metadata"
+)
+
 var logger = slog.Default()
 
 func createTestDir(t *testing.T) string {
