@@ -52,17 +52,32 @@ func ParseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
 }
 
 func PruneTree(entry *metadata.Entry) *metadata.Entry {
-	if entry.PathInfo.IsDir && entry.Children == nil {
+	// If this is an empty directory, prune it
+	if entry.PathInfo.IsDir && len(entry.Children) == 0 {
 		return nil
 	}
 
+	// If this is a file, keep it
+	if !entry.PathInfo.IsDir {
+		return entry
+	}
+
+	// Recursively prune all children
 	children := make([]*metadata.Entry, 0, len(entry.Children))
 	for _, child := range entry.Children {
-		child = PruneTree(child)		
-		if child != nil {
-			children = append(children, child)
+		prunedChild := PruneTree(child)
+		if prunedChild != nil {
+			children = append(children, prunedChild)
 		}
 	}
+
+	// Update children with only valid ones
 	entry.Children = children
+
+	// If after pruning all children this directory is now empty, prune it too
+	if len(entry.Children) == 0 {
+		return nil
+	}
+
 	return entry
 }
