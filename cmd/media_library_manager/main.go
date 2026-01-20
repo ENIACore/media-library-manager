@@ -28,18 +28,30 @@ func main() {
 		path := filepath.Join(cfg.MediaPath, entry.Name())
 
 		root, err := parser.ParseTree(path, nil, 0, logger)
+		if err != nil && cfg.DryRun {
+			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
+			continue
+		}
 		if err != nil {
 			processor.Error(root, errorPath, logger)	
 			continue
 		}
 
 		err = classifier.ClassifyEntries(root, logger)
+		if err != nil && cfg.DryRun {
+			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
+			continue
+		}
 		if err != nil {
 			processor.Error(root, errorPath, logger)	
 			continue
 		}
 
 		err = processor.ResolveEntries(root, logger)
+		if err != nil && cfg.DryRun {
+			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
+			continue
+		}
 		if err != nil {
 			processor.Error(root, errorPath, logger)	
 			continue
