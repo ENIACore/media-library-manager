@@ -28,8 +28,12 @@ func main() {
 	for _, entry := range entries {
 		path := filepath.Join(cfg.MediaPath, entry.Name())
 
-		separator := "\n" + strings.Repeat("=", 80) + "\n"
+		separator := strings.Repeat("=", 80)
+		logger.Info("")
+		logger.Info("")
 		logger.Info(separator)
+		logger.Info("")
+		logger.Info("")
 		logger.Info("processing root entry", "entry", path)
 
 		root, err := parser.ParseTree(path, nil, 0, logger)
@@ -73,12 +77,20 @@ func main() {
 
 		if cfg.DryRun {
 			logger.Info("successfully processed media, no action due to dry run", "source", root.PathInfo.Source, "dest", filepath.Join(finalLibraryPath, root.PathInfo.Dest), "classification", root.Role) 
+			logger.Info("")
+			logger.Info("")
 			logger.Info(separator)
+			logger.Info("")
+			logger.Info("")
 			continue
 		}
 
 		logger.Info("successfully processed media", "source", root.PathInfo.Source, "dest", filepath.Join(finalLibraryPath, root.PathInfo.Dest), "classification", root.Role) 
+		logger.Info("")
+		logger.Info("")
 		logger.Info(separator)
+		logger.Info("")
+		logger.Info("")
 		err = processor.Transfer(root, cfg.LibraryPath, logger)
 		if err != nil {
 			processor.Error(root, errorPath, logger)	
