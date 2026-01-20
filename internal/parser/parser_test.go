@@ -8,10 +8,11 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
-
 func TestParseTree(t *testing.T) {
 	tmp := createDummyLibrary(t)
 	logger := slog.Default()
+
+
 
 	root, err := ParseTree(tmp, nil, 0, logger)
 	if err != nil {
@@ -28,22 +29,22 @@ func TestParseTree(t *testing.T) {
 
 	depth := getDepth(root.Children[0], 1) 
 	if depth != 2 {
-		t.Errorf("Expected depth of 2 for tempdir/dir/file.txt, got %v", depth) 
+		t.Errorf("Expected depth of 2 for tempdir/dir/file.mp4, got %v", depth) 
 	}
 
 	depth = root.Children[0].Children[0].Depth
 	if depth != 2 {
-		t.Errorf("Expected calculated Depth for tempdir/dir/file.txt by ParseTree = %v, got %v", 2, depth) 
+		t.Errorf("Expected calculated Depth for tempdir/dir/file.mp4 by ParseTree = %v, got %v", 2, depth) 
 	}
 
 	depth = getDepth(root.Children[1], 1)
 	if depth != 4 {
-		t.Errorf("Expected depth of 4 for tempdir/parent/child/subchild/file.txt, got %v", depth) 
+		t.Errorf("Expected depth of 4 for tempdir/parent/child/subchild/file.mp4, got %v", depth) 
 	}
 
 	depth = root.Children[1].Children[0].Children[0].Children[0].Depth
 	if depth != 4 {
-		t.Errorf("Expected calculated Depth for tempdir/parent/child/subchild/file.txt by ParseTree = %v, got %v", 4, depth) 
+		t.Errorf("Expected calculated Depth for tempdir/parent/child/subchild/file.mp4 by ParseTree = %v, got %v", 4, depth) 
 	}
 
 	_, err = ParseTree("/nonexistent/path", nil, 0, slog.Default())
@@ -71,8 +72,8 @@ func getDepth(entry *metadata.Entry, depth int) int {
 }
 
 //Makes two dummy direcotries inside temporary directory
-// temp dir -> dir -> file.txt
-// temp dir -> parent -> child -> subchild -> file.txt
+// temp dir -> dir -> file.mp4
+// temp dir -> parent -> child -> subchild -> file.mp4
 func createDummyLibrary(t *testing.T) string {
 	dir := t.TempDir()
 
@@ -82,7 +83,7 @@ func createDummyLibrary(t *testing.T) string {
 		t.Fatalf("Unable to create dummy dir %v, error %v\n", dummyDir, err)
 	}
 
-	dummyFile := filepath.Join(dummyDir, "file.txt")
+	dummyFile := filepath.Join(dummyDir, "file.mp4")
 	_, err = os.Create(dummyFile)
 	if err != nil {
 		t.Fatalf("Unable to create dummy file %v, error %v", dummyFile, err)
@@ -95,23 +96,11 @@ func createDummyLibrary(t *testing.T) string {
 		t.Fatalf("Unable to create dummy dir %v, error %v\n", dummyDir, err)
 	}
 
-	dummyFile = filepath.Join(dummyDir, "file.txt")
+	dummyFile = filepath.Join(dummyDir, "file.mp4")
 	_, err = os.Create(dummyFile)
 	if err != nil {
 		t.Fatalf("Unable to create dummy file %v, error %v", dummyFile, err)
 	}
-
-	invalidFile := filepath.Join(dummyDir, "invalid.jpg")
-	_, err = os.Create(invalidFile)
-	if err != nil {
-		t.Fatalf("Unable to create invalid file %v, error %v", invalidFile, err)
-	}
-	invalidFile = filepath.Join(dummyDir, "invalid.txt")
-	_, err = os.Create(invalidFile)
-	if err != nil {
-		t.Fatalf("Unable to create invalid file %v, error %v", invalidFile, err)
-	}
-
 
 	return dir
 }

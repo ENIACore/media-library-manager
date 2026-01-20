@@ -22,11 +22,14 @@ func ParseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
 		MediaInfo: extractor.ExtractMedia(path, logger),
 		PathInfo: extractor.ExtractPath(path, logger),
     }
+
+	// If node is invalid file (txt, jpg, etc), skip it
+	if node.PathInfo.Type == metadata.UnknownType && !node.PathInfo.IsDir {
+		return nil, nil
+	} 
 	if !info.IsDir() {
 		return node, nil
-	} else if node.PathInfo.Type == metadata.UnknownType && !node.PathInfo.IsDir {
-		return nil, nil
-	}
+	} 
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
