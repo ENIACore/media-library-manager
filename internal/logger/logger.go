@@ -98,5 +98,5 @@ func NewLogger(cfg *config.Config) *slog.Logger {
 		},
 	}
 
-	return slog.New(handler).With("dry-run", cfg.DryRun)
+	return slog.New(handler)
 }

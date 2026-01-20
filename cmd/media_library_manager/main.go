@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"flag"
 	"github.com/ENIACore/media_library_manager/internal/config"
 	/*
 	"path/filepath"
