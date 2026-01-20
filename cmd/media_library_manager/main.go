@@ -2,19 +2,22 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"log/slog"
+
 	"github.com/ENIACore/media_library_manager/internal/config"
 	"github.com/ENIACore/media_library_manager/internal/logger"
-	"path/filepath"
+	"github.com/ENIACore/media_library_manager/internal/parser"
+	"github.com/ENIACore/media_library_manager/internal/processor"
+	"github.com/ENIACore/media_library_manager/internal/metadata"
 	/*
 
 
-	"github.com/ENIACore/media_library_manager/internal/classifier"
-	"github.com/ENIACore/media_library_manager/internal/metadata"
-	"github.com/ENIACore/media_library_manager/internal/parser"
-	"github.com/ENIACore/media_library_manager/internal/processor"
-	"strings"
-	*/
-)
+		"github.com/ENIACore/media_library_manager/internal/classifier"
+
+
+		"strings"
+	*/)
 
 var dryRun *bool
 var mediaPath *string
@@ -35,7 +38,8 @@ func main() {
 
 	for _, entry := range entries {
 		entryPath := filepath.Join(cfg.TorrentPath, entry.Name())
-		
+
+		root, err := parser.Parse(entryPath, logger)
 	}
 	/*
 
