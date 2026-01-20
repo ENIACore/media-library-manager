@@ -9,7 +9,16 @@ import (
 	"log/slog"
 )
 
-func ParseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logger) (*metadata.Entry, error) {
+func Parse(path string, logger *slog.Logger) (*metadata.Entry, error) {
+	root, err := parseTree(path, nil, 0, logger)
+	if err != nil {
+		return nil, err
+	}
+	root = pruneTree(root)
+	return root, nil
+}
+
+func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logger) (*metadata.Entry, error) {
 
     info, err := os.Stat(path)
     if err != nil {
@@ -39,7 +48,7 @@ func ParseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
 	children := make([]*metadata.Entry, 0, len(entries))
 	for _, entry := range entries {
 		childPath := filepath.Join(path, entry.Name())
-		child, err := ParseTree(childPath, node, depth + 1, logger)
+		child, err := parseTree(childPath, node, depth + 1, logger)
 		if err != nil {
 			return nil, err
 		} else if child != nil {
@@ -51,33 +60,26 @@ func ParseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
     return node, nil
 }
 
-func PruneTree(entry *metadata.Entry) *metadata.Entry {
-	// If this is an empty directory, prune it
+func pruneTree(entry *metadata.Entry) *metadata.Entry {
 	if entry.PathInfo.IsDir && len(entry.Children) == 0 {
 		return nil
 	}
 
-	// If this is a file, keep it
 	if !entry.PathInfo.IsDir {
 		return entry
 	}
 
-	// Recursively prune all children
 	children := make([]*metadata.Entry, 0, len(entry.Children))
 	for _, child := range entry.Children {
-		prunedChild := PruneTree(child)
-		if prunedChild != nil {
-			children = append(children, prunedChild)
+		child = pruneTree(child)
+		if child != nil {
+			children = append(children, child)
 		}
 	}
 
-	// Update children with only valid ones
 	entry.Children = children
-
-	// If after pruning all children this directory is now empty, prune it too
 	if len(entry.Children) == 0 {
 		return nil
 	}
-
 	return entry
 }

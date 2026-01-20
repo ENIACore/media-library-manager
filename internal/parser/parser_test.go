@@ -14,7 +14,7 @@ func TestParseTree(t *testing.T) {
 
 
 
-	root, err := ParseTree(tmp, nil, 0, logger)
+	root, err := parseTree(tmp, nil, 0, logger)
 	if err != nil {
 		t.Errorf("ParseTree returns error %v", err)
 	}
@@ -47,7 +47,7 @@ func TestParseTree(t *testing.T) {
 		t.Errorf("Expected calculated Depth for tempdir/parent/child/subchild/file.mp4 by ParseTree = %v, got %v", 4, depth) 
 	}
 
-	_, err = ParseTree("/nonexistent/path", nil, 0, slog.Default())
+	_, err = parseTree("/nonexistent/path", nil, 0, slog.Default())
     if err == nil {
         t.Error("expected error for nonexistent path")
     }

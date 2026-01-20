@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
 	"github.com/ENIACore/media_library_manager/internal/config"
-	/*
+	"github.com/ENIACore/media_library_manager/internal/logger"
 	"path/filepath"
+	/*
+
 
 	"github.com/ENIACore/media_library_manager/internal/classifier"
-
-	"github.com/ENIACore/media_library_manager/internal/logger"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/parser"
 	"github.com/ENIACore/media_library_manager/internal/processor"
@@ -20,20 +21,25 @@ var mediaPath *string
 
 func main() {
 	cfg := config.Load()
-	/*
-	cfg := config.Load()
 	logger := logger.NewLogger(cfg)
 
-	entries, err := os.ReadDir(cfg.MediaPath)	
+	entries, err := os.ReadDir(cfg.TorrentPath)
 	if err != nil {
-		logger.Error("unable to read from media path", "error", err)
-		panic("unable to read from media path")
+		panic("unable to read from torrent path")
 	}
 
-	errorPath := filepath.Join(cfg.ManagerPath, "error")  
+	errorPath := filepath.Join(cfg.ManagerPath, "error")
 
-	numSuccessful := 0
-	numError := 0
+	//numSuccessful := 0
+	//numError := 0
+
+	for _, entry := range entries {
+		entryPath := filepath.Join(cfg.TorrentPath, entry.Name())
+		
+	}
+	/*
+
+
 	for _, entry := range entries {
 		path := filepath.Join(cfg.MediaPath, entry.Name())
 
