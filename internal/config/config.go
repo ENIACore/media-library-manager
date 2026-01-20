@@ -20,7 +20,7 @@ var Load = sync.OnceValue(New)
 func New() *Config {
     return &Config {
         MediaPath:		getEnv("TORRENT_DOWNLOAD_PATH", "/mnt/RAID/qbit-data/downloads"),
-		ManagerPath:	getEnv("TORRENT_MANAGER_PATH", "/mnt/RAID/torrent-manager"),
+		ManagerPath:	getEnv("TORRENT_MANAGER_PATH", "/mnt/RAID/media-manager"),
         LibraryPath:	getEnv("MEDIA_SERVER_PATH", "/mnt/RAID/jelly/media"),
         DryRun:			getEnvBool("TORRENT_MANAGER_DRY_RUN", true),
 	}

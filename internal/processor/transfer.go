@@ -10,22 +10,26 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
-func Transfer(entry *metadata.Entry, mediaPath string, logger *slog.Logger) error {
+func Transfer(entry *metadata.Entry, libraryPath string, logger *slog.Logger) error {
 	log := logger.With("func", "Move")
-	log.Info("processing entry", "source", entry.PathInfo.Source, "mediaPath", mediaPath)
+	log.Info("processing entry", "source", entry.PathInfo.Source, "mediaPath", libraryPath)
 
-	if entry.PathInfo.Dest == "" {
+	if entry == nil || entry.PathInfo.Dest == "" {
 		log.Error("empty destination", "path", entry.PathInfo.Source)
 		return fmt.Errorf("entry %v has no destination set", entry.PathInfo.Source)
 	}
 	
-	moveEntries(entry, mediaPath, logger)	
+	moveEntries(entry, libraryPath, logger)	
 	log.Info("successfully processed entry", "source", entry.PathInfo.Source, "dest", entry.PathInfo.Dest)
 	return nil
 }
 
 func Error(entry *metadata.Entry, errorPath string, logger *slog.Logger) {
 	log := logger.With("func", "HandleError")
+
+	if entry == nil {
+		log.Info("Entry is nil, unable to move entry")
+	}
 
 	log.Info("moving entries to error path", "entry", entry.PathInfo.Source, "error-path", errorPath)
 	moveEntries(entry, errorPath, logger)

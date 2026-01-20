@@ -16,7 +16,7 @@ func TestNew(t *testing.T) {
 			envVariables: map[string]string{},
 			expected: &Config{
 				MediaPath:   "/mnt/RAID/qbit-data/downloads",
-				ManagerPath: "/mnt/RAID/torrent-manager",
+				ManagerPath: "/mnt/RAID/media-manager",
 				LibraryPath: "/mnt/RAID/jelly/media",
 				DryRun:      true,
 			},
