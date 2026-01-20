@@ -5,6 +5,5 @@ import (
 )
 
 func main() {
-	//logger := logger.GetLogger()
-	//logger.Info("test here")
+	//logger := logger.NewLogger()
 }

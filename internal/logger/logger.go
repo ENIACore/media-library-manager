@@ -92,9 +92,9 @@ func NewLogger(cfg *config.Config) *slog.Logger {
 
 	handler := &multiHandler{
 		handlers: []slog.Handler{
-			slog.NewTextHandler(debugFile, &slog.HandlerOptions{Level: slog.LevelDebug}),
-			slog.NewTextHandler(infoFile, &slog.HandlerOptions{Level: slog.LevelInfo}),
-			slog.NewTextHandler(warnFile, &slog.HandlerOptions{Level: slog.LevelWarn}),
+			slog.NewJSONHandler(debugFile, &slog.HandlerOptions{Level: slog.LevelDebug}),
+			slog.NewJSONHandler(infoFile, &slog.HandlerOptions{Level: slog.LevelInfo}),
+			slog.NewJSONHandler(warnFile, &slog.HandlerOptions{Level: slog.LevelWarn}),
 		},
 	}
 
