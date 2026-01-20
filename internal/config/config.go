@@ -1,29 +1,42 @@
 package config
 
 import (
+    "flag"
     "os"
     "strconv"
-	"sync"
+    "sync"
 )
 
 type Config struct {
-    MediaPath	string // Initial location of media files & dirs
-    ManagerPath	string // Location of manager dir
-    LibraryPath	string // Location to place processed media files & dirs in
-    DryRun		bool
+    TorrentPath string
+    MoviePath   string
+    ShowPath    string
+    ManagerPath string
+    DryRun      bool
 }
 
-// Load reads configuration from environment variables with defaults
 var Load = sync.OnceValue(New)
 
-
+// Sets global configuration variables using order of precedence args > env > default
 func New() *Config {
-    return &Config {
-        MediaPath:		getEnv("TORRENT_DOWNLOAD_PATH", "/mnt/RAID/qbit-data/downloads"),
-		ManagerPath:	getEnv("TORRENT_MANAGER_PATH", "/mnt/RAID/media-manager"),
-        LibraryPath:	getEnv("MEDIA_SERVER_PATH", "/mnt/RAID/jelly/media"),
-        DryRun:			getEnvBool("TORRENT_MANAGER_DRY_RUN", true),
-	}
+    defaults := &Config{
+        TorrentPath: getEnv("ENIACORE_TORRENT_PATH", "/opt/qbit/downloads"),
+        MoviePath:   getEnv("ENIACORE_MOVIE_PATH", "/opt/jellyfin/media/movies"),
+        ShowPath:    getEnv("ENIACORE_SHOW_PATH", "/opt/jellyfin/media/shows"),
+        ManagerPath: getEnv("ENIACORE_MANAGER_PATH", "/opt/media_manager"),
+        DryRun:      getEnvBool("ENIACORE_DRY_RUN", false),
+    }
+
+    // Parse flags with env defaults
+    cfg := &Config{}
+    flag.StringVar(&cfg.TorrentPath, "torrent-path", defaults.TorrentPath, "Path to downloaded torrents")
+    flag.StringVar(&cfg.MoviePath, "movie-path", defaults.MoviePath, "Path to movie library")
+    flag.StringVar(&cfg.ShowPath, "show-path", defaults.ShowPath, "Path to show library")
+    flag.StringVar(&cfg.ManagerPath, "manager-path", defaults.ManagerPath, "Path to program directory")
+    flag.BoolVar(&cfg.DryRun, "dry-run", defaults.DryRun, "Run without moving files")
+    flag.Parse()
+
+    return cfg
 }
 
 func getEnv(key, defaultVal string) string {

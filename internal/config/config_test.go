@@ -1,66 +1,113 @@
 package config
 
 import (
+	"flag"
 	"os"
 	"testing"
 )
 
 func TestNew(t *testing.T) {
 	tests := []struct {
-		name     string
-		envVariables  map[string]string
-		expected *Config
+		name         string
+		envVariables map[string]string
+		args         []string
+		expected     *Config
 	}{
 		{
-			name:    "no environment variables set",
+			name:         "no environment variables or flags set",
 			envVariables: map[string]string{},
+			args:         []string{},
 			expected: &Config{
-				MediaPath:   "/mnt/RAID/qbit-data/downloads",
-				ManagerPath: "/mnt/RAID/media-manager",
-				LibraryPath: "/mnt/RAID/jelly/media",
-				DryRun:      true,
+				TorrentPath: "/opt/qbit/downloads",
+				MoviePath:   "/opt/jellyfin/media/movies",
+				ShowPath:    "/opt/jellyfin/media/shows",
+				ManagerPath: "/opt/media_manager",
+				DryRun:      false,
 			},
 		},
 		{
 			name: "all environment variables set",
 			envVariables: map[string]string{
-				"TORRENT_DOWNLOAD_PATH":  "/custom/downloads",
-				"TORRENT_MANAGER_PATH":   "/custom/manager",
-				"MEDIA_SERVER_PATH":      "/custom/media",
-				"TORRENT_MANAGER_DRY_RUN": "false",
+				"ENIACORE_TORRENT_PATH": "/custom/downloads",
+				"ENIACORE_MOVIE_PATH":   "/custom/movies",
+				"ENIACORE_SHOW_PATH":    "/custom/shows",
+				"ENIACORE_MANAGER_PATH": "/custom/manager",
+				"ENIACORE_DRY_RUN":      "true",
+			},
+			args: []string{},
+			expected: &Config{
+				TorrentPath: "/custom/downloads",
+				MoviePath:   "/custom/movies",
+				ShowPath:    "/custom/shows",
+				ManagerPath: "/custom/manager",
+				DryRun:      true,
+			},
+		},
+		{
+			name: "flags override environment variables",
+			envVariables: map[string]string{
+				"ENIACORE_TORRENT_PATH": "/env/downloads",
+				"ENIACORE_DRY_RUN":      "false",
+			},
+			args: []string{
+				"-torrent-path", "/flag/downloads",
+				"-dry-run",
 			},
 			expected: &Config{
-				MediaPath:   "/custom/downloads",
-				ManagerPath: "/custom/manager",
-				LibraryPath: "/custom/media",
-				DryRun:      false,
+				TorrentPath: "/flag/downloads",
+				MoviePath:   "/opt/jellyfin/media/movies",
+				ShowPath:    "/opt/jellyfin/media/shows",
+				ManagerPath: "/opt/media_manager",
+				DryRun:      true,
+			},
+		},
+		{
+			name:         "partial environment variables set",
+			envVariables: map[string]string{
+				"ENIACORE_TORRENT_PATH": "/custom/downloads",
+				"ENIACORE_DRY_RUN":      "true",
+			},
+			args: []string{},
+			expected: &Config{
+				TorrentPath: "/custom/downloads",
+				MoviePath:   "/opt/jellyfin/media/movies",
+				ShowPath:    "/opt/jellyfin/media/shows",
+				ManagerPath: "/opt/media_manager",
+				DryRun:      true,
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// Clear environment before each test
+			// Clear environment and reset flags before each test
 			clearEnv()
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
 			// Set test environment variables
 			for key, value := range test.envVariables {
 				os.Setenv(key, value)
 			}
-
-			// Clean up after test
 			defer clearEnv()
+
+			// Set os.Args for flag parsing
+			oldArgs := os.Args
+			os.Args = append([]string{"cmd"}, test.args...)
+			defer func() { os.Args = oldArgs }()
 
 			cfg := New()
 
-			if cfg.MediaPath != test.expected.MediaPath {
-				t.Errorf("MediaPath = %v, want %v", cfg.MediaPath, test.expected.MediaPath)
+			if cfg.TorrentPath != test.expected.TorrentPath {
+				t.Errorf("TorrentPath = %v, want %v", cfg.TorrentPath, test.expected.TorrentPath)
+			}
+			if cfg.MoviePath != test.expected.MoviePath {
+				t.Errorf("MoviePath = %v, want %v", cfg.MoviePath, test.expected.MoviePath)
+			}
+			if cfg.ShowPath != test.expected.ShowPath {
+				t.Errorf("ShowPath = %v, want %v", cfg.ShowPath, test.expected.ShowPath)
 			}
 			if cfg.ManagerPath != test.expected.ManagerPath {
 				t.Errorf("ManagerPath = %v, want %v", cfg.ManagerPath, test.expected.ManagerPath)
-			}
-			if cfg.LibraryPath != test.expected.LibraryPath {
-				t.Errorf("LibraryPath = %v, want %v", cfg.LibraryPath, test.expected.LibraryPath)
 			}
 			if cfg.DryRun != test.expected.DryRun {
 				t.Errorf("DryRun = %v, want %v", cfg.DryRun, test.expected.DryRun)
@@ -71,44 +118,44 @@ func TestNew(t *testing.T) {
 
 func TestGetEnv(t *testing.T) {
 	tests := []struct {
-		name			string
-		key 			string
-		defaultValue 	string
-		envValue   		string
-		expectedValue	string
-		setEnv     		bool
+		name          string
+		key           string
+		defaultValue  string
+		envValue      string
+		expectedValue string
+		setEnv        bool
 	}{
 		{
-			name:			"env variable set to custom",
-			key:			"TEST_KEY",
-			defaultValue:	"default",
-			envValue:		"custom",
-			expectedValue:	"custom",
-			setEnv:			true,
+			name:          "env variable set to custom",
+			key:           "TEST_KEY",
+			defaultValue:  "default",
+			envValue:      "custom",
+			expectedValue: "custom",
+			setEnv:        true,
 		},
 		{
-			name:			"env variable not set and default value is default",
-			key:			"TEST_KEY",
-			defaultValue:	"default",
-			envValue:		"not set",
-			expectedValue:	"default",
-			setEnv:			false,
+			name:          "env variable not set uses default",
+			key:           "TEST_KEY",
+			defaultValue:  "default",
+			envValue:      "",
+			expectedValue: "default",
+			setEnv:        false,
 		},
 		{
-			name:			"env variable set to empty string",
-			key:			"TEST_KEY",
-			defaultValue:	"default",
-			envValue:		"",
-			expectedValue:	"default",
-			setEnv:			true,
+			name:          "env variable set to empty string uses default",
+			key:           "TEST_KEY",
+			defaultValue:  "default",
+			envValue:      "",
+			expectedValue: "default",
+			setEnv:        true,
 		},
 		{
-			name:			"env variable not set and default value is empty string",
-			key:			"TEST_KEY",
-			defaultValue:	"",
-			envValue:		"not set",
-			expectedValue:	"",
-			setEnv:			false,
+			name:          "env variable not set with empty default",
+			key:           "TEST_KEY",
+			defaultValue:  "",
+			envValue:      "",
+			expectedValue: "",
+			setEnv:        false,
 		},
 	}
 
@@ -119,6 +166,7 @@ func TestGetEnv(t *testing.T) {
 			if test.setEnv {
 				os.Setenv(test.key, test.envValue)
 			}
+			defer os.Unsetenv(test.key)
 
 			result := getEnv(test.key, test.defaultValue)
 
@@ -131,44 +179,68 @@ func TestGetEnv(t *testing.T) {
 
 func TestGetEnvBool(t *testing.T) {
 	tests := []struct {
-		name			string
-		key				string
-		defaultValue	bool
-		envValue   		string
-		expectedValue   bool
-		setEnv			bool
+		name          string
+		key           string
+		defaultValue  bool
+		envValue      string
+		expectedValue bool
+		setEnv        bool
 	}{
 		{
-			name:			"env variable set to true",
-			key: 			"TEST_BOOL",
-			defaultValue:	false,
-			envValue:		"true",
-			expectedValue:	true,
-			setEnv:			true,
+			name:          "env variable set to true",
+			key:           "TEST_BOOL",
+			defaultValue:  false,
+			envValue:      "true",
+			expectedValue: true,
+			setEnv:        true,
 		},
 		{
-			name:			"env variable set to false",
-			key: 			"TEST_BOOL",
-			defaultValue:	true,
-			envValue:		"false",
-			expectedValue:	false,
-			setEnv:			true,
+			name:          "env variable set to false",
+			key:           "TEST_BOOL",
+			defaultValue:  true,
+			envValue:      "false",
+			expectedValue: false,
+			setEnv:        true,
 		},
 		{
-			name:			"env variable not set and default value true",
-			key: 			"TEST_BOOL",
-			defaultValue:	true,
-			envValue:		"false",
-			expectedValue:	true,
-			setEnv:			false,
+			name:          "env variable not set uses default true",
+			key:           "TEST_BOOL",
+			defaultValue:  true,
+			envValue:      "",
+			expectedValue: true,
+			setEnv:        false,
 		},
 		{
-			name:			"env variable not set and default value false",
-			key: 			"TEST_BOOL",
-			defaultValue:	false,
-			envValue:		"true",
-			expectedValue:	false,
-			setEnv:			false,
+			name:          "env variable not set uses default false",
+			key:           "TEST_BOOL",
+			defaultValue:  false,
+			envValue:      "",
+			expectedValue: false,
+			setEnv:        false,
+		},
+		{
+			name:          "env variable set to invalid value uses default",
+			key:           "TEST_BOOL",
+			defaultValue:  false,
+			envValue:      "invalid",
+			expectedValue: false,
+			setEnv:        true,
+		},
+		{
+			name:          "env variable set to 1 (true)",
+			key:           "TEST_BOOL",
+			defaultValue:  false,
+			envValue:      "1",
+			expectedValue: true,
+			setEnv:        true,
+		},
+		{
+			name:          "env variable set to 0 (false)",
+			key:           "TEST_BOOL",
+			defaultValue:  true,
+			envValue:      "0",
+			expectedValue: false,
+			setEnv:        true,
 		},
 	}
 
@@ -179,6 +251,7 @@ func TestGetEnvBool(t *testing.T) {
 			if test.setEnv {
 				os.Setenv(test.key, test.envValue)
 			}
+			defer os.Unsetenv(test.key)
 
 			result := getEnvBool(test.key, test.defaultValue)
 			if result != test.expectedValue {
@@ -189,8 +262,9 @@ func TestGetEnvBool(t *testing.T) {
 }
 
 func clearEnv() {
-	os.Unsetenv("TORRENT_DOWNLOAD_PATH")
-	os.Unsetenv("TORRENT_MANAGER_PATH")
-	os.Unsetenv("MEDIA_SERVER_PATH")
-	os.Unsetenv("TORRENT_MANAGER_DRY_RUN")
+	os.Unsetenv("ENIACORE_TORRENT_PATH")
+	os.Unsetenv("ENIACORE_MOVIE_PATH")
+	os.Unsetenv("ENIACORE_SHOW_PATH")
+	os.Unsetenv("ENIACORE_MANAGER_PATH")
+	os.Unsetenv("ENIACORE_DRY_RUN")
 }

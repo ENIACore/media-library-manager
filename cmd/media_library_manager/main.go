@@ -1,19 +1,28 @@
 package main
 
 import (
-	"os"
+	"fmt"
+	"flag"
+	"github.com/ENIACore/media_library_manager/internal/config"
+	/*
 	"path/filepath"
 
 	"github.com/ENIACore/media_library_manager/internal/classifier"
-	"github.com/ENIACore/media_library_manager/internal/config"
+
 	"github.com/ENIACore/media_library_manager/internal/logger"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/parser"
 	"github.com/ENIACore/media_library_manager/internal/processor"
 	"strings"
+	*/
 )
 
+var dryRun *bool
+var mediaPath *string
+
 func main() {
+	cfg := config.Load()
+	/*
 	cfg := config.Load()
 	logger := logger.NewLogger(cfg)
 
@@ -108,5 +117,6 @@ func main() {
 	
 
 	logger.Info("!!total counts!!", "total-successful", numSuccessful, "total-error", numError) 
+	*/
 
 }
