@@ -91,14 +91,21 @@ func main() {
 		logger.Info("")
 		logger.Info(separator)
 		logger.Info("")
-		err = processor.Transfer(root, cfg.LibraryPath, logger)
+		err = processor.Transfer(root, finalLibraryPath, logger)
 		if err != nil {
 			numError++
 			processor.Error(root, errorPath, logger)	
 			continue
 		}
+		if err = os.RemoveAll(path); err != nil {
+			logger.Error("failed to remove empty original directory", "path", path, "err", err)
+		}
+
 		numSuccessful++
 	}
 
+	
+
 	logger.Info("!!total counts!!", "total-successful", numSuccessful, "total-error", numError) 
+
 }
