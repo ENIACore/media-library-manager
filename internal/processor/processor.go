@@ -119,7 +119,7 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, logger *slog.Logge
 	if entry.MediaInfo.Season != nil {
 		seasonNum = *entry.MediaInfo.Season
 	}
-	seasonPath := fmt.Sprintf("Season %02d", seasonNum)
+	seasonPath := fmt.Sprintf("S%02d", seasonNum)
 
 	// Assign both series title and base path (if base path is empty)
 	title := buildTitle(entry.MediaInfo.Title)
