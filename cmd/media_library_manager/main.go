@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/ENIACore/media_library_manager/internal/processor"
-	"github.com/ENIACore/media_library_manager/internal/classifier"
-	"github.com/ENIACore/media_library_manager/internal/logger"
-	"github.com/ENIACore/media_library_manager/internal/config"
-	"github.com/ENIACore/media_library_manager/internal/parser"
 	"os"
 	"path/filepath"
+
+	"github.com/ENIACore/media_library_manager/internal/classifier"
+	"github.com/ENIACore/media_library_manager/internal/config"
+	"github.com/ENIACore/media_library_manager/internal/logger"
+	"github.com/ENIACore/media_library_manager/internal/metadata"
+	"github.com/ENIACore/media_library_manager/internal/parser"
+	"github.com/ENIACore/media_library_manager/internal/processor"
 )
 
 func main() {
@@ -43,8 +45,16 @@ func main() {
 			continue
 		}
 
+		finalLibraryPath := cfg.LibraryPath
+		switch root.Role {
+			case metadata.MovieDir, metadata.MovieFile:
+				finalLibraryPath = filepath.Join(finalLibraryPath, "movies")
+			case metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
+				finalLibraryPath = filepath.Join(finalLibraryPath, "shows")
+		}
+
 		if cfg.DryRun {
-			logger.Info("successfully processed media, no action due to dry run", "source", root.PathInfo.Source, "dest", root.PathInfo.Dest, "classification", root.Role) 
+			logger.Info("successfully processed media, no action due to dry run", "source", root.PathInfo.Source, "dest", filepath.Join(finalLibraryPath, root.PathInfo.Dest), "classification", root.Role) 
 			continue
 		}
 
