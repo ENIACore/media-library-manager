@@ -34,6 +34,7 @@ func main() {
 		logger.Info("processing root entry", "entry", path)
 
 		root, err := parser.ParseTree(path, nil, 0, logger)
+		root = parser.PruneTree(root)
 		if err != nil && cfg.DryRun {
 			numError++
 			logger.Error("error occurred, skipping error processing due to dry run", "error", err)

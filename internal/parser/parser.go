@@ -50,3 +50,19 @@ func ParseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
     
     return node, nil
 }
+
+func PruneTree(entry *metadata.Entry) *metadata.Entry {
+	if entry.PathInfo.IsDir && entry.Children == nil {
+		return nil
+	}
+
+	children := make([]*metadata.Entry, 0, len(entry.Children))
+	for _, child := range entry.Children {
+		child = PruneTree(child)		
+		if child != nil {
+			children = append(children, child)
+		}
+	}
+	entry.Children = children
+	return entry
+}
