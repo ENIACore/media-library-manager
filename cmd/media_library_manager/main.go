@@ -25,43 +25,46 @@ func main() {
 
 	errorPath := filepath.Join(cfg.ManagerPath, "error")  
 
+	numSuccessful := 0
+	numError := 0
 	for _, entry := range entries {
 		path := filepath.Join(cfg.MediaPath, entry.Name())
 
 		separator := strings.Repeat("=", 80)
-		logger.Info("")
-		logger.Info("")
-		logger.Info(separator)
-		logger.Info("")
-		logger.Info("")
 		logger.Info("processing root entry", "entry", path)
 
 		root, err := parser.ParseTree(path, nil, 0, logger)
 		if err != nil && cfg.DryRun {
+			numError++
 			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
 			continue
 		}
 		if err != nil {
+			numError++
 			processor.Error(root, errorPath, logger)	
 			continue
 		}
 
 		err = classifier.ClassifyEntries(root, logger)
 		if err != nil && cfg.DryRun {
+			numError++
 			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
 			continue
 		}
 		if err != nil {
+			numError++
 			processor.Error(root, errorPath, logger)	
 			continue
 		}
 
 		err = processor.ResolveEntries(root, logger)
 		if err != nil && cfg.DryRun {
+			numError++
 			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
 			continue
 		}
 		if err != nil {
+			numError++
 			processor.Error(root, errorPath, logger)	
 			continue
 		}
@@ -78,23 +81,24 @@ func main() {
 		if cfg.DryRun {
 			logger.Info("successfully processed media, no action due to dry run", "source", root.PathInfo.Source, "dest", filepath.Join(finalLibraryPath, root.PathInfo.Dest), "classification", root.Role) 
 			logger.Info("")
-			logger.Info("")
 			logger.Info(separator)
 			logger.Info("")
-			logger.Info("")
+			numSuccessful++
 			continue
 		}
 
 		logger.Info("successfully processed media", "source", root.PathInfo.Source, "dest", filepath.Join(finalLibraryPath, root.PathInfo.Dest), "classification", root.Role) 
 		logger.Info("")
-		logger.Info("")
 		logger.Info(separator)
-		logger.Info("")
 		logger.Info("")
 		err = processor.Transfer(root, cfg.LibraryPath, logger)
 		if err != nil {
+			numError++
 			processor.Error(root, errorPath, logger)	
 			continue
 		}
+		numSuccessful++
 	}
+
+	logger.Info("!!total counts!!", "total-successful", numSuccessful, "total-error", numError) 
 }
