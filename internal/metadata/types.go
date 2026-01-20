@@ -49,6 +49,32 @@ const (
 	MovieDir
 )
 
+func (r EntryRole) String() string {
+	switch r {
+	case UnknownRole:
+		return "UNKNOWN"
+	case SubtitleFile:
+		return "SUBTITLE_FILE"
+	case BonusFile:
+		return "BONUS_FILE"
+	case EpisodeFile:
+		return "EPISODE_FILE"
+	case MovieFile:
+		return "MOVIE_FILE"
+	case SubtitleDir:
+		return "SUBTITLE_DIR"
+	case BonusDir:
+		return "BONUS_DIR"
+	case SeasonDir:
+		return "SEASON_DIR"
+	case SeriesDir:
+		return "SERIES_DIR"
+	case MovieDir:
+		return "MOVIE_DIR"
+	default:
+		return "INVALID"
+	}
+}
 
 type ContentType int8
 
