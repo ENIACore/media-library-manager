@@ -8,44 +8,6 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
-/*
-Destination Format:
-
-Movie File (root):
-	<Title>.<Year>/<Title>.<Year>.<Resolution>.<Codec>.<Source>.<Audio>.<Language>.<ext>
-
-Movie Directory:
-	<Title>.<Year>/
-		Subtitles/<Title>.<Language>.<ext>
-		Extras/<Title>.<Bonus>.<Resolution>.<Codec>.<Source>.<Audio>.<Language>.<ext>
-		<Title>.<Year>.<Resolution>.<Codec>.<Source>.<Audio>.<Language>.<ext>
-
-Episode File (root):
-	<Title>.<Year>/<Season>/
-		<Title>.<S##E##>.<Resolution>.<Codec>.<Source>.<Audio>.<Language>.<ext>
-
-Season Directory:
-	<Title>.<Year>/<Season>/
-		Subtitles/<Title>.<S##E##>.<Language>.<ext>
-		<Title>.<S##E##>.<Resolution>.<Codec>.<Source>.<Audio>.<Language>.<ext>
-
-Series Directory:
-	<Title>.<Year>/
-		<Season>/
-			Subtitles/<Title>.<S##E##>.<Language>.<ext>
-			<Title>.<S##E##>.<Resolution>.<Codec>.<Source>.<Audio>.<Language>.<ext>
-		Extras/<Title>.<Bonus>.<Resolution>.<Codec>.<Source>.<Audio>.<Language>.<ext>
-		Subtitles/<Title>.<Language>.<ext>
-
-Notes:
-- Title is capitalized (e.g., "Test.Movie")
-- Year is included when available
-- Missing metadata fields are omitted from the filename
-- All subtitle files go into a "Subtitles" subdirectory
-- All bonus files go into an "Extras" subdirectory
-- Extensions are lowercase
-*/
-
 func ResolveEntries(root *metadata.Entry, logger *slog.Logger) error {
 	log := logger.With("func", "ResolveEntries")
 	log.Info("resolving root", "path", root.PathInfo.Source)
