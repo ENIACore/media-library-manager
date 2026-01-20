@@ -7,6 +7,7 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"log/slog"
 	"regexp"
+	"os"
 	"fmt"
 )
 
@@ -20,8 +21,12 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	pathInfo := metadata.PathInfo{}
 	pathInfo.Source = path
 	pathInfo.Type, pathInfo.Ext = extractType(sanitizedName)
-	if pathInfo.Ext == "" && pathInfo.Type == metadata.UnknownType {
-		pathInfo.IsDir = true
+
+	if info, err := os.Stat(path); err == nil {
+		pathInfo.IsDir = info.IsDir()
+	} else {
+		// If we can't stat, fall back to extension check
+		pathInfo.IsDir = pathInfo.Ext == "" && pathInfo.Type == metadata.UnknownType
 	}
 
 	log.Debug("successfully extracted path info", "path-info", fmt.Sprintf("%+v", pathInfo))
