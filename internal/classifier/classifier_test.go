@@ -1,1142 +1,843 @@
 package classifier
 
 import (
-	"testing"
-	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"log/slog"
+	"testing"
+
+	"github.com/ENIACore/media_library_manager/internal/metadata"
+	"github.com/ENIACore/media_library_manager/internal/testutil"
 )
 
 var logger = slog.Default()
 
-func TestClassifyEntries(t *testing.T) {
-	/*
-		Testing movie file
-	*/
-	resetEntryRoles(&movieFile)
-	err := ClassifyEntries(&movieFile, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", movieFile.PathInfo.Source)
-	}
-	if movieFile.Role != metadata.MovieFile {
-		t.Errorf("Role = %v, want %v", movieFile.Role, metadata.MovieFile)
+func TestClassify(t *testing.T) {
+	tests := []struct {
+		name         string
+		entry        func() *metadata.Entry
+		expectedRole metadata.EntryRole
+		expectError  bool
+	}{
+		{
+			name: "movie file at root",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			expectedRole: metadata.MovieFile,
+			expectError:  false,
+		},
+		{
+			name: "episode file at root",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestEpFile(nil)
+			},
+			expectedRole: metadata.EpisodeFile,
+			expectError:  false,
+		},
+		{
+			name: "subtitle file at root",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubFile(nil)
+			},
+			expectedRole: metadata.SubtitleFile,
+			expectError:  false,
+		},
+		{
+			name: "bonus file at root",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestBonusFile(nil)
+			},
+			expectedRole: metadata.BonusFile,
+			expectError:  false,
+		},
+		{
+			name: "movie directory",
+			entry: func() *metadata.Entry {
+				movieFile := testutil.CreateTestMovieFile(nil)
+				subFile := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestMovieDir(nil, movieFile, subFile)
+			},
+			expectedRole: metadata.MovieDir,
+			expectError:  false,
+		},
+		{
+			name: "season directory",
+			entry: func() *metadata.Entry {
+				ep1 := testutil.CreateTestEpFile(nil)
+				ep2 := testutil.CreateTestEpFile(nil)
+				return testutil.CreateTestSeasonDir(nil, ep1, ep2)
+			},
+			expectedRole: metadata.SeasonDir,
+			expectError:  false,
+		},
+		{
+			name: "series directory",
+			entry: func() *metadata.Entry {
+				ep1 := testutil.CreateTestEpFile(nil)
+				ep2 := testutil.CreateTestEpFile(nil)
+				seasonDir := testutil.CreateTestSeasonDir(nil, ep1, ep2)
+				return testutil.CreateTestSeriesDir(nil, seasonDir)
+			},
+			expectedRole: metadata.SeriesDir,
+			expectError:  false,
+		},
+		{
+			name: "subtitle directory",
+			entry: func() *metadata.Entry {
+				sub1 := testutil.CreateTestSubFile(nil)
+				sub2 := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestSubDir(nil, sub1, sub2)
+			},
+			expectedRole: metadata.SubtitleDir,
+			expectError:  false,
+		},
+		{
+			name: "bonus directory",
+			entry: func() *metadata.Entry {
+				bonus := testutil.CreateTestBonusFile(nil)
+				sub := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestBonusDir(nil, bonus, sub)
+			},
+			expectedRole: metadata.BonusDir,
+			expectError:  false,
+		},
+		{
+			name: "unknown file type",
+			entry: func() *metadata.Entry {
+				return &metadata.Entry{
+					PathInfo: metadata.PathInfo{
+						IsDir:  false,
+						Source: "/unknown/file.xyz",
+						Type:   metadata.UnknownType,
+					},
+				}
+			},
+			expectedRole: metadata.UnknownRole,
+			expectError:  true,
+		},
+		{
+			name: "empty directory",
+			entry: func() *metadata.Entry {
+				return &metadata.Entry{
+					PathInfo: metadata.PathInfo{
+						IsDir:  true,
+						Source: "/empty/dir",
+						Type:   metadata.UnknownType,
+					},
+					Children: []*metadata.Entry{},
+				}
+			},
+			expectedRole: metadata.UnknownRole,
+			expectError:  true,
+		},
 	}
 
-	/*
-		Testing episode file
-	*/
-	resetEntryRoles(&episodeFile)
-	err = ClassifyEntries(&episodeFile, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", episodeFile.PathInfo.Source)
-	}
-	if episodeFile.Role != metadata.EpisodeFile {
-		t.Errorf("Role = %v, want %v", episodeFile.Role, metadata.EpisodeFile)
-	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
 
-	/*
-		Testing subtitle file
-	*/
-	resetEntryRoles(&subtitleFile)
-	err = ClassifyEntries(&subtitleFile, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", subtitleFile.PathInfo.Source)
-	}
-	if subtitleFile.Role != metadata.SubtitleFile {
-		t.Errorf("Role = %v, want %v", subtitleFile.Role, metadata.SubtitleFile)
-	}
-	
-	/*
-		Testing bonus file
-	*/
-	resetEntryRoles(&bonusFile)
-	err = ClassifyEntries(&bonusFile, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", bonusFile.PathInfo.Source)
-	}
-	if bonusFile.Role != metadata.BonusFile {
-		t.Errorf("Role = %v, want %v", bonusFile.Role, metadata.BonusFile)
-	}
+			err := Classify(entry, logger)
 
-
-
-	/*
-		Testing movie dir
-		Movie Dir Children: movieFile, bonusFile, subtitleFile, subtitleFile
-	*/
-	resetEntryRoles(&movieDir)
-	err = ClassifyEntries(&movieDir, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", movieDir.PathInfo.Source)
-	}
-	if movieDir.Role != metadata.MovieDir || movieDir.Children[0].Role != metadata.MovieFile || movieDir.Children[1].Role != metadata.BonusFile || movieDir.Children[2].Role != metadata.SubtitleFile || movieDir.Children[3].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", movieDir.PathInfo.Source)
-	}
-
-	/*
-		Testing season dir
-		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
-	*/
-	resetEntryRoles(&seasonDir)
-	err = ClassifyEntries(&seasonDir, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", seasonDir.PathInfo.Source)
-	}
-	if seasonDir.Role != metadata.SeasonDir || seasonDir.Children[0].Role != metadata.EpisodeFile || seasonDir.Children[1].Role != metadata.EpisodeFile || seasonDir.Children[2].Role != metadata.SubtitleFile || seasonDir.Children[3].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", seasonDir.PathInfo.Source)
-	}
-
-	/*
-		Testing series dir
-		Series Dir Children: seasonDir, bonusDir, subtitleDir,
-		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
-		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
-		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
-	*/
-	resetEntryRoles(&seriesDir)
-	err = ClassifyEntries(&seriesDir, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", seriesDir.PathInfo.Source)
-	}
-	if seriesDir.Role != metadata.SeriesDir || seriesDir.Children[0].Role != metadata.SeasonDir || seriesDir.Children[1].Role != metadata.BonusDir || seriesDir.Children[2].Role != metadata.SubtitleDir {
-		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.PathInfo.Source)
-	}
-	if seriesDir.Children[0].Role != metadata.SeasonDir || seriesDir.Children[0].Children[0].Role != metadata.EpisodeFile || seriesDir.Children[0].Children[1].Role != metadata.EpisodeFile || seriesDir.Children[0].Children[2].Role != metadata.SubtitleFile || seriesDir.Children[0].Children[3].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[0].PathInfo.Source)
-	}
-	if seriesDir.Children[1].Role != metadata.BonusDir || seriesDir.Children[1].Children[0].Role != metadata.BonusFile  || seriesDir.Children[1].Children[1].Role != metadata.SubtitleFile  || seriesDir.Children[1].Children[2].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[1].PathInfo.Source)
-	}
-	if seriesDir.Children[2].Role != metadata.SubtitleDir || seriesDir.Children[2].Children[0].Role != metadata.SubtitleFile || seriesDir.Children[2].Children[1].Role != metadata.SubtitleFile || seriesDir.Children[2].Children[2].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[2].PathInfo.Source)
-	}
-
-	/*
-		Testing subtitle dir
-		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
-	*/
-	resetEntryRoles(&subtitleDir)
-	err = ClassifyEntries(&subtitleDir, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", subtitleDir.PathInfo.Source)
-	}
-	if subtitleDir.Role != metadata.SubtitleDir || subtitleDir.Children[0].Role != metadata.SubtitleFile || subtitleDir.Children[1].Role != metadata.SubtitleFile || subtitleDir.Children[2].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", subtitleDir.PathInfo.Source)
-	}
-	
-	/*
-		Testing bonus dir
-		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
-	*/
-	resetEntryRoles(&bonusDir)
-	err = ClassifyEntries(&bonusDir, logger)
-	if err != nil {
-		t.Errorf("ClassifyEntries has err for %v, want no error", bonusDir.PathInfo.Source)
-	}
-	if bonusDir.Role != metadata.BonusDir || bonusDir.Children[0].Role != metadata.BonusFile  || bonusDir.Children[1].Role != metadata.SubtitleFile  || bonusDir.Children[2].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", bonusDir.PathInfo.Source)
+			if test.expectError && err == nil {
+				t.Errorf("Classify expected error, got nil")
+			}
+			if !test.expectError && err != nil {
+				t.Errorf("Classify unexpected error: %v", err)
+			}
+			if !test.expectError && entry.Role != test.expectedRole {
+				t.Errorf("Role = %v, want %v", entry.Role, test.expectedRole)
+			}
+		})
 	}
 }
 
-/*
-	Classifier helper function tests
-*/
+func TestClassifySubtitleFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid subtitle file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubFile(nil)
+			},
+			expected: true,
+		},
+		{
+			name: "movie file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "episode file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestEpFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "bonus file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestBonusFile(nil)
+			},
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifySubtitleFile(entry)
+
+			if result != test.expected {
+				t.Errorf("classifySubtitleFile = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.SubtitleFile {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.SubtitleFile)
+			}
+		})
+	}
+}
+
+func TestClassifyBonusFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid bonus file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestBonusFile(nil)
+			},
+			expected: true,
+		},
+		{
+			name: "movie file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "episode file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestEpFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "subtitle file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubFile(nil)
+			},
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifyBonusFile(entry)
+
+			if result != test.expected {
+				t.Errorf("classifyBonusFile = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.BonusFile {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.BonusFile)
+			}
+		})
+	}
+}
+
+func TestClassifyEpisodeFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid episode file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestEpFile(nil)
+			},
+			expected: true,
+		},
+		{
+			name: "episode file with parent season",
+			entry: func() *metadata.Entry {
+				seasonDir := testutil.CreateTestSeasonDir(nil)
+				ep := &metadata.Entry{
+					Parent: seasonDir,
+					PathInfo: metadata.PathInfo{
+						IsDir:  false,
+						Source: "/show/S01/episode.mp4",
+						Type:   metadata.Video,
+					},
+					MediaInfo: metadata.MediaInfo{},
+				}
+				return ep
+			},
+			expected: true,
+		},
+		{
+			name: "movie file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "bonus file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestBonusFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "subtitle file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubFile(nil)
+			},
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifyEpisodeFile(entry)
+
+			if result != test.expected {
+				t.Errorf("classifyEpisodeFile = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.EpisodeFile {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.EpisodeFile)
+			}
+		})
+	}
+}
+
+func TestClassifyMovieFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid movie file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			expected: true,
+		},
+		{
+			name: "episode file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestEpFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "bonus file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestBonusFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "subtitle file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubFile(nil)
+			},
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifyMovieFile(entry)
+
+			if result != test.expected {
+				t.Errorf("classifyMovieFile = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.MovieFile {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.MovieFile)
+			}
+		})
+	}
+}
 
 func TestClassifySubtitleDir(t *testing.T) {
-	/*
-		Testing subtitle dir
-		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
-	*/
-	resetEntryRoles(&subtitleDir)
-	err := classifySubtitleDir(&subtitleDir, logger)
-	if err != nil {
-		t.Errorf("classifySubtitleDir has err for %v, want no error", subtitleDir.PathInfo.Source)
-	}
-	if subtitleDir.Role != metadata.SubtitleDir || subtitleDir.Children[0].Role != metadata.SubtitleFile || subtitleDir.Children[1].Role != metadata.SubtitleFile || subtitleDir.Children[2].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", subtitleDir.PathInfo.Source)
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid subtitle directory",
+			entry: func() *metadata.Entry {
+				sub1 := testutil.CreateTestSubFile(nil)
+				sub2 := testutil.CreateTestSubFile(nil)
+				sub3 := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestSubDir(nil, sub1, sub2, sub3)
+			},
+			expected: true,
+		},
+		{
+			name: "directory with non-subtitle file",
+			entry: func() *metadata.Entry {
+				sub := testutil.CreateTestSubFile(nil)
+				movie := testutil.CreateTestMovieFile(nil)
+				return testutil.CreateTestSubDir(nil, sub, movie)
+			},
+			expected: false,
+		},
+		{
+			name: "empty directory",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubDir(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "file instead of directory",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubFile(nil)
+			},
+			expected: false,
+		},
 	}
 
-	resetEntryRoles(&movieDir)
-	err = classifySubtitleDir(&movieDir, logger)
-	if err == nil {
-		t.Errorf("classifySubtitleDir has no error, expected error")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifySubtitleDir(entry, logger)
+
+			if result != test.expected {
+				t.Errorf("classifySubtitleDir = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.SubtitleDir {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.SubtitleDir)
+			}
+		})
 	}
 }
 
 func TestClassifyBonusDir(t *testing.T) {
-	/*
-		Testing bonus dir
-		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
-	*/
-	resetEntryRoles(&bonusDir)
-	err := classifyBonusDir(&bonusDir, logger)
-	if err != nil {
-		t.Errorf("classifyBonusDir has err for %v, want no error", bonusDir.PathInfo.Source)
-	}
-	if bonusDir.Role != metadata.BonusDir || bonusDir.Children[0].Role != metadata.BonusFile  || bonusDir.Children[1].Role != metadata.SubtitleFile  || bonusDir.Children[2].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", bonusDir.PathInfo.Source)
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid bonus directory",
+			entry: func() *metadata.Entry {
+				bonus := testutil.CreateTestBonusFile(nil)
+				sub := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestBonusDir(nil, bonus, sub)
+			},
+			expected: true,
+		},
+		{
+			name: "bonus directory with only bonus files",
+			entry: func() *metadata.Entry {
+				bonus1 := testutil.CreateTestBonusFile(nil)
+				bonus2 := testutil.CreateTestBonusFile(nil)
+				return testutil.CreateTestBonusDir(nil, bonus1, bonus2)
+			},
+			expected: true,
+		},
+		{
+			name: "directory with only subtitles",
+			entry: func() *metadata.Entry {
+				sub1 := testutil.CreateTestSubFile(nil)
+				sub2 := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestBonusDir(nil, sub1, sub2)
+			},
+			expected: false,
+		},
+		{
+			name: "directory with movie file",
+			entry: func() *metadata.Entry {
+				bonus := testutil.CreateTestBonusFile(nil)
+				movie := testutil.CreateTestMovieFile(nil)
+				return testutil.CreateTestBonusDir(nil, bonus, movie)
+			},
+			expected: false,
+		},
+		{
+			name: "file instead of directory",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestBonusFile(nil)
+			},
+			expected: false,
+		},
 	}
 
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
 
-	resetEntryRoles(&movieDir)
-	err = classifyBonusDir(&movieDir, logger)
-	if err == nil {
-		t.Errorf("classifyBonusDir has no error, expected error")
+			result := classifyBonusDir(entry, logger)
+
+			if result != test.expected {
+				t.Errorf("classifyBonusDir = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.BonusDir {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.BonusDir)
+			}
+		})
 	}
 }
 
-
 func TestClassifySeasonDir(t *testing.T) {
-
-	/*
-		Testing season dir
-		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
-	*/
-	resetEntryRoles(&seasonDir)
-	err := classifySeasonDir(&seasonDir, logger)
-	if err != nil {
-		t.Errorf("classifySeasonDir has err for %v, want no error", seasonDir.PathInfo.Source)
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid season directory",
+			entry: func() *metadata.Entry {
+				ep1 := testutil.CreateTestEpFile(nil)
+				ep2 := testutil.CreateTestEpFile(nil)
+				sub := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestSeasonDir(nil, ep1, ep2, sub)
+			},
+			expected: true,
+		},
+		{
+			name: "season directory with subtitle dir",
+			entry: func() *metadata.Entry {
+				ep := testutil.CreateTestEpFile(nil)
+				subFile := testutil.CreateTestSubFile(nil)
+				subDir := testutil.CreateTestSubDir(nil, subFile)
+				return testutil.CreateTestSeasonDir(nil, ep, subDir)
+			},
+			expected: true,
+		},
+		{
+			name: "directory without episodes",
+			entry: func() *metadata.Entry {
+				sub1 := testutil.CreateTestSubFile(nil)
+				sub2 := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestSeasonDir(nil, sub1, sub2)
+			},
+			expected: false,
+		},
+		{
+			name: "directory with movie file",
+			entry: func() *metadata.Entry {
+				ep := testutil.CreateTestEpFile(nil)
+				movie := testutil.CreateTestMovieFile(nil)
+				return testutil.CreateTestSeasonDir(nil, ep, movie)
+			},
+			expected: true,
+		},
+		{
+			name: "file instead of directory",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestEpFile(nil)
+			},
+			expected: false,
+		},
 	}
-	if seasonDir.Role != metadata.SeasonDir || seasonDir.Children[0].Role != metadata.EpisodeFile || seasonDir.Children[1].Role != metadata.EpisodeFile || seasonDir.Children[2].Role != metadata.SubtitleFile || seasonDir.Children[3].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", seasonDir.PathInfo.Source)
-	}
 
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
 
-	resetEntryRoles(&movieDir)
-	err = classifySeasonDir(&movieDir, logger)
-	if err == nil {
-		t.Errorf("classifySeasonDir has no error, expected error")
+			result := classifySeasonDir(entry, logger)
+
+			if result != test.expected {
+				t.Errorf("classifySeasonDir = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.SeasonDir {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.SeasonDir)
+			}
+		})
 	}
 }
 
 func TestClassifySeriesDir(t *testing.T) {
-	/*
-		Testing series dir
-		Series Dir Children: seasonDir, bonusDir, subtitleDir,
-		Season Dir Children: episodeFile, episodeFile, subtitleFile, subtitleFile
-		Bonus Dir Children: bonusFile, subtitleFile, subtitleFile,
-		Subtitle Dir Children: subtitleFile, subtitleFile, subtitleFile,
-	*/
-	resetEntryRoles(&seriesDir)
-	err := classifySeriesDir(&seriesDir, logger)
-	if err != nil {
-		t.Errorf("classifySeriesDir has err for %v, want no error", seriesDir.PathInfo.Source)
-	}
-	if seriesDir.Role != metadata.SeriesDir || seriesDir.Children[0].Role != metadata.SeasonDir || seriesDir.Children[1].Role != metadata.BonusDir || seriesDir.Children[2].Role != metadata.SubtitleDir {
-		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.PathInfo.Source)
-	}
-	if seriesDir.Children[0].Role != metadata.SeasonDir || seriesDir.Children[0].Children[0].Role != metadata.EpisodeFile || seriesDir.Children[0].Children[1].Role != metadata.EpisodeFile || seriesDir.Children[0].Children[2].Role != metadata.SubtitleFile || seriesDir.Children[0].Children[3].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[0].PathInfo.Source)
-	}
-	if seriesDir.Children[1].Role != metadata.BonusDir || seriesDir.Children[1].Children[0].Role != metadata.BonusFile  || seriesDir.Children[1].Children[1].Role != metadata.SubtitleFile  || seriesDir.Children[1].Children[2].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[1].PathInfo.Source)
-	}
-	if seriesDir.Children[2].Role != metadata.SubtitleDir || seriesDir.Children[2].Children[0].Role != metadata.SubtitleFile || seriesDir.Children[2].Children[1].Role != metadata.SubtitleFile || seriesDir.Children[2].Children[2].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", seriesDir.Children[2].PathInfo.Source)
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid series directory",
+			entry: func() *metadata.Entry {
+				ep1 := testutil.CreateTestEpFile(nil)
+				ep2 := testutil.CreateTestEpFile(nil)
+				seasonDir := testutil.CreateTestSeasonDir(nil, ep1, ep2)
+				return testutil.CreateTestSeriesDir(nil, seasonDir)
+			},
+			expected: true,
+		},
+		{
+			name: "series directory with bonus and subtitle dirs",
+			entry: func() *metadata.Entry {
+				ep := testutil.CreateTestEpFile(nil)
+				seasonDir := testutil.CreateTestSeasonDir(nil, ep)
+				bonus := testutil.CreateTestBonusFile(nil)
+				bonusDir := testutil.CreateTestBonusDir(nil, bonus)
+				sub := testutil.CreateTestSubFile(nil)
+				subDir := testutil.CreateTestSubDir(nil, sub)
+				return testutil.CreateTestSeriesDir(nil, seasonDir, bonusDir, subDir)
+			},
+			expected: true,
+		},
+		{
+			name: "directory without season",
+			entry: func() *metadata.Entry {
+				bonus := testutil.CreateTestBonusFile(nil)
+				bonusDir := testutil.CreateTestBonusDir(nil, bonus)
+				sub := testutil.CreateTestSubFile(nil)
+				subDir := testutil.CreateTestSubDir(nil, sub)
+				return testutil.CreateTestSeriesDir(nil, bonusDir, subDir)
+			},
+			expected: false,
+		},
+		{
+			name: "directory with loose files",
+			entry: func() *metadata.Entry {
+				ep := testutil.CreateTestEpFile(nil)
+				seasonDir := testutil.CreateTestSeasonDir(nil, ep)
+				looseEp := testutil.CreateTestEpFile(nil)
+				return testutil.CreateTestSeriesDir(nil, seasonDir, looseEp)
+			},
+			expected: false,
+		},
+		{
+			name: "file instead of directory",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestEpFile(nil)
+			},
+			expected: false,
+		},
 	}
 
-	resetEntryRoles(&seasonDir)
-	err = classifySeriesDir(&seasonDir, logger)
-	if err == nil {
-		t.Errorf("classifySeriesDir has no error, expected error")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifySeriesDir(entry, logger)
+
+			if result != test.expected {
+				t.Errorf("classifySeriesDir = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.SeriesDir {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.SeriesDir)
+			}
+		})
 	}
 }
 
 func TestClassifyMovieDir(t *testing.T) {
-	/*
-		Testing movie dir
-		Movie Dir Children: movieFile, bonusFile, subtitleFile, subtitleFile
-	*/
-	resetEntryRoles(&movieDir)
-	err := classifyMovieDir(&movieDir, logger)
-	if err != nil {
-		t.Errorf("classifyMovieDir has err for %v, want no error", movieDir.PathInfo.Source)
-	}
-	if movieDir.Role != metadata.MovieDir || movieDir.Children[0].Role != metadata.MovieFile || movieDir.Children[1].Role != metadata.BonusFile || movieDir.Children[2].Role != metadata.SubtitleFile || movieDir.Children[3].Role != metadata.SubtitleFile {
-		t.Errorf("Classification for %v failed, view logging for more information", movieDir.PathInfo.Source)
-	}
-
-	resetEntryRoles(&seasonDir)
-	err = classifyMovieDir(&seasonDir, logger)
-	if err == nil {
-		t.Errorf("classifyMovieDir has no error, expected error")
-	}
-}
-
-func TestClassifyFile(t *testing.T) {
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	metadata.EntryRole
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
 	}{
 		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	metadata.MovieFile,
+			name: "valid movie directory",
+			entry: func() *metadata.Entry {
+				movie := testutil.CreateTestMovieFile(nil)
+				sub := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestMovieDir(nil, movie, sub)
+			},
+			expected: true,
 		},
 		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	metadata.EpisodeFile,
+			name: "movie directory with bonus and subtitle dirs",
+			entry: func() *metadata.Entry {
+				movie := testutil.CreateTestMovieFile(nil)
+				bonus := testutil.CreateTestBonusFile(nil)
+				bonusDir := testutil.CreateTestBonusDir(nil, bonus)
+				sub := testutil.CreateTestSubFile(nil)
+				subDir := testutil.CreateTestSubDir(nil, sub)
+				return testutil.CreateTestMovieDir(nil, movie, bonusDir, subDir)
+			},
+			expected: true,
 		},
 		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	metadata.SubtitleFile,
+			name: "movie directory with bonus files",
+			entry: func() *metadata.Entry {
+				movie := testutil.CreateTestMovieFile(nil)
+				bonus := testutil.CreateTestBonusFile(nil)
+				return testutil.CreateTestMovieDir(nil, movie, bonus)
+			},
+			expected: true,
 		},
 		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	metadata.BonusFile,
+			name: "directory with multiple movie files",
+			entry: func() *metadata.Entry {
+				movie1 := testutil.CreateTestMovieFile(nil)
+				movie2 := testutil.CreateTestMovieFile(nil)
+				return testutil.CreateTestMovieDir(nil, movie1, movie2)
+			},
+			expected: false,
+		},
+		{
+			name: "directory without movie file",
+			entry: func() *metadata.Entry {
+				bonus := testutil.CreateTestBonusFile(nil)
+				sub := testutil.CreateTestSubFile(nil)
+				return testutil.CreateTestMovieDir(nil, bonus, sub)
+			},
+			expected: false,
+		},
+		{
+			name: "directory with season metadata",
+			entry: func() *metadata.Entry {
+				movie := testutil.CreateTestMovieFile(nil)
+				dir := testutil.CreateTestMovieDir(nil, movie)
+				dir.MediaInfo.Season = testutil.IntPtr(1)
+				return dir
+			},
+			expected: false,
+		},
+		{
+			name: "directory with episode metadata",
+			entry: func() *metadata.Entry {
+				movie := testutil.CreateTestMovieFile(nil)
+				dir := testutil.CreateTestMovieDir(nil, movie)
+				dir.MediaInfo.Episode = testutil.IntPtr(1)
+				return dir
+			},
+			expected: false,
+		},
+		{
+			name: "file instead of directory",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			expected: false,
 		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res := classifyFile(&test.node)
-			if res != test.expected {
-				t.Errorf("classifyEntryFile = %v, want %v", res, test.expected)
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifyMovieDir(entry, logger)
+
+			if result != test.expected {
+				t.Errorf("classifyMovieDir = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.MovieDir {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.MovieDir)
 			}
 		})
 	}
 }
 
+func TestClassifyChildrenRoles(t *testing.T) {
+	t.Run("movie directory children are classified", func(t *testing.T) {
+		movie := testutil.CreateTestMovieFile(nil)
+		bonus := testutil.CreateTestBonusFile(nil)
+		sub := testutil.CreateTestSubFile(nil)
+		dir := testutil.CreateTestMovieDir(nil, movie, bonus, sub)
+		resetEntryRoles(dir)
 
-func TestClassifyDir(t *testing.T) {
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	metadata.EntryRole
-	}{
-		{
-			name:		"movie directory", 
-			node: 		movieDir,
-			expected:	metadata.MovieDir,
-		},
-		{
-			name:		"series directory", 
-			node: 		seriesDir,
-			expected:	metadata.SeriesDir,
-		},
-		{
-			name:		"season directory", 
-			node: 		seasonDir,
-			expected:	metadata.SeasonDir,
-		},
-		{
-			name:		"subtitle directory", 
-			node: 		subtitleDir,
-			expected:	metadata.SubtitleDir,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	metadata.BonusDir,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := classifyDir(&test.node)
-			if res != test.expected {
-				t.Errorf("classifyEntryDir = %v, want %v", res, test.expected)
-			}
-		})
-	}
+		err := Classify(dir, logger)
+
+		if err != nil {
+			t.Errorf("Classify unexpected error: %v", err)
+		}
+		if dir.Children[0].Role != metadata.MovieFile {
+			t.Errorf("Movie child Role = %v, want %v", dir.Children[0].Role, metadata.MovieFile)
+		}
+		if dir.Children[1].Role != metadata.BonusFile {
+			t.Errorf("Bonus child Role = %v, want %v", dir.Children[1].Role, metadata.BonusFile)
+		}
+		if dir.Children[2].Role != metadata.SubtitleFile {
+			t.Errorf("Subtitle child Role = %v, want %v", dir.Children[2].Role, metadata.SubtitleFile)
+		}
+	})
+
+	t.Run("season directory children are classified", func(t *testing.T) {
+		ep1 := testutil.CreateTestEpFile(nil)
+		ep2 := testutil.CreateTestEpFile(nil)
+		sub := testutil.CreateTestSubFile(nil)
+		dir := testutil.CreateTestSeasonDir(nil, ep1, ep2, sub)
+		resetEntryRoles(dir)
+
+		err := Classify(dir, logger)
+
+		if err != nil {
+			t.Errorf("Classify unexpected error: %v", err)
+		}
+		if dir.Children[0].Role != metadata.EpisodeFile {
+			t.Errorf("Episode 1 Role = %v, want %v", dir.Children[0].Role, metadata.EpisodeFile)
+		}
+		if dir.Children[1].Role != metadata.EpisodeFile {
+			t.Errorf("Episode 2 Role = %v, want %v", dir.Children[1].Role, metadata.EpisodeFile)
+		}
+		if dir.Children[2].Role != metadata.SubtitleFile {
+			t.Errorf("Subtitle Role = %v, want %v", dir.Children[2].Role, metadata.SubtitleFile)
+		}
+	})
+
+	t.Run("series directory nested children are classified", func(t *testing.T) {
+		ep := testutil.CreateTestEpFile(nil)
+		seasonDir := testutil.CreateTestSeasonDir(nil, ep)
+		bonus := testutil.CreateTestBonusFile(nil)
+		bonusDir := testutil.CreateTestBonusDir(nil, bonus)
+		sub := testutil.CreateTestSubFile(nil)
+		subDir := testutil.CreateTestSubDir(nil, sub)
+		dir := testutil.CreateTestSeriesDir(nil, seasonDir, bonusDir, subDir)
+		resetEntryRoles(dir)
+
+		err := Classify(dir, logger)
+
+		if err != nil {
+			t.Errorf("Classify unexpected error: %v", err)
+		}
+		if dir.Children[0].Role != metadata.SeasonDir {
+			t.Errorf("Season dir Role = %v, want %v", dir.Children[0].Role, metadata.SeasonDir)
+		}
+		if dir.Children[0].Children[0].Role != metadata.EpisodeFile {
+			t.Errorf("Episode Role = %v, want %v", dir.Children[0].Children[0].Role, metadata.EpisodeFile)
+		}
+		if dir.Children[1].Role != metadata.BonusDir {
+			t.Errorf("Bonus dir Role = %v, want %v", dir.Children[1].Role, metadata.BonusDir)
+		}
+		if dir.Children[1].Children[0].Role != metadata.BonusFile {
+			t.Errorf("Bonus file Role = %v, want %v", dir.Children[1].Children[0].Role, metadata.BonusFile)
+		}
+		if dir.Children[2].Role != metadata.SubtitleDir {
+			t.Errorf("Subtitle dir Role = %v, want %v", dir.Children[2].Role, metadata.SubtitleDir)
+		}
+		if dir.Children[2].Children[0].Role != metadata.SubtitleFile {
+			t.Errorf("Subtitle file Role = %v, want %v", dir.Children[2].Children[0].Role, metadata.SubtitleFile)
+		}
+	})
 }
 
-/*
-	file helper tests
-*/
-
-func TestIsSubtitleFile(t *testing.T) {
-
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	false,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	false,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	true,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	false,
-		},
-		{
-			name:		"movie directory", 
-			node: movieDir,
-			expected:	false,
-		},
-		{
-			name:		"series directory", 
-			node: seriesDir,
-			expected:	false,
-		},
-		{
-			name:		"season directory", 
-			node: seasonDir,
-			expected:	false,
-		},
-		{
-			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	false,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isSubtitleFile(&test.node)
-			if res != test.expected {
-				t.Errorf("isSubtitleFile = %v, want %v", res, test.expected)
-			}
-		})
-	}
-
-}
-
-func TestIsBonusFile(t *testing.T) {
-
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	false,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	false,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	false,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	true,
-		},
-		{
-			name:		"movie directory", 
-			node: movieDir,
-			expected:	false,
-		},
-		{
-			name:		"series directory", 
-			node: seriesDir,
-			expected:	false,
-		},
-		{
-			name:		"season directory", 
-			node: seasonDir,
-			expected:	false,
-		},
-		{
-			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	false,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isBonusFile(&test.node)
-			if res != test.expected {
-				t.Errorf("isBonusFile = %v, want %v", res, test.expected)
-			}
-		})
-	}
-
-}
-
-func TestIsEpisodeFile(t *testing.T) {
-
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	false,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	true,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	false,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	false,
-		},
-		{
-			name:		"movie directory", 
-			node: movieDir,
-			expected:	false,
-		},
-		{
-			name:		"series directory", 
-			node: seriesDir,
-			expected:	false,
-		},
-		{
-			name:		"season directory", 
-			node: seasonDir,
-			expected:	false,
-		},
-		{
-			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	false,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isEpisodeFile(&test.node)
-			if res != test.expected {
-				t.Errorf("isEpisodeFile = %v, want %v", res, test.expected)
-			}
-		})
-	}
-
-}
-
-func TestIsMovieFile(t *testing.T) {
-
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	true,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	false,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	false,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	false,
-		},
-		{
-			name:		"movie directory", 
-			node: movieDir,
-			expected:	false,
-		},
-		{
-			name:		"series directory", 
-			node: seriesDir,
-			expected:	false,
-		},
-		{
-			name:		"season directory", 
-			node: seasonDir,
-			expected:	false,
-		},
-		{
-			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	false,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isMovieFile(&test.node)
-			if res != test.expected {
-				t.Errorf("isMovieFile = %v, want %v", res, test.expected)
-			}
-		})
-	}
-}
-
-/*
-	dir helper tests
-*/
-
-func TestIsSubtitleDir(t *testing.T) {
-
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	false,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	false,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	false,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	false,
-		},
-		{
-			name:		"movie directory", 
-			node: movieDir,
-			expected:	false,
-		},
-		{
-			name:		"series directory", 
-			node: seriesDir,
-			expected:	false,
-		},
-		{
-			name:		"season directory", 
-			node: seasonDir,
-			expected:	false,
-		},
-		{
-			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	true,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isSubtitleDir(&test.node)
-			if res != test.expected {
-				t.Errorf("isSubtitleDir = %v, want %v", res, test.expected)
-			}
-		})
-	}
-}
-
-func TestIsBonusDir(t *testing.T) {
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	false,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	false,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	false,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	false,
-		},
-		{
-			name:		"movie directory", 
-			node: movieDir,
-			expected:	false,
-		},
-		{
-			name:		"series directory", 
-			node: seriesDir,
-			expected:	false,
-		},
-		{
-			name:		"season directory", 
-			node: seasonDir,
-			expected:	false,
-		},
-		{
-			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	false,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	true,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isBonusDir(&test.node)
-			if res != test.expected {
-				t.Errorf("isBonusDir = %v, want %v", res, test.expected)
-			}
-		})
-	}
-}
-
-func TestIsSeasonDir(t *testing.T) {
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	false,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	false,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	false,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	false,
-		},
-		{
-			name:		"movie directory", 
-			node: 		movieDir,
-			expected:	false,
-		},
-		{
-			name:		"series directory", 
-			node: 		seriesDir,
-			expected:	false,
-		},
-		{
-			name:		"season directory", 
-			node: 		seasonDir,
-			expected:	true,
-		},
-		{
-			name:		"subtitle directory", 
-			node: 		subtitleDir,
-			expected:	false,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isSeasonDir(&test.node)
-			if res != test.expected {
-				t.Errorf("isSeasonDir = %v, want %v", res, test.expected)
-			}
-		})
-	}
-}
-
-func TestIsSeriesDir(t *testing.T) {
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	false,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	false,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	false,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	false,
-		},
-		{
-			name:		"movie directory", 
-			node: movieDir,
-			expected:	false,
-		},
-		{
-			name:		"series directory", 
-			node: seriesDir,
-			expected:	true,
-		},
-		{
-			name:		"season directory", 
-			node: seasonDir,
-			expected:	false,
-		},
-		{
-			name:		"subtitle directory", 
-			node: subtitleDir,
-			expected:	false,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isSeriesDir(&test.node)
-			if res != test.expected {
-				t.Errorf("isSeriesDir = %v, want %v", res, test.expected)
-			}
-		})
-	}
-}
-
-func TestIsMovieDir(t *testing.T) {
-	tests := []struct{
-		name		string
-		node		metadata.Entry
-		expected	bool
-	}{
-		{
-			name:		"movie file",
-			node:		movieFile,
-			expected:	false,
-		},
-		{
-			name:		"episode file",
-			node:		episodeFile,
-			expected:	false,
-		},
-		{
-			name:		"subtitle file",
-			node:		subtitleFile,
-			expected:	false,
-		},
-		{
-			name:		"bonus file",
-			node:		bonusFile,
-			expected:	false,
-		},
-		{
-			name:		"movie directory", 
-			node: 		movieDir,
-			expected:	true,
-		},
-		{
-			name:		"series directory", 
-			node: 		seriesDir,
-			expected:	false,
-		},
-		{
-			name:		"season directory", 
-			node: 		seasonDir,
-			expected:	false,
-		},
-		{
-			name:		"subtitle directory", 
-			node: 		subtitleDir,
-			expected:	false,
-		},
-		{
-			name:		"bonus directory", 
-			node:		bonusDir,
-			expected:	false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := isMovieDir(&test.node)
-			if res != test.expected {
-				t.Errorf("isMovieDir = %v, want %v", res, test.expected)
-			}
-		})
-	}
-}
-
-
-/*
-	test helper functions
-*/
 func resetEntryRoles(entry *metadata.Entry) {
 	entry.Role = metadata.UnknownRole
 	for _, child := range entry.Children {
-		child.Role = metadata.UnknownRole
 		resetEntryRoles(child)
 	}
-}
-
-func intPtr(i int) *int {
-	return &i
-}
-
-/*
-	test files
-*/
-
-var subtitleFile = metadata.Entry{
-	Parent: nil,
-	Children: nil,
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"SUBTITLE",
-		},
-		Year:		nil,
-		Episode:	nil,
-		Season:		nil,
-		Resolution:	"",
-		Codec:		"",
-		Source:		"",
-		Audio:		"",
-		Language:	"ENGLISH",
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: false,
-		Dest: "",
-		Source: "/test movie/subtitles/subtitle english.srt",
-		Ext: "SRT",	
-		Type: metadata.Subtitle,
-	},
-}
-
-var bonusFile = metadata.Entry{
-	Parent: nil,
-	Children: nil,
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"TEST",
-			"MOVIE",
-			"BEHIND",
-			"THE",
-			"SCENES",
-		},
-		Year:		intPtr(2025),
-		Episode:	nil,
-		Season:		nil,
-		Resolution:	"1080P",
-		Codec:		"X264",
-		Source:		"REMUX",
-		Audio:		"ATMOS",
-		Language:	"ENGLISH",
-		Bonus:		"BEHIND_THE_SCENES",
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: false,
-		Dest: "",
-		Source: "/test movie/test movie behind the scenes 2025 1080p.x264.remux.atmos.english.mp4",
-		Ext: "MP4",	
-		Type: metadata.Video,
-	},
-}
-
-var episodeFile = metadata.Entry{
-	Parent: nil,
-	Children: nil,
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"TEST",
-			"EPISODE",
-		},
-		Year:		intPtr(2025),
-		Episode:	intPtr(1),
-		Season:		nil,
-		Resolution:	"1080P",
-		Codec:		"X264",
-		Source:		"REMUX",
-		Audio:		"ATMOS",
-		Language:	"ENGLISH",
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: false,
-		Dest: "",
-		Source: "/test show/season 01/test episode E01 2025 1080p.x264.remux.atmos.english.mp4",
-		Ext: "MP4",	
-		Type: metadata.Video,
-	},
-}
-
-var movieFile = metadata.Entry{
-	Parent: nil,
-	Children: nil,
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"TEST",
-			"MOVIE",
-		},
-		Year:		intPtr(2025),
-		Episode:	nil,
-		Season:		nil,
-		Resolution:	"1080P",
-		Codec:		"X264",
-		Source:		"REMUX",
-		Audio:		"ATMOS",
-		Language:	"ENGLISH",
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: false,
-		Dest: "",
-		Source: "/test movie/test movie 2025 1080p.x264.remux.atmos.english.mp4",
-		Ext: "MP4",	
-		Type: metadata.Video,
-	},
-}
-
-/*
-	test directories
-*/
-
-var subtitleDir = metadata.Entry{
-	Children: []*metadata.Entry{
-		&subtitleFile,
-		&subtitleFile,
-		&subtitleFile,
-	},
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"SUBTITLES",
-		},
-
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: true,
-		Source: "/test movie/subtitles",
-		Type: metadata.UnknownType,
-	},
-}
-
-var bonusDir = metadata.Entry{
-	Children: []*metadata.Entry{
-		&bonusFile,
-		&subtitleFile,
-		&subtitleFile,
-	},
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"EXTRAS",
-		},
-		Bonus: "EXTRA",
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: true,
-		Source: "/test movie/extras",
-		Type: metadata.UnknownType,
-	},
-}
-
-var seasonDir = metadata.Entry{
-	Children: []*metadata.Entry{
-		&episodeFile,
-		&episodeFile,
-		&subtitleFile,
-		&subtitleFile,
-	},
-	MediaInfo: metadata.MediaInfo{
-		Season:		intPtr(1),
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: true,
-		Source: "/test show/season 01",
-		Type: metadata.UnknownType,
-	},
-}
-
-var seriesDir = metadata.Entry{
-	Children: []*metadata.Entry{
-		&seasonDir,
-		&bonusDir,
-		&subtitleDir,
-	},
-	MediaInfo: metadata.MediaInfo{
-		Title: []string{
-			"TEST",
-			"SHOW",
-		},
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: true,
-		Source: "/test show",
-		Type: metadata.UnknownType,
-	},
-}
-
-var movieDir = metadata.Entry{
-	Children: []*metadata.Entry{
-		&movieFile,
-		&bonusFile,
-		&subtitleFile,
-		&subtitleFile,
-	},
-	MediaInfo: metadata.MediaInfo{
-		Title:		[]string{
-			"TEST",
-			"MOVIE",
-		},
-	},
-	PathInfo: metadata.PathInfo{
-		IsDir: true,
-		Source: "/test movie",
-		Type: metadata.UnknownType,
-	},
 }

@@ -1,5 +1,10 @@
 # media_library_manager
 
+
+# packages to refactor 
+- classifier
+- processor
+
 # TODO
 - Prune empty directories from entry tree!
 - Add episode file handling being sent to staging to under a season directory!
