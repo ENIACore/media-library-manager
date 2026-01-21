@@ -17,6 +17,9 @@ func TestTransfer_MovieFile(t *testing.T) {
 
 	entry := testutil.CreateTestMovieFile(nil)
 	testutil.CreateTestFiles(entry, testDir)
+	
+	// Set destination path for transfer
+	entry.PathInfo.Dest = filepath.Base(entry.PathInfo.Source)
 
 	err := Transfer(entry, &cfg, logger)
 	if err != nil {
@@ -39,6 +42,9 @@ func TestTransfer_EpisodeFile(t *testing.T) {
 
 	entry := testutil.CreateTestEpFile(nil)
 	testutil.CreateTestFiles(entry, testDir)
+	
+	// Set destination path for transfer
+	entry.PathInfo.Dest = filepath.Base(entry.PathInfo.Source)
 
 	err := Transfer(entry, &cfg, logger)
 	if err != nil {
@@ -65,6 +71,11 @@ func TestTransfer_MovieDir(t *testing.T) {
 
 	entry := testutil.CreateTestMovieDir(nil, movieFile, bonusFile, subtitleFile)
 	testutil.CreateTestFiles(entry, testDir)
+
+	// Set destination paths for transfer
+	movieFile.PathInfo.Dest = filepath.Base(movieFile.PathInfo.Source)
+	bonusFile.PathInfo.Dest = filepath.Base(bonusFile.PathInfo.Source)
+	subtitleFile.PathInfo.Dest = filepath.Base(subtitleFile.PathInfo.Source)
 
 	err := Transfer(entry, &cfg, logger)
 	if err != nil {
@@ -102,6 +113,10 @@ func TestTransfer_SeriesDir(t *testing.T) {
 	seriesDir := testutil.CreateTestSeriesDir(nil, seasonDir)
 	testutil.CreateTestFiles(seriesDir, testDir)
 
+	// Set destination paths for transfer
+	ep1.PathInfo.Dest = filepath.Base(ep1.PathInfo.Source)
+	ep2.PathInfo.Dest = filepath.Base(ep2.PathInfo.Source)
+
 	err := Transfer(seriesDir, &cfg, logger)
 	if err != nil {
 		t.Fatalf("Transfer() error = %v", err)
@@ -126,6 +141,9 @@ func TestTransfer_DryRun(t *testing.T) {
 
 	entry := testutil.CreateTestMovieFile(nil)
 	testutil.CreateTestFiles(entry, testDir)
+	
+	// Set destination path for transfer
+	entry.PathInfo.Dest = filepath.Base(entry.PathInfo.Source)
 
 	sourcePath := entry.PathInfo.Source
 
@@ -142,7 +160,7 @@ func TestTransfer_DryRun(t *testing.T) {
 	// Destination should not exist
 	destPath := filepath.Join(cfg.MoviePath, entry.PathInfo.Dest)
 	if _, err := os.Stat(destPath); err == nil {
-		t.Errorf("destination file exists during dry run")
+		t.Errorf("destination file exists during dry run at %s", destPath)
 	}
 }
 
@@ -153,6 +171,9 @@ func TestTransfer_InvalidRole(t *testing.T) {
 	entry := testutil.CreateTestMovieFile(nil)
 	entry.Role = -1
 	testutil.CreateTestFiles(entry, testDir)
+	
+	// Set destination path for transfer
+	entry.PathInfo.Dest = filepath.Base(entry.PathInfo.Source)
 
 	err := Transfer(entry, &cfg, logger)
 	if err == nil {
@@ -166,14 +187,18 @@ func TestError_MovesToErrorDir(t *testing.T) {
 
 	entry := testutil.CreateTestMovieFile(nil)
 	testutil.CreateTestFiles(entry, testDir)
+	
+	// Set destination path - Error() uses PathInfo.Dest if set
+	entry.PathInfo.Dest = filepath.Base(entry.PathInfo.Source)
 
 	sourcePath := entry.PathInfo.Source
 
 	Error(entry, &cfg, logger)
 
 	// Check file was moved to error directory
+	// Error() uses the Dest field when moving files
 	errorDir := filepath.Join(cfg.ManagerPath, "errors")
-	destPath := filepath.Join(errorDir, filepath.Base(entry.PathInfo.Source))
+	destPath := filepath.Join(errorDir, entry.PathInfo.Dest)
 
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
 		t.Errorf("expected file at %s, but it doesn't exist", destPath)
@@ -191,6 +216,9 @@ func TestError_DryRun(t *testing.T) {
 
 	entry := testutil.CreateTestMovieFile(nil)
 	testutil.CreateTestFiles(entry, testDir)
+	
+	// Set destination path
+	entry.PathInfo.Dest = filepath.Base(entry.PathInfo.Source)
 
 	sourcePath := entry.PathInfo.Source
 
