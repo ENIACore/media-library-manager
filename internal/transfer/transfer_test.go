@@ -1,5 +1,4 @@
 package transfer
-/*
 
 import (
 	"log/slog"
@@ -7,440 +6,366 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ENIACore/media_library_manager/internal/config"
-	"github.com/ENIACore/media_library_manager/internal/metadata"
+	"github.com/ENIACore/media_library_manager/internal/testutil"
 )
 
-func createTestMovieFile(testDir string, children []*metadata.Entry) *metadata.Entry {
-
-}
+var logger = slog.Default()
 
 func TestTransfer_MovieFile(t *testing.T) {
-	testDir := createTestDir(t)
+	testDir := testutil.CreateTestDir(t)
+	cfg := testutil.CreateTestCfg(testDir)
 
-	sourcePath := filepath.Join(testDir, "source", "movie.mp4")
+	entry := testutil.CreateTestMovieFile(nil)
+	testutil.CreateTestFiles(entry, testDir)
 
-	testCfg := createTestCfg(testDir)
-
-	entry := &metadata.Entry{
-		Role: metadata.MovieFile,
-		PathInfo: metadata.PathInfo{
-			Source: sourcePath,
-			Dest:   "movie.mp4",
-			IsDir:  false,
-		},
-		Children: []*metadata.Entry{},
-	}
-
-	err := Transfer(entry, cfg, logger)
-
+	err := Transfer(entry, &cfg, logger)
 	if err != nil {
-		t.Errorf("Transfer failed: %v", err)
+		t.Fatalf("Transfer() error = %v", err)
 	}
 
-	destPath := filepath.Join(cfg.MoviePath, "movie.mp4")
+	destPath := filepath.Join(cfg.MoviePath, entry.PathInfo.Dest)
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
-		t.Errorf("Expected file at %s, but it doesn't exist", destPath)
+		t.Errorf("expected file at %s, but it doesn't exist", destPath)
 	}
 
-	if _, err := os.Stat(sourcePath); err == nil {
-		t.Errorf("Source file still exists at %s", sourcePath)
+	if _, err := os.Stat(entry.PathInfo.Source); err == nil {
+		t.Errorf("source file still exists at %s", entry.PathInfo.Source)
 	}
 }
 
-func TestTransfer_SeriesFile(t *testing.T) {
-	tempDir, cleanup := setupTestDirs(t)
-	defer cleanup()
+func TestTransfer_EpisodeFile(t *testing.T) {
+	testDir := testutil.CreateTestDir(t)
+	cfg := testutil.CreateTestCfg(testDir)
 
-	sourcePath := filepath.Join(tempDir, "source", "show", "S01E01.mp4")
-	createTestFile(t, sourcePath)
+	entry := testutil.CreateTestEpFile(nil)
+	testutil.CreateTestFiles(entry, testDir)
 
-	cfg := &config.Config{
-		MoviePath:   filepath.Join(tempDir, "movies"),
-		ShowPath:    filepath.Join(tempDir, "shows"),
-		ManagerPath: filepath.Join(tempDir, "manager"),
-		DryRun:      false,
-	}
-
-	entry := &metadata.Entry{
-		Role: metadata.EpisodeFile,
-		PathInfo: metadata.PathInfo{
-			Source: sourcePath,
-			Dest:   "Show/Season 1/S01E01.mp4",
-			IsDir:  false,
-		},
-		Children: []*metadata.Entry{},
-	}
-
-	err := Transfer(entry, cfg, logger)
-
+	err := Transfer(entry, &cfg, logger)
 	if err != nil {
-		t.Errorf("Transfer failed: %v", err)
+		t.Fatalf("Transfer() error = %v", err)
 	}
 
-	destPath := filepath.Join(cfg.ShowPath, "Show", "Season 1", "S01E01.mp4")
+	destPath := filepath.Join(cfg.ShowPath, entry.PathInfo.Dest)
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
-		t.Errorf("Expected file at %s, but it doesn't exist", destPath)
+		t.Errorf("expected file at %s, but it doesn't exist", destPath)
+	}
+
+	if _, err := os.Stat(entry.PathInfo.Source); err == nil {
+		t.Errorf("source file still exists at %s", entry.PathInfo.Source)
+	}
+}
+
+func TestTransfer_MovieDir(t *testing.T) {
+	testDir := testutil.CreateTestDir(t)
+	cfg := testutil.CreateTestCfg(testDir)
+
+	movieFile := testutil.CreateTestMovieFile(nil)
+	bonusFile := testutil.CreateTestBonusFile(nil)
+	subtitleFile := testutil.CreateTestSubFile(nil)
+
+	entry := testutil.CreateTestMovieDir(nil, movieFile, bonusFile, subtitleFile)
+	testutil.CreateTestFiles(entry, testDir)
+
+	err := Transfer(entry, &cfg, logger)
+	if err != nil {
+		t.Fatalf("Transfer() error = %v", err)
+	}
+
+	// Verify movie file was transferred
+	movieDest := filepath.Join(cfg.MoviePath, movieFile.PathInfo.Dest)
+	if _, err := os.Stat(movieDest); os.IsNotExist(err) {
+		t.Errorf("expected movie file at %s", movieDest)
+	}
+
+	// Verify bonus file was transferred
+	bonusDest := filepath.Join(cfg.MoviePath, bonusFile.PathInfo.Dest)
+	if _, err := os.Stat(bonusDest); os.IsNotExist(err) {
+		t.Errorf("expected bonus file at %s", bonusDest)
+	}
+
+	// Verify subtitle file was transferred
+	subtitleDest := filepath.Join(cfg.MoviePath, subtitleFile.PathInfo.Dest)
+	if _, err := os.Stat(subtitleDest); os.IsNotExist(err) {
+		t.Errorf("expected subtitle file at %s", subtitleDest)
+	}
+}
+
+func TestTransfer_SeriesDir(t *testing.T) {
+	testDir := testutil.CreateTestDir(t)
+	cfg := testutil.CreateTestCfg(testDir)
+
+	ep1 := testutil.CreateTestEpFile(nil)
+	ep2 := testutil.CreateTestEpFile(nil)
+	ep2.PathInfo.Source = "test.title.2025.S01E02.1080p.x264.remux.atmos.english.mp4"
+
+	seasonDir := testutil.CreateTestSeasonDir(nil, ep1, ep2)
+	seriesDir := testutil.CreateTestSeriesDir(nil, seasonDir)
+	testutil.CreateTestFiles(seriesDir, testDir)
+
+	err := Transfer(seriesDir, &cfg, logger)
+	if err != nil {
+		t.Fatalf("Transfer() error = %v", err)
+	}
+
+	// Verify episodes were transferred
+	ep1Dest := filepath.Join(cfg.ShowPath, ep1.PathInfo.Dest)
+	if _, err := os.Stat(ep1Dest); os.IsNotExist(err) {
+		t.Errorf("expected episode 1 at %s", ep1Dest)
+	}
+
+	ep2Dest := filepath.Join(cfg.ShowPath, ep2.PathInfo.Dest)
+	if _, err := os.Stat(ep2Dest); os.IsNotExist(err) {
+		t.Errorf("expected episode 2 at %s", ep2Dest)
 	}
 }
 
 func TestTransfer_DryRun(t *testing.T) {
-	tempDir, cleanup := setupTestDirs(t)
-	defer cleanup()
+	testDir := testutil.CreateTestDir(t)
+	cfg := testutil.CreateTestCfg(testDir)
+	cfg.DryRun = true
 
-	sourcePath := filepath.Join(tempDir, "source", "movie.mp4")
-	createTestFile(t, sourcePath)
+	entry := testutil.CreateTestMovieFile(nil)
+	testutil.CreateTestFiles(entry, testDir)
 
-	cfg := &config.Config{
-		MoviePath:   filepath.Join(tempDir, "movies"),
-		ShowPath:    filepath.Join(tempDir, "shows"),
-		ManagerPath: filepath.Join(tempDir, "manager"),
-		DryRun:      true,
-	}
+	sourcePath := entry.PathInfo.Source
 
-	entry := &metadata.Entry{
-		Role: metadata.MovieFile,
-		PathInfo: metadata.PathInfo{
-			Source: sourcePath,
-			Dest:   "movie.mp4",
-			IsDir:  false,
-		},
-		Children: []*metadata.Entry{},
-	}
-
-	err := Transfer(entry, cfg, logger)
-
+	err := Transfer(entry, &cfg, logger)
 	if err != nil {
-		t.Errorf("Transfer failed: %v", err)
+		t.Fatalf("Transfer() error = %v", err)
 	}
 
-	// Source should still exist
+	// Source should still exist in dry run
 	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
-		t.Errorf("Source file was moved during dry run")
+		t.Errorf("source file was moved during dry run")
 	}
 
-	// Dest should not exist
-	destPath := filepath.Join(cfg.MoviePath, "movie.mp4")
+	// Destination should not exist
+	destPath := filepath.Join(cfg.MoviePath, entry.PathInfo.Dest)
 	if _, err := os.Stat(destPath); err == nil {
-		t.Errorf("Destination file exists during dry run")
+		t.Errorf("destination file exists during dry run")
 	}
 }
 
 func TestTransfer_InvalidRole(t *testing.T) {
-	tempDir, cleanup := setupTestDirs(t)
-	defer cleanup()
+	testDir := testutil.CreateTestDir(t)
+	cfg := testutil.CreateTestCfg(testDir)
 
-	cfg := &config.Config{
-		MoviePath:   filepath.Join(tempDir, "movies"),
-		ShowPath:    filepath.Join(tempDir, "shows"),
-		ManagerPath: filepath.Join(tempDir, "manager"),
-		DryRun:      false,
-	}
+	entry := testutil.CreateTestMovieFile(nil)
+	entry.Role = -1
+	testutil.CreateTestFiles(entry, testDir)
 
-	entry := &metadata.Entry{
-		Role: -1,
-		PathInfo: metadata.PathInfo{
-			Source: filepath.Join(tempDir, "source", "file.mp4"),
-			Dest:   "file.mp4",
-			IsDir:  false,
-		},
-		Children: []*metadata.Entry{},
-	}
-
-	err := Transfer(entry, cfg, logger)
-
+	err := Transfer(entry, &cfg, logger)
 	if err == nil {
-		t.Error("Expected error for invalid role, got nil")
-	}
-}
-
-func TestTransfer_WithChildren(t *testing.T) {
-	tempDir, cleanup := setupTestDirs(t)
-	defer cleanup()
-
-	// Create parent directory and child files
-	parentSource := filepath.Join(tempDir, "source", "show")
-	os.MkdirAll(parentSource, 0755)
-
-	child1Source := filepath.Join(parentSource, "S01E01.mp4")
-	child2Source := filepath.Join(parentSource, "S01E02.mp4")
-	createTestFile(t, child1Source)
-	createTestFile(t, child2Source)
-
-	cfg := &config.Config{
-		MoviePath:   filepath.Join(tempDir, "movies"),
-		ShowPath:    filepath.Join(tempDir, "shows"),
-		ManagerPath: filepath.Join(tempDir, "manager"),
-		DryRun:      false,
-	}
-
-	entry := &metadata.Entry{
-		Role: metadata.SeriesDir,
-		PathInfo: metadata.PathInfo{
-			Source: parentSource,
-			Dest:   "Show",
-			IsDir:  true,
-		},
-		Children: []*metadata.Entry{
-			{
-				Role: metadata.EpisodeFile,
-				PathInfo: metadata.PathInfo{
-					Source: child1Source,
-					Dest:   "Show/S01E01.mp4",
-					IsDir:  false,
-				},
-				Children: []*metadata.Entry{},
-			},
-			{
-				Role: metadata.EpisodeFile,
-				PathInfo: metadata.PathInfo{
-					Source: child2Source,
-					Dest:   "Show/S01E02.mp4",
-					IsDir:  false,
-				},
-				Children: []*metadata.Entry{},
-			},
-		},
-	}
-
-	err := Transfer(entry, cfg, logger)
-
-	if err != nil {
-		t.Errorf("Transfer failed: %v", err)
-	}
-
-	// Check both children were moved
-	dest1 := filepath.Join(cfg.ShowPath, "Show", "S01E01.mp4")
-	dest2 := filepath.Join(cfg.ShowPath, "Show", "S01E02.mp4")
-
-	if _, err := os.Stat(dest1); os.IsNotExist(err) {
-		t.Errorf("Expected file at %s", dest1)
-	}
-	if _, err := os.Stat(dest2); os.IsNotExist(err) {
-		t.Errorf("Expected file at %s", dest2)
+		t.Error("expected error for invalid role, got nil")
 	}
 }
 
 func TestError_MovesToErrorDir(t *testing.T) {
-	tempDir, cleanup := setupTestDirs(t)
-	defer cleanup()
+	testDir := testutil.CreateTestDir(t)
+	cfg := testutil.CreateTestCfg(testDir)
 
-	sourcePath := filepath.Join(tempDir, "source", "error.mp4")
-	createTestFile(t, sourcePath)
+	entry := testutil.CreateTestMovieFile(nil)
+	testutil.CreateTestFiles(entry, testDir)
 
-	cfg := &config.Config{
-		MoviePath:   filepath.Join(tempDir, "movies"),
-		ShowPath:    filepath.Join(tempDir, "shows"),
-		ManagerPath: filepath.Join(tempDir, "manager"),
-		DryRun:      false,
-	}
+	sourcePath := entry.PathInfo.Source
 
-	entry := &metadata.Entry{
-		Role: metadata.MovieFile,
-		PathInfo: metadata.PathInfo{
-			Source: sourcePath,
-			Dest:   "error.mp4",
-			IsDir:  false,
-		},
-		Children: []*metadata.Entry{},
-	}
+	Error(entry, &cfg, logger)
 
-	Error(entry, cfg, logger)
-
+	// Check file was moved to error directory
 	errorDir := filepath.Join(cfg.ManagerPath, "errors")
-	destPath := filepath.Join(errorDir, "error.mp4")
+	destPath := filepath.Join(errorDir, filepath.Base(entry.PathInfo.Source))
 
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
-		t.Errorf("Expected file at %s, but it doesn't exist", destPath)
+		t.Errorf("expected file at %s, but it doesn't exist", destPath)
 	}
 
 	if _, err := os.Stat(sourcePath); err == nil {
-		t.Errorf("Source file still exists at %s", sourcePath)
+		t.Errorf("source file still exists at %s", sourcePath)
 	}
 }
 
 func TestError_DryRun(t *testing.T) {
-	tempDir, cleanup := setupTestDirs(t)
-	defer cleanup()
+	testDir := testutil.CreateTestDir(t)
+	cfg := testutil.CreateTestCfg(testDir)
+	cfg.DryRun = true
 
-	sourcePath := filepath.Join(tempDir, "source", "error.mp4")
-	createTestFile(t, sourcePath)
+	entry := testutil.CreateTestMovieFile(nil)
+	testutil.CreateTestFiles(entry, testDir)
 
-	cfg := &config.Config{
-		MoviePath:   filepath.Join(tempDir, "movies"),
-		ShowPath:    filepath.Join(tempDir, "shows"),
-		ManagerPath: filepath.Join(tempDir, "manager"),
-		DryRun:      true,
-	}
+	sourcePath := entry.PathInfo.Source
 
-	entry := &metadata.Entry{
-		Role: metadata.MovieFile,
-		PathInfo: metadata.PathInfo{
-			Source: sourcePath,
-			Dest:   "error.mp4",
-			IsDir:  false,
-		},
-		Children: []*metadata.Entry{},
-	}
-
-	Error(entry, cfg, logger)
+	Error(entry, &cfg, logger)
 
 	// Source should still exist in dry run
 	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
-		t.Errorf("Source file was moved during dry run")
+		t.Errorf("source file was moved during dry run")
 	}
 }
 
 func TestResolveConflict_NoConflict(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "test.mp4")
+	testDir := t.TempDir()
+	path := filepath.Join(testDir, "test.mp4")
 
 	result, err := resolveConflict(path)
-
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Fatalf("resolveConflict() error = %v", err)
 	}
 
 	if result != path {
-		t.Errorf("Expected %s, got %s", path, result)
+		t.Errorf("resolveConflict() = %v, want %v", result, path)
 	}
 }
 
 func TestResolveConflict_SingleConflict(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "test.mp4")
-	createTestFile(t, path)
+	testDir := t.TempDir()
+	path := filepath.Join(testDir, "test.mp4")
 
-	result, err := resolveConflict(path)
-
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	// Create conflicting file
+	if _, err := os.Create(path); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	expected := filepath.Join(tempDir, "test_1.mp4")
+	result, err := resolveConflict(path)
+	if err != nil {
+		t.Fatalf("resolveConflict() error = %v", err)
+	}
+
+	expected := filepath.Join(testDir, "test_1.mp4")
 	if result != expected {
-		t.Errorf("Expected %s, got %s", expected, result)
+		t.Errorf("resolveConflict() = %v, want %v", result, expected)
 	}
 }
 
 func TestResolveConflict_MultipleConflicts(t *testing.T) {
-	tempDir := t.TempDir()
-	basePath := filepath.Join(tempDir, "test.mp4")
-	
+	testDir := t.TempDir()
+	basePath := filepath.Join(testDir, "test.mp4")
+
 	// Create original and first 3 conflicts
-	createTestFile(t, basePath)
-	createTestFile(t, filepath.Join(tempDir, "test_1.mp4"))
-	createTestFile(t, filepath.Join(tempDir, "test_2.mp4"))
-	createTestFile(t, filepath.Join(tempDir, "test_3.mp4"))
-
-	result, err := resolveConflict(basePath)
-
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	for i := 0; i <= 3; i++ {
+		var path string
+		if i == 0 {
+			path = basePath
+		} else {
+			path = filepath.Join(testDir, "test_"+string(rune('0'+i))+".mp4")
+		}
+		if _, err := os.Create(path); err != nil {
+			t.Fatalf("failed to create test file: %v", err)
+		}
 	}
 
-	expected := filepath.Join(tempDir, "test_4.mp4")
+	result, err := resolveConflict(basePath)
+	if err != nil {
+		t.Fatalf("resolveConflict() error = %v", err)
+	}
+
+	expected := filepath.Join(testDir, "test_4.mp4")
 	if result != expected {
-		t.Errorf("Expected %s, got %s", expected, result)
+		t.Errorf("resolveConflict() = %v, want %v", result, expected)
 	}
 }
 
 func TestResolveConflict_PreservesExtension(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "test.mkv")
-	createTestFile(t, path)
+	testDir := t.TempDir()
+	path := filepath.Join(testDir, "test.mkv")
 
-	result, err := resolveConflict(path)
-
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	if _, err := os.Create(path); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	expected := filepath.Join(tempDir, "test_1.mkv")
+	result, err := resolveConflict(path)
+	if err != nil {
+		t.Fatalf("resolveConflict() error = %v", err)
+	}
+
+	expected := filepath.Join(testDir, "test_1.mkv")
 	if result != expected {
-		t.Errorf("Expected %s, got %s", expected, result)
+		t.Errorf("resolveConflict() = %v, want %v", result, expected)
 	}
 }
 
 func TestResolveConflict_NoExtension(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "testfile")
-	createTestFile(t, path)
+	testDir := t.TempDir()
+	path := filepath.Join(testDir, "testfile")
 
-	result, err := resolveConflict(path)
-
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	if _, err := os.Create(path); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	expected := filepath.Join(tempDir, "testfile_1")
+	result, err := resolveConflict(path)
+	if err != nil {
+		t.Fatalf("resolveConflict() error = %v", err)
+	}
+
+	expected := filepath.Join(testDir, "testfile_1")
 	if result != expected {
-		t.Errorf("Expected %s, got %s", expected, result)
+		t.Errorf("resolveConflict() = %v, want %v", result, expected)
 	}
 }
 
 func TestExists_FileExists(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "exists.txt")
-	createTestFile(t, path)
+	testDir := t.TempDir()
+	path := filepath.Join(testDir, "exists.txt")
+
+	if _, err := os.Create(path); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
 
 	if !exists(path) {
-		t.Error("Expected exists() to return true for existing file")
+		t.Error("exists() = false, want true for existing file")
 	}
 }
 
 func TestExists_FileDoesNotExist(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "nonexistent.txt")
+	testDir := t.TempDir()
+	path := filepath.Join(testDir, "nonexistent.txt")
 
 	if exists(path) {
-		t.Error("Expected exists() to return false for non-existent file")
+		t.Error("exists() = true, want false for non-existent file")
 	}
 }
 
 func TestExists_Directory(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "subdir")
-	os.MkdirAll(path, 0755)
+	testDir := t.TempDir()
+	path := filepath.Join(testDir, "subdir")
+
+	if err := os.MkdirAll(path, 0755); err != nil {
+		t.Fatalf("failed to create test directory: %v", err)
+	}
 
 	if !exists(path) {
-		t.Error("Expected exists() to return true for existing directory")
+		t.Error("exists() = false, want true for existing directory")
 	}
 }
 
 func TestMoveEntries_CreatesDestinationDirectory(t *testing.T) {
-	tempDir := t.TempDir()
-	
-	sourcePath := filepath.Join(tempDir, "source", "file.mp4")
-	createTestFile(t, sourcePath)
+	testDir := t.TempDir()
 
-	destDir := filepath.Join(tempDir, "dest", "nested", "path")
-
-	entry := &metadata.Entry{
-		Role: metadata.MovieFile,
-		PathInfo: metadata.PathInfo{
-			Source: sourcePath,
-			Dest:   "file.mp4",
-			IsDir:  false,
-		},
-		Children: []*metadata.Entry{},
+	sourcePath := filepath.Join(testDir, "source", "file.mp4")
+	if err := os.MkdirAll(filepath.Dir(sourcePath), 0755); err != nil {
+		t.Fatalf("failed to create source directory: %v", err)
+	}
+	if _, err := os.Create(sourcePath); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	err := moveEntries(entry, destDir, logger)
+	destDir := filepath.Join(testDir, "dest", "nested", "path")
+	entry := testutil.CreateTestMovieFile(nil)
+	entry.PathInfo.Source = sourcePath
+	entry.PathInfo.Dest = "file.mp4"
 
+	err := moveEntries(entry, destDir, logger)
 	if err != nil {
-		t.Errorf("moveEntries failed: %v", err)
+		t.Fatalf("moveEntries() error = %v", err)
 	}
 
 	// Check directory was created
 	if _, err := os.Stat(destDir); os.IsNotExist(err) {
-		t.Errorf("Expected directory %s to be created", destDir)
+		t.Errorf("expected directory %s to be created", destDir)
 	}
 
 	// Check file was moved
 	destPath := filepath.Join(destDir, "file.mp4")
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
-		t.Errorf("Expected file at %s", destPath)
+		t.Errorf("expected file at %s", destPath)
 	}
 }
-*/
