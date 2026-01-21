@@ -8,21 +8,28 @@ import (
 
 // Classifies in order of specificity
 func Classify(root *metadata.Entry, logger *slog.Logger) error {
+	lg := logger.With("func", "Classify")
 
 	if root.PathInfo.IsDir {
 		if classifySubtitleDir(root, logger) || classifyBonusDir(root, logger) || classifySeasonDir(root, logger) || classifySeriesDir(root, logger) || classifyMovieDir(root, logger) {
+			lg.Info("Root entry classification determined", "entry", root.PathInfo.Source, "role", root.Role)
 			return nil
 		}
 	} else {
 		if classifySubtitleFile(root) || classifyBonusFile(root) || classifyEpisodeFile(root) || classifyMovieFile(root) {
+			lg.Info("Root entry classification determined", "entry", root.PathInfo.Source, "role", root.Role)
 			return nil
 		} 
 	}
+	
+	lg.Error("Unable to classify entry", "entry", root.PathInfo.Source)
 	return fmt.Errorf("Failed to classify root entry %v", root.PathInfo.Source)
 }
 
 func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) bool {
+	lg := logger.With("func", "classifySubtitleDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 1 {
+		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
 		return false
 	}
 
@@ -36,11 +43,14 @@ func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	}
 
 	entry.Role = metadata.SubtitleDir
+	lg.Debug("Classification determined", "value", hasSubtitle) 
 	return hasSubtitle
 }
 
 func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
+	lg := logger.With("func", "classifyBonusDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 1 {
+		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
 		return false
 	}
 
@@ -58,11 +68,14 @@ func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	}
 
 	entry.Role = metadata.BonusDir	
+	lg.Debug("Classification determined", "value", hasBonus) 
 	return hasBonus
 }
 
 func classifySeasonDir(entry *metadata.Entry, logger *slog.Logger) bool {
+	lg := logger.With("func", "classifySeasonDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 2 {
+		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
 		return false
 	}
 
@@ -84,11 +97,14 @@ func classifySeasonDir(entry *metadata.Entry, logger *slog.Logger) bool {
 
 
 	entry.Role = metadata.SeasonDir	
+	lg.Debug("Classification determined", "value", hasEpisode) 
 	return hasEpisode
 }
 
 func classifySeriesDir(entry *metadata.Entry, logger *slog.Logger) bool {
+	lg := logger.With("func", "classifySeriesDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 3 {
+		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
 		return false
 	}
 
@@ -110,14 +126,18 @@ func classifySeriesDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	}
 
 	entry.Role = metadata.SeriesDir
+	lg.Debug("Classification determined", "value", hasSeason) 
 	return hasSeason
 }
 
 func classifyMovieDir(entry *metadata.Entry, logger *slog.Logger) bool {
+	lg := logger.With("func", "classifyMovieDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 2 {
+		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
 		return false
 	}
 	if entry.MediaInfo.Season != nil || entry.MediaInfo.Episode != nil {
+		lg.Debug("Unexpected season or ep present", "season", entry.MediaInfo.Season, "episode", entry.MediaInfo.Episode)
 		return false
 	}
 
@@ -141,11 +161,13 @@ func classifyMovieDir(entry *metadata.Entry, logger *slog.Logger) bool {
 		if classifyMovieFile(child) && !hasMovie{
 			hasMovie = true
 		} else {
+			lg.Debug("Unable to to classify child", child.PathInfo.Source)
 			return false
 		}
 	}
 
 	entry.Role = metadata.MovieDir
+	lg.Debug("Classification determined", "value", hasMovie) 
 	return hasMovie
 }
 
