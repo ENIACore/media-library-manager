@@ -161,7 +161,7 @@ func classifyMovieDir(entry *metadata.Entry, logger *slog.Logger) bool {
 		if classifyMovieFile(child) && !hasMovie{
 			hasMovie = true
 		} else {
-			lg.Debug("Unable to to classify child", child.PathInfo.Source)
+			lg.Debug("Unable to to classify child", "entry", child.PathInfo.Source)
 			return false
 		}
 	}

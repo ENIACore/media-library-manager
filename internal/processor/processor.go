@@ -8,15 +8,11 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
-func ResolveEntries(root *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "ResolveEntries")
-	log.Info("resolving root", "path", root.PathInfo.Source)
-
+func Resolve(root *metadata.Entry, logger *slog.Logger) error {
 	var err error
 
 	switch root.Role {
 		case metadata.SubtitleFile, metadata.BonusFile, metadata.SubtitleDir, metadata.BonusDir:
-			log.Error("invalid root entry", "path", root.PathInfo.Source, "role", root.Role)
 			return fmt.Errorf("entry %v cannot be processed alone at root level", root.PathInfo.Source)
 		case metadata.MovieFile:
 			err = resolveMovieFile("", root, logger)
@@ -29,21 +25,17 @@ func ResolveEntries(root *metadata.Entry, logger *slog.Logger) error {
 		case metadata.MovieDir:
 			err = resolveMovieDir(root, logger)
 		default:
-			log.Error("unknown role", "path", root.PathInfo.Source, "role", root.Role)
 			return fmt.Errorf("entry %v has unknown role", root.PathInfo.Source)
 	}
 
 	if err != nil {
-		log.Error("resolution failed", "path", root.PathInfo.Source, "err", err)
 		return fmt.Errorf("failed to resolve root %v: %w", root.PathInfo.Source, err)
 	}
 
-	log.Info("resolved root", "path", root.PathInfo.Source, "dest", root.PathInfo.Dest)
 	return nil
 }
 
 func resolveMovieDir(entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveMovieDir")
 
 	// Use dir for base path and title if movie file with title not present
 	title := buildTitle(entry.MediaInfo.Title)
@@ -70,7 +62,6 @@ func resolveMovieDir(entry *metadata.Entry, logger *slog.Logger) error {
 			case metadata.BonusDir:
 				err = resolveBonusDir(basePath, title, child, logger)
 			default:
-				log.Debug("unexpected child", "path", child.PathInfo.Source, "role", child.Role)
 				return fmt.Errorf("unexpected child role %v in movie dir", child.Role)
 		}
 		if err != nil {
@@ -78,13 +69,11 @@ func resolveMovieDir(entry *metadata.Entry, logger *slog.Logger) error {
 		}
 	}
 
-	log.Debug("resolved dir", "path", entry.PathInfo.Source, "dest", basePath)
 	entry.PathInfo.Dest = basePath
 	return nil
 }
 
 func resolveSeriesDir(entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveSeriesDir")
 
 	basePath := buildBasePath(entry.MediaInfo.Title, entry.MediaInfo.Year)
 	title := buildTitle(entry.MediaInfo.Title)
@@ -99,7 +88,6 @@ func resolveSeriesDir(entry *metadata.Entry, logger *slog.Logger) error {
 			case metadata.BonusDir:
 				err = resolveBonusDir(basePath, title, child, logger)
 			default:
-				log.Debug("unexpected child", "path", child.PathInfo.Source, "role", child.Role)
 				return fmt.Errorf("unexpected child role %v in series dir", child.Role)
 		}
 		if err != nil {
@@ -107,13 +95,11 @@ func resolveSeriesDir(entry *metadata.Entry, logger *slog.Logger) error {
 		}
 	}
 
-	log.Debug("resolved dir", "path", entry.PathInfo.Source, "dest", basePath)
 	entry.PathInfo.Dest = basePath
 	return nil
 }
 
 func resolveSeasonDir(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveSeasonDir")
 
 	seasonNum := 1
 	if entry.MediaInfo.Season != nil {
@@ -147,7 +133,6 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, logger *slog.Logge
 		case metadata.SubtitleDir:
 			err = resolveSubtitleDir(basePath, title, child, logger)
 		default:
-			log.Debug("unexpected child", "path", child.PathInfo.Source, "role", child.Role)
 			return fmt.Errorf("unexpected child role %v in season dir", child.Role)
 		}
 		if err != nil {
@@ -155,7 +140,6 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, logger *slog.Logge
 		}
 	}
 
-	log.Debug("resolved dir", "path", entry.PathInfo.Source, "dest", basePath)
 	entry.PathInfo.Dest = basePath
 	return nil
 }
