@@ -2,22 +2,24 @@ package extractor
 
 import (
 	"fmt"
-	"strings"
+	"log/slog"
+	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
-	"log/slog"
-	"github.com/ENIACore/media_library_manager/internal/patterns"
+
 	"github.com/ENIACore/media_library_manager/internal/metadata"
-	"path/filepath"
+	"github.com/ENIACore/media_library_manager/internal/patterns"
 )
 
-
-
+// ExtractMedia extracts media metadata from a file or directory path.
+// Returns a populated MediaInfo containing title, year, episode, season,
+// resolution, codec, source, audio, language, and bonus information.
 func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	log := logger.With("func", "ExtractMedia")
 	log.Info("extracting media info from path", "path", path)
-	filename := filepath.Base(path)	
+	filename := filepath.Base(path)
 
 	sanitizedName := strings.Split(sanitizeName(filename), ".")
 	mediaInfo := metadata.MediaInfo{}
@@ -39,29 +41,31 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	return mediaInfo
 }
 
-// Returns title starting from left most segment
-// Extracts using segment order:
-//		-	<title>.<year (optional)>.<misc pattern>...
-//		-	<title>.<year (optional)>.<bonus pattern>...
-//		-	<title>.<year (optional)>.<resolution, codec, source, or audio>...
-//		-	<title>.<year (optional)>.<season or ep>...
-//		-	<title>.<year (optional)>.<file ext>
-//		-	<title>.<year (optional)>
+// extractTitle returns the title starting from the leftmost segment.
+// Extraction stops at the first recognized pattern (resolution, codec,
+// source, audio, season, episode, extension, misc, or bonus).
+//
+// Segment order:
+//
+//	<title>.<year>.<pattern>...
+//	<title>.<year>
+//
+// Year is optional in all patterns.
 func extractTitle(segments []string) []string {
 	var title []string
 	var year *int
 	for i, segment := range segments {
 		candidates := segments[i:]
-		if	parseResolution(candidates) != "" 	||
-			parseCodec(candidates) != ""		||
-			parseSource(candidates) != "" 		||
-			parseAudio(candidates) != "" 		||
-			parseSeason(candidates) != nil 		||
-			parseEpisode(candidates) != nil 	||
-			parseVideoExt(candidates) != "" 	||
-			parseSubtitleExt(candidates) != "" 	||
-			parseMisc(candidates) != "" 		||
-			parseAudioExt(candidates) != ""		||
+		if parseResolution(candidates) != "" ||
+			parseCodec(candidates) != "" ||
+			parseSource(candidates) != "" ||
+			parseAudio(candidates) != "" ||
+			parseSeason(candidates) != nil ||
+			parseEpisode(candidates) != nil ||
+			parseVideoExt(candidates) != "" ||
+			parseSubtitleExt(candidates) != "" ||
+			parseMisc(candidates) != "" ||
+			parseAudioExt(candidates) != "" ||
 			parseBonus(candidates) != "" {
 			break
 		}
@@ -73,34 +77,26 @@ func extractTitle(segments []string) []string {
 		if year = parseYear(segment); year == nil {
 			title = append(title, segment)
 		}
-
 	}
 	return title
 }
 
-// Returns year and -1 for no year found
-// Extracts using segment order:
-//		- <...>.<year (optional)>.<misc pattern>...
-//		- <...>.<year (optional)>.<bonus pattern>...
-//		- <...>.<year (optional)>.<resolution, codec, source, or audio>...
-//		- <...>.<year (optional)>.<season or ep>...
-//		- <...>.<year (optional)>.<file ext>...
-//		- <...>.<year (optional)>
+// extractYear returns the year from segments, or nil if not found.
+// Scans segments until a recognized pattern is encountered.
 func extractYear(segments []string) *int {
 	var year *int
 	for i, segment := range segments {
-
 		candidates := segments[i:]
-		if	parseResolution(candidates) != "" 	||
-			parseCodec(candidates) != ""		||
-			parseSource(candidates) != "" 		||
-			parseAudio(candidates) != "" 		||
-			parseSeason(candidates) != nil 		||
-			parseEpisode(candidates) != nil 	||
-			parseVideoExt(candidates) != "" 	||
-			parseSubtitleExt(candidates) != "" 	||
-			parseMisc(candidates) != "" 		||
-			parseAudioExt(candidates) != ""		||
+		if parseResolution(candidates) != "" ||
+			parseCodec(candidates) != "" ||
+			parseSource(candidates) != "" ||
+			parseAudio(candidates) != "" ||
+			parseSeason(candidates) != nil ||
+			parseEpisode(candidates) != nil ||
+			parseVideoExt(candidates) != "" ||
+			parseSubtitleExt(candidates) != "" ||
+			parseMisc(candidates) != "" ||
+			parseAudioExt(candidates) != "" ||
 			parseBonus(candidates) != "" {
 			return year
 		}
@@ -109,8 +105,8 @@ func extractYear(segments []string) *int {
 	return year
 }
 
-// Returns nil for no season pattern, 0 for season without number, >0 for season number found
-// Extracts without using expected segment order
+// extractSeason returns the season number from segments.
+// Returns nil if no pattern, 0 if pattern without number, >0 for season number.
 func extractSeason(segments []string) *int {
 	for i := range segments {
 		candidates := segments[i:]
@@ -121,8 +117,8 @@ func extractSeason(segments []string) *int {
 	return nil
 }
 
-// Returns nil for no episode pattern, 0 for episode without number, >0 for episode number found
-// Extracts without using expected segment order
+// extractEpisode returns the episode number from segments.
+// Returns nil if no pattern, 0 if pattern without number, >0 for episode number.
 func extractEpisode(segments []string) *int {
 	for i := range segments {
 		candidates := segments[i:]
@@ -130,12 +126,10 @@ func extractEpisode(segments []string) *int {
 			return ep
 		}
 	}
-
 	return nil
 }
 
-// Returns resolution pattern or "" for no resolution pattern
-// Extracts without using expected segment order
+// extractResolution returns the resolution pattern from segments, or empty string.
 func extractResolution(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -146,8 +140,7 @@ func extractResolution(segments []string) string {
 	return ""
 }
 
-// Returns codec pattern or "" for no codec pattern
-// Extracts without using expected segment order
+// extractCodec returns the codec pattern from segments, or empty string.
 func extractCodec(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -158,8 +151,7 @@ func extractCodec(segments []string) string {
 	return ""
 }
 
-// Returns source pattern or "" for no source pattern
-// Extracts without using expected segment order
+// extractSource returns the source pattern from segments, or empty string.
 func extractSource(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -170,8 +162,7 @@ func extractSource(segments []string) string {
 	return ""
 }
 
-// Returns audio pattern or "" for no audio pattern
-// Extracts without using expected segment order
+// extractAudio returns the audio pattern from segments, or empty string.
 func extractAudio(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -182,6 +173,7 @@ func extractAudio(segments []string) string {
 	return ""
 }
 
+// extractLanguage returns the language pattern from segments, or empty string.
 func extractLanguage(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -192,6 +184,7 @@ func extractLanguage(segments []string) string {
 	return ""
 }
 
+// extractBonus returns the bonus pattern from segments, or empty string.
 func extractBonus(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -202,7 +195,8 @@ func extractBonus(segments []string) string {
 	return ""
 }
 
-// Helper function to return resolution if left most segments are a resolution or empty string if not
+// parseResolution checks if the leftmost segments match a resolution pattern.
+// Returns the resolution key or empty string.
 func parseResolution(segments []string) string {
 	for _, group := range patterns.GetResolutionPatternGroups() {
 		for _, re := range group.Patterns {
@@ -214,7 +208,8 @@ func parseResolution(segments []string) string {
 	return ""
 }
 
-// Helper function to return codec if left most segments are a codec or empty string if not
+// parseCodec checks if the leftmost segments match a codec pattern.
+// Returns the codec key or empty string.
 func parseCodec(segments []string) string {
 	for _, group := range patterns.GetCodecPatternGroups() {
 		for _, re := range group.Patterns {
@@ -226,7 +221,8 @@ func parseCodec(segments []string) string {
 	return ""
 }
 
-// Helper function to return media source if left most segments are a media source or empty string if not
+// parseSource checks if the leftmost segments match a source pattern.
+// Returns the source key or empty string.
 func parseSource(segments []string) string {
 	for _, group := range patterns.GetSourcePatternGroups() {
 		for _, re := range group.Patterns {
@@ -238,7 +234,8 @@ func parseSource(segments []string) string {
 	return ""
 }
 
-// Helper function to return audio if left most segments are a audio or empty string if not
+// parseAudio checks if the leftmost segments match an audio pattern.
+// Returns the audio key or empty string.
 func parseAudio(segments []string) string {
 	for _, group := range patterns.GetAudioPatternGroups() {
 		for _, re := range group.Patterns {
@@ -250,13 +247,14 @@ func parseAudio(segments []string) string {
 	return ""
 }
 
-// Returns nil for invalid year, otherwise returns year
+// parseYear validates and returns a year from a segment.
+// Returns nil if invalid (not 4 digits, not between 1930 and current year).
 func parseYear(s string) *int {
 	if len(s) != 4 {
 		return nil
 	}
 
-	year, err := strconv.Atoi(s)	
+	year, err := strconv.Atoi(s)
 	if err != nil {
 		return nil
 	}
@@ -268,8 +266,8 @@ func parseYear(s string) *int {
 	return &year
 }
 
-
-// Returns nil for SEASON pattern not matched, 0 for match without number, >0 for season number
+// parseSeason checks if segments match a season pattern.
+// Returns nil if no match, 0 if pattern without number, >0 for season number.
 func parseSeason(segments []string) *int {
 	unknown := 0
 	for _, re := range patterns.GetSeasonPatterns() {
@@ -279,21 +277,20 @@ func parseSeason(segments []string) *int {
 			continue
 		}
 		if len(match) == 1 {
-			return &unknown	
+			return &unknown
 		}
 
 		if season, err := strconv.Atoi(match[1]); err == nil {
 			return &season
 		}
-		
-		return &unknown // matched but couldn't parse number
-		
+
+		return &unknown
 	}
 	return nil
 }
 
-
-// Returns nil for EPISODE pattern not matched, 0 for match without number, >0 for EPISODE number
+// parseEpisode checks if segments match an episode pattern.
+// Returns nil if no match, 0 if pattern without number, >0 for episode number.
 func parseEpisode(segments []string) *int {
 	unknown := 0
 	for _, re := range patterns.GetEpisodePatterns() {
@@ -303,22 +300,23 @@ func parseEpisode(segments []string) *int {
 			continue
 		}
 		if len(match) == 1 {
-			return &unknown	
+			return &unknown
 		}
 
 		if ep, err := strconv.Atoi(match[1]); err == nil {
 			return &ep
 		}
-		return &unknown // matched but couldn't parse number
-		
+		return &unknown
 	}
 	return nil
 }
 
+// parseLanguage checks if segments match a language pattern.
+// Returns the language key or empty string.
 func parseLanguage(segments []string) string {
 	for _, group := range patterns.GetLanguagePatternGroups() {
 		for _, re := range group.Patterns {
-			match := matchSegments(segments, (*regexp.Regexp)(re)) 
+			match := matchSegments(segments, (*regexp.Regexp)(re))
 			if match != nil {
 				return group.Key
 			}
@@ -327,6 +325,8 @@ func parseLanguage(segments []string) string {
 	return ""
 }
 
+// parseMisc checks if segments match a miscellaneous pattern.
+// Returns the matched string or empty string.
 func parseMisc(segments []string) string {
 	for _, re := range patterns.GetMiscPatterns() {
 		if match := matchSegments(segments, (*regexp.Regexp)(re)); match != nil {
@@ -336,10 +336,12 @@ func parseMisc(segments []string) string {
 	return ""
 }
 
+// parseBonus checks if segments match a bonus content pattern.
+// Returns the bonus key or empty string.
 func parseBonus(segments []string) string {
 	for _, group := range patterns.GetBonusPatternGroups() {
 		for _, re := range group.Patterns {
-			match := matchSegments(segments, (*regexp.Regexp)(re)) 
+			match := matchSegments(segments, (*regexp.Regexp)(re))
 			if match != nil {
 				return group.Key
 			}

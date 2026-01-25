@@ -1,12 +1,14 @@
 package extractor
 
 import (
-	"strings"
 	"regexp"
+	"strings"
 )
 
+// sanitizeName normalizes a filename for pattern matching.
+// Converts to uppercase, removes quotes, replaces non-alphanumeric
+// characters with dots, and trims leading/trailing spaces and dots.
 func sanitizeName(name string) string {
-
 	name = strings.ToUpper(name)
 	name = strings.ReplaceAll(name, "'", "")
 	name = strings.ReplaceAll(name, "\"", "")
@@ -18,20 +20,17 @@ func sanitizeName(name string) string {
 	return name
 }
 
-// matchSegments joins dot-separated segments and attempts a full regex match.
-// It joins only as many segments as needed based on the number of literal dots in the pattern. 
-// Returns the match slice (full match + capture groups) if the entire joined string matches, or nil otherwise.
+// matchSegments joins segments and attempts a full regex match.
+// Joins only as many segments as needed based on literal dots in the pattern.
+// Returns the match slice (full match + capture groups) or nil.
 func matchSegments(segments []string, re *regexp.Regexp) []string {
+	numDots := strings.Count(re.String(), `\.`)
+	end := min(numDots+1, len(segments))
 
-	// Determine how many segments to join based on dots in pattern
-    numDots := strings.Count(re.String(), `\.`)
-    end := min(numDots+1, len(segments))
-    
-    str := strings.Join(segments[:end], ".")
-    
-    if match := re.FindStringSubmatch(str); match != nil && match[0] == str {
-        return match
-    }
-    return nil
+	str := strings.Join(segments[:end], ".")
 
+	if match := re.FindStringSubmatch(str); match != nil && match[0] == str {
+		return match
+	}
+	return nil
 }

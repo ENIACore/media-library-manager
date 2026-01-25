@@ -1,21 +1,25 @@
 package extractor
 
 import (
-	"path/filepath"
-	"strings"
-	"github.com/ENIACore/media_library_manager/internal/patterns"
-	"github.com/ENIACore/media_library_manager/internal/metadata"
-	"log/slog"
-	"regexp"
-	"os"
 	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/ENIACore/media_library_manager/internal/metadata"
+	"github.com/ENIACore/media_library_manager/internal/patterns"
 )
 
+// ExtractPath extracts filesystem metadata from a file or directory path.
+// Returns a populated PathInfo containing source path, content type,
+// file extension, and whether the path is a directory.
 func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	log := logger.With("func", "ExtractPath")
 	log.Info("extracting path info from path", "path", path)
 
-	filename := filepath.Base(path)	
+	filename := filepath.Base(path)
 	sanitizedName := strings.Split(sanitizeName(filename), ".")
 
 	pathInfo := metadata.PathInfo{}
@@ -25,7 +29,6 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	if info, err := os.Stat(path); err == nil {
 		pathInfo.IsDir = info.IsDir()
 	} else {
-		// If we can't stat, fall back to extension check
 		pathInfo.IsDir = pathInfo.Ext == "" && pathInfo.Type == metadata.UnknownType
 	}
 
@@ -33,26 +36,24 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	return pathInfo
 }
 
-// Extracts both content type and extension
-// Returns metadata.Unknown and "" if not found or unsupported
+// extractType returns the content type and extension from segments.
+// Returns UnknownType and empty string if not found or unsupported.
 func extractType(segments []string) (metadata.ContentType, string) {
 	for i := range segments {
-		candidates := segments[i:]	
+		candidates := segments[i:]
 		if match := parseVideoExt(candidates); match != "" {
 			return metadata.Video, match
 		}
 		if match := parseSubtitleExt(candidates); match != "" {
 			return metadata.Subtitle, match
 		}
-		/* TODO: Audio files not yet supported
-		if match := parseAudioExt(candidates); match != "" {
-			return match
-		}
-		*/
+		// TODO: Audio files not yet supported
 	}
 	return metadata.UnknownType, ""
 }
 
+// parseVideoExt checks if segments match a video extension pattern.
+// Returns the matched extension or empty string.
 func parseVideoExt(segments []string) string {
 	for _, re := range patterns.GetVideoExtensionPatterns() {
 		match := matchSegments(segments, (*regexp.Regexp)(re))
@@ -63,6 +64,8 @@ func parseVideoExt(segments []string) string {
 	return ""
 }
 
+// parseSubtitleExt checks if segments match a subtitle extension pattern.
+// Returns the matched extension or empty string.
 func parseSubtitleExt(segments []string) string {
 	for _, re := range patterns.GetSubtitleExtensionPatterns() {
 		match := matchSegments(segments, (*regexp.Regexp)(re))
@@ -73,6 +76,8 @@ func parseSubtitleExt(segments []string) string {
 	return ""
 }
 
+// parseAudioExt checks if segments match an audio extension pattern.
+// Returns the matched extension or empty string.
 func parseAudioExt(segments []string) string {
 	for _, re := range patterns.GetAudioExtensionPatterns() {
 		match := matchSegments(segments, (*regexp.Regexp)(re))

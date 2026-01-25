@@ -4,8 +4,7 @@
 // # Entry
 //
 // The main type, [Entry], represents a node in the media file hierarchy.
-// It is passed along the media_library_manager pipeline and transformed
-// until its destination is determined.
+// It is passed along the media_library_manager pipeline and transformed until its destination is determined.
 //
 // # Pipeline
 //

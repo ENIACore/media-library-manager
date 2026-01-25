@@ -1,13 +1,10 @@
 package metadata
 
-// Entry represents a node in the media file hierarchy.
-//
-// Entry forms a tree structure where each node contains metadata
-// about a file or directory and its relationship to other entries.
+// Entry represents a node in the media file hierarchy, forming a tree where each node contains metadata about file or directory
 type Entry struct {
 	Parent   *Entry
 	Children []*Entry
-	Depth    int // depth from root (root = 0)
+	Depth    int // Depth depth from root (root = 0)
 
 	MediaInfo MediaInfo
 	PathInfo  PathInfo
