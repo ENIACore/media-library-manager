@@ -4,429 +4,383 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"strconv"
+	"path/filepath"
 
+	"unicode"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
+	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
-func Resolve(root *metadata.Entry, logger *slog.Logger) error {
-	var err error
-
+func Resolve(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	switch root.Role {
-		case metadata.SubtitleFile, metadata.BonusFile, metadata.SubtitleDir, metadata.BonusDir:
-			return fmt.Errorf("entry %v cannot be processed alone at root level", root.PathInfo.Source)
-		case metadata.MovieFile:
-			err = resolveMovieFile("", root, logger)
-		case metadata.EpisodeFile:
-			err = resolveEpisodeFile("", nil, root, logger)
-		case metadata.SeasonDir:
-			err = resolveSeasonDir("", root, logger)
-		case metadata.SeriesDir:
-			err = resolveSeriesDir(root, logger)
-		case metadata.MovieDir:
-			err = resolveMovieDir(root, logger)
-		default:
-			return fmt.Errorf("entry %v has unknown role", root.PathInfo.Source)
+	case metadata.SubtitleFile, metadata.BonusFile, metadata.SubtitleDir, metadata.BonusDir:
+		return fmt.Errorf("Entry %v cannot be processed at root level", root.PathInfo.Source)
+	case metadata.EpisodeFile:
+		return resolveEpisodeFile("", root, cfg, logger)
+	case metadata.MovieFile:
+		return resolveMovieFile("", root, cfg, logger)
+	case metadata.SeasonDir:
+		return resolveSeasonDir("", root, cfg, logger)
+	case metadata.SeriesDir:
+		return resolveSeriesDir(root, cfg, logger)
+	case metadata.MovieDir:
+		return resolveMovieDir(root, cfg, logger)
+	default:
+		return fmt.Errorf("Entry %v has unknown role", root.PathInfo.Source)
 	}
-
-	if err != nil {
-		return fmt.Errorf("failed to resolve root %v: %w", root.PathInfo.Source, err)
-	}
-
-	return nil
 }
 
-func resolveMovieDir(entry *metadata.Entry, logger *slog.Logger) error {
+/*
+	Resolvers
+*/
 
-	// Use dir for base path and title if movie file with title not present
-	title := buildTitle(entry.MediaInfo.Title)
-	basePath := buildBasePath(entry.MediaInfo.Title, entry.MediaInfo.Year)
-	for _, child := range entry.Children {
-		if child.Role == metadata.MovieFile && len(child.MediaInfo.Title) > 0{
-			title = buildTitle(child.MediaInfo.Title)
-			basePath = buildBasePath(child.MediaInfo.Title, child.MediaInfo.Year)
-			break
-		}
-	}
-
-	for _, child := range entry.Children {
-		var err error
-		switch child.Role {
-			case metadata.MovieFile:
-				err = resolveMovieFile(basePath, child, logger)
-			case metadata.SubtitleFile:
-				err = resolveSubtitleFile(basePath, title, child, logger)
-			case metadata.SubtitleDir:
-				err = resolveSubtitleDir(basePath, title, child, logger)
-			case metadata.BonusFile:
-				err = resolveBonusFile(basePath, title, child, logger)
-			case metadata.BonusDir:
-				err = resolveBonusDir(basePath, title, child, logger)
-			default:
-				return fmt.Errorf("unexpected child role %v in movie dir", child.Role)
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	entry.PathInfo.Dest = basePath
-	return nil
-}
-
-func resolveSeriesDir(entry *metadata.Entry, logger *slog.Logger) error {
-
-	basePath := buildBasePath(entry.MediaInfo.Title, entry.MediaInfo.Year)
-	title := buildTitle(entry.MediaInfo.Title)
-
-	for _, child := range entry.Children {
-		var err error
-		switch child.Role {
-			case metadata.SeasonDir:
-				err = resolveSeasonDir(basePath, child, logger)
-			case metadata.SubtitleDir:
-				err = resolveSubtitleDir(basePath, title, child, logger)
-			case metadata.BonusDir:
-				err = resolveBonusDir(basePath, title, child, logger)
-			default:
-				return fmt.Errorf("unexpected child role %v in series dir", child.Role)
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	entry.PathInfo.Dest = basePath
-	return nil
-}
-
-func resolveSeasonDir(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
-
-	seasonNum := 1
-	if entry.MediaInfo.Season != nil {
-		seasonNum = *entry.MediaInfo.Season
-	}
-	seasonPath := fmt.Sprintf("S%02d", seasonNum)
-
-	// Assign both series title and base path (if base path is empty)
-	title := buildTitle(entry.MediaInfo.Title)
-	for _, child := range entry.Children {
-		if child.Role == metadata.EpisodeFile {
-			if basePath == "" {
-				basePath = buildBasePath(child.MediaInfo.Title, child.MediaInfo.Year)
-			}
-			if len(child.MediaInfo.Title) > 0 {
-				title = buildTitle(child.MediaInfo.Title)
-				break
-			}
-		}
-	}
-
-	basePath = joinPath(basePath, seasonPath)
-
-	for _, child := range entry.Children {
-		var err error
-		switch child.Role {
-		case metadata.EpisodeFile:
-			err = resolveEpisodeFile(basePath, entry.MediaInfo.Season, child, logger)
-		case metadata.SubtitleFile:
-			err = resolveSubtitleFile(basePath, title, child, logger)
-		case metadata.SubtitleDir:
-			err = resolveSubtitleDir(basePath, title, child, logger)
-		default:
-			return fmt.Errorf("unexpected child role %v in season dir", child.Role)
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	entry.PathInfo.Dest = basePath
-	return nil
-}
-
-func resolveMovieFile(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveMovieFile")
-
-	if entry.Role != metadata.MovieFile {
-		log.Debug("invalid role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("entry %v is not a movie file", entry.PathInfo.Source)
-	}
-
-	if basePath == "" {
-		basePath = buildBasePath(entry.MediaInfo.Title, entry.MediaInfo.Year)
-	}
-
-	filename := buildVideoFilename(entry.MediaInfo, entry.PathInfo.Ext)
-	basePath = joinPath(basePath, filename)
-
-	log.Debug("resolved file", "path", entry.PathInfo.Source, "dest", basePath)
-	entry.PathInfo.Dest = basePath
-	return nil
-}
-
-func resolveEpisodeFile(basePath string, parentSeason *int, entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveEpisodeFile")
-
-	if entry.Role != metadata.EpisodeFile {
-		log.Debug("invalid role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("entry %v is not an episode file", entry.PathInfo.Source)
-	}
-
-	if basePath == "" {
-		season := 1
-		if entry.MediaInfo.Season != nil {
-			season = *entry.MediaInfo.Season
-		} else if parentSeason != nil {
-			season = *parentSeason
-		}
-		basePath = buildBasePath(entry.MediaInfo.Title, entry.MediaInfo.Year)
-		seasonPath := fmt.Sprintf("S%02d", season)
-		basePath = joinPath(basePath, seasonPath)
-	}
-
-	filename := buildEpisodeFilename(entry.MediaInfo, parentSeason, entry.PathInfo.Ext)
-	basePath = joinPath(basePath, filename)
-
-	log.Debug("resolved file", "path", entry.PathInfo.Source, "dest", basePath)
-	entry.PathInfo.Dest = basePath
-	return nil
-}
-
-func resolveSubtitleFile(basePath string, title string, entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveSubtitleFile")
+func resolveSubtitleFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveSubtitleFile")
 
 	if entry.Role != metadata.SubtitleFile {
-		log.Debug("invalid role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("entry %v is not a subtitle file", entry.PathInfo.Source)
+		lg.Debug("Expected SubtitleFile role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected SubtitleFile role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	}
+	if basePath == "" {
+		lg.Debug("Expected base path for SubtitleFile role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected base path for SubtitlFile role, for node %v", entry.PathInfo.Source)
 	}
 
-	filename := buildSubtitleFilename(title, entry.MediaInfo, entry.PathInfo.Ext)
-	basePath = joinPath(basePath, "Subtitles")
-	basePath = joinPath(basePath, filename)
+	entry.MediaInfo.Resolution = ""
+	entry.MediaInfo.Codec = ""
+	entry.MediaInfo.Source = ""
+	entry.MediaInfo.Audio = ""
+	entry.MediaInfo.Bonus = ""
+	filename := buildFilename(entry)
 
-	log.Debug("resolved file", "path", entry.PathInfo.Source, "dest", basePath)
-	entry.PathInfo.Dest = basePath
+	entry.PathInfo.Dest = filepath.Join(basePath, filename)
+	lg.Debug("Resolved bonus file destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
 	return nil
 }
 
-func resolveSubtitleDir(basePath string, title string, entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveSubtitleDir")
+func resolveSubtitleDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveSubtitleDir")
 
 	if entry.Role != metadata.SubtitleDir {
-		log.Debug("invalid role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("entry %v is not a subtitle dir", entry.PathInfo.Source)
+		lg.Debug("Expected SubtitleDir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected SubtitleDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	}
+	if basePath == "" {
+		lg.Debug("Expected base path for SubtitleDir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected base path for SubtitleDir role, for node %v", entry.PathInfo.Source)
 	}
 
+	basePath = filepath.Join(basePath, "Subtitles")
+
 	for _, child := range entry.Children {
-		if err := resolveSubtitleFile(basePath, title, child, logger); err != nil {
+		var err error
+		switch child.Role {
+		case metadata.SubtitleFile:
+			err = resolveSubtitleFile(basePath, child, cfg, logger)
+		default:
+			err = fmt.Errorf("Unexpected child role for SubtitleDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
+		}
+		if err != nil {
 			return err
 		}
 	}
 
-	basePath = joinPath(basePath, "Subtitles")
-	log.Debug("resolved dir", "path", entry.PathInfo.Source, "dest", basePath)
 	entry.PathInfo.Dest = basePath
+	lg.Debug("Resolved subtitle dir destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
 	return nil
 }
 
-func resolveBonusFile(basePath string, title string, entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveBonusFile")
+func resolveBonusFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveBonusFile")
 
 	if entry.Role != metadata.BonusFile {
-		log.Debug("invalid role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("entry %v is not a bonus file", entry.PathInfo.Source)
+		lg.Debug("Expected BonusFile role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected BonusFile role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	}
+	if basePath == "" {
+		lg.Debug("Expected base path for BonusFile role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected base path for BonusFile role, for node %v", entry.PathInfo.Source)
 	}
 
-	filename := buildBonusFilename(title, entry.MediaInfo, entry.PathInfo.Ext)
-	basePath = joinPath(basePath, "Extras")
-	basePath = joinPath(basePath, filename)
+	filename := buildFilename(entry)
 
-	log.Debug("resolved file", "path", entry.PathInfo.Source, "dest", basePath)
-	entry.PathInfo.Dest = basePath
+	entry.PathInfo.Dest = filepath.Join(basePath, filename)
+	lg.Debug("Resolved bonus file destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
 	return nil
 }
 
-func resolveBonusDir(basePath string, title string, entry *metadata.Entry, logger *slog.Logger) error {
-	log := logger.With("func", "resolveBonusDir")
+func resolveBonusDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveBonusDir")
 
 	if entry.Role != metadata.BonusDir {
-		log.Debug("invalid role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("entry %v is not a bonus dir", entry.PathInfo.Source)
+		lg.Debug("Expected BonusDir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected BonusDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
 	}
+	if basePath == "" {
+		lg.Debug("Expected base path for BonusDir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected base path for BonusDir role, for node %v", entry.PathInfo.Source)
+	}
+
+	basePath = filepath.Join(basePath, "Extras")
 
 	for _, child := range entry.Children {
 		var err error
 		switch child.Role {
 		case metadata.BonusFile:
-			err = resolveBonusFile(basePath, title, child, logger)
+			err = resolveBonusFile(basePath, child, cfg, logger)
 		case metadata.SubtitleFile:
-			err = resolveSubtitleFile(basePath, title, child, logger)
+			err = resolveSubtitleFile(basePath, child, cfg, logger)
 		default:
-			log.Debug("unexpected child", "path", child.PathInfo.Source, "role", child.Role)
-			return fmt.Errorf("unexpected child role %v in bonus dir", child.Role)
+			err = fmt.Errorf("Unexpected child role for BonusDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
 		if err != nil {
 			return err
 		}
 	}
 
-	basePath = joinPath(basePath, "Extras")
-	log.Debug("resolved dir", "path", entry.PathInfo.Source, "dest", basePath)
 	entry.PathInfo.Dest = basePath
+	lg.Debug("Resolved bonus dir destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
+	return nil
+}
+
+func resolveEpisodeFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveEpisodeFile")
+
+	if entry.Role != metadata.EpisodeFile {
+		lg.Debug("Expected EpisodeFile role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected EpisodeFile role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	}
+
+	if basePath == "" {
+		titlePath := buildTitlePath(entry)	
+		seasonPath := buildSeasonPath(entry)
+		basePath = filepath.Join(cfg.ShowPath, titlePath, seasonPath)
+	}
+	entry.MediaInfo.Bonus = ""
+	filename := buildFilename(entry)
+
+	entry.PathInfo.Dest = filepath.Join(basePath, filename)
+	lg.Debug("Resolved episode file destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
+	return nil
+}
+
+func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveSeasonDir")
+
+	if entry.Role != metadata.SeasonDir {
+		lg.Debug("Expected SeasonDir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected SeasonDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	}
+
+	seasonPath := buildSeasonPath(entry)
+	if basePath == "" {
+		titlePath := buildTitlePath(entry)
+		basePath = filepath.Join(cfg.ShowPath, titlePath, seasonPath)	
+	} else {
+		basePath = filepath.Join(basePath, seasonPath)
+	}
+
+	for _, child := range entry.Children {
+		var err error
+		switch child.Role {
+		case metadata.EpisodeFile:
+			err = resolveEpisodeFile(basePath, child, cfg, logger)
+		case metadata.SubtitleFile:
+			err = resolveSubtitleFile(basePath, child, cfg, logger)
+		case metadata.SubtitleDir:
+			err = resolveSubtitleDir(basePath, child, cfg, logger)
+		default:
+			err = fmt.Errorf("Unexpected child role for SeasonDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	entry.PathInfo.Dest = basePath
+	lg.Debug("Resolved season dir destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
+	return nil
+}
+
+// Top level resolver cannot have basePath from parent
+func resolveSeriesDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveSeriesDir")
+
+	if entry.Role != metadata.SeriesDir {
+		lg.Debug("Expected SeriesDir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected SeriesDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	}
+
+	titlePath := buildTitlePath(entry)
+	basePath := filepath.Join(cfg.ShowPath, titlePath)
+
+	for _, child := range entry.Children {
+		var err error
+		switch child.Role {
+		case metadata.SeasonDir:
+			err = resolveSeasonDir(basePath, child, cfg, logger)
+		case metadata.BonusDir:
+			err = resolveBonusDir(basePath, child, cfg, logger)
+		case metadata.SubtitleDir:
+			err = resolveSubtitleDir(basePath, child, cfg, logger)
+		default:
+			return fmt.Errorf("Unexpected child role for SeriesDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	entry.PathInfo.Dest = basePath
+	lg.Debug("Resolved series dir destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
+	return nil
+}
+
+func resolveMovieFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveMovieFile")
+
+	if entry.Role != metadata.MovieFile {
+		lg.Debug("Expected MovieFile role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected MovieFile role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	}
+
+	if basePath == "" {
+		titlePath := buildTitlePath(entry)
+		basePath = filepath.Join(cfg.MoviePath, titlePath)
+	}
+
+	entry.MediaInfo.Season = nil
+	entry.MediaInfo.Episode = nil
+	entry.MediaInfo.Bonus = ""
+	filename := buildFilename(entry)
+
+	entry.PathInfo.Dest = filepath.Join(basePath, filename)
+	lg.Debug("Resolved movie file destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
+	return nil
+}
+
+// Top level resolver cannot have basePath from parent
+func resolveMovieDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveMovieDir")
+
+	if entry.Role != metadata.MovieDir {
+		lg.Debug("Expected MovieDir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected MovieDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	}
+
+	titlePath := buildTitlePath(entry)
+	basePath := filepath.Join(cfg.MoviePath, titlePath)
+
+	for _, child := range entry.Children {
+		var err error
+		switch child.Role {
+		case metadata.MovieFile:
+			err = resolveMovieFile(basePath, child, cfg, logger)
+		case metadata.SubtitleFile:
+			err = resolveSubtitleFile(basePath, child, cfg, logger)
+		case metadata.BonusFile:
+			err = resolveBonusFile(basePath, child, cfg, logger)
+		case metadata.SubtitleDir:
+			err = resolveSubtitleDir(basePath, child, cfg, logger)
+		case metadata.BonusDir:
+			err = resolveBonusDir(basePath, child, cfg, logger)
+		default:
+			return fmt.Errorf("Unexpected child role for MovieDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
+		}
+		
+		if err != nil {
+			return err
+		}
+	}
+
+	entry.PathInfo.Dest = basePath
+	lg.Debug("Resolved movie dir destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
+
 	return nil
 }
 
 /*
-	filename builders
+	Resolver Helpers
 */
 
-func buildBasePath(titleParts []string, year *int) string {
-	title := buildTitle(titleParts)
-	if year != nil {
-		return fmt.Sprintf("%s.%d", title, *year)
-	}
-	return title
-}
+// Set Entry fields to nil to omit from filename
+func buildFilename(entry *metadata.Entry) string {
+	filename := ""
 
-func buildTitle(parts []string) string {
-	if len(parts) == 0 {
-		return ""
-	}
-
-	capitalized := make([]string, len(parts))
-	for i, part := range parts {
-		capitalized[i] = capitalize(part)
-	}
-	return strings.Join(capitalized, ".")
-}
-
-func buildVideoFilename(info metadata.MediaInfo, ext string) string {
-	parts := []string{buildTitle(info.Title)}
-
-	if info.Year != nil {
-		parts = append(parts, fmt.Sprintf("%d", *info.Year))
-	}
-	if info.Resolution != "" {
-		parts = append(parts, capitalize(info.Resolution))
-	}
-	if info.Codec != "" {
-		parts = append(parts, capitalize(info.Codec))
-	}
-	if info.Source != "" {
-		parts = append(parts, capitalize(info.Source))
-	}
-	if info.Audio != "" {
-		parts = append(parts, capitalize(info.Audio))
-	}
-	if info.Language != "" {
-		parts = append(parts, capitalize(info.Language))
-	}
-
-	filename := strings.Join(parts, ".")
-	return filename + "." + strings.ToLower(ext)
-}
-
-func buildEpisodeFilename(info metadata.MediaInfo, parentSeason *int, ext string) string {
-	parts := []string{buildTitle(info.Title)}
-
-	seasonNum := 0
-	if info.Season != nil {
-		seasonNum = *info.Season
-	} else if parentSeason != nil {
-		seasonNum = *parentSeason
-	}
-
-	episodeNum := 0
-	if info.Episode != nil {
-		episodeNum = *info.Episode
-	}
-
-	parts = append(parts, fmt.Sprintf("S%02dE%02d", seasonNum, episodeNum))
-
-	if info.Resolution != "" {
-		parts = append(parts, capitalize(info.Resolution))
-	}
-	if info.Codec != "" {
-		parts = append(parts, capitalize(info.Codec))
-	}
-	if info.Source != "" {
-		parts = append(parts, capitalize(info.Source))
-	}
-	if info.Audio != "" {
-		parts = append(parts, capitalize(info.Audio))
-	}
-	if info.Language != "" {
-		parts = append(parts, capitalize(info.Language))
-	}
-
-	filename := strings.Join(parts, ".")
-	return filename + "." + strings.ToLower(ext)
-}
-
-func buildSubtitleFilename(title string, info metadata.MediaInfo, ext string) string {
-	parts := []string{title}
-
-	if info.Language != "" {
-		parts = append(parts, capitalize(info.Language))
-	}
-
-	filename := strings.Join(parts, ".")
-	return filename + "." + strings.ToLower(ext)
-}
-
-func buildBonusFilename(title string, info metadata.MediaInfo, ext string) string {
-	parts := []string{title}
-
-	if info.Bonus != "" {
-		parts = append(parts, formatBonus(info.Bonus))
-	}
-	if info.Resolution != "" {
-		parts = append(parts, capitalize(info.Resolution))
-	}
-	if info.Codec != "" {
-		parts = append(parts, capitalize(info.Codec))
-	}
-	if info.Source != "" {
-		parts = append(parts, capitalize(info.Source))
-	}
-	if info.Audio != "" {
-		parts = append(parts, capitalize(info.Audio))
-	}
-	if info.Language != "" {
-		parts = append(parts, capitalize(info.Language))
-	}
-
-	filename := strings.Join(parts, ".")
-	return filename + "." + strings.ToLower(ext)
-}
-
-/*
-	string helpers
-*/
-
-func capitalize(s string) string {
-	if s == "" {
-		return ""
-	}
-	lower := strings.ToLower(s)
-	return strings.ToUpper(string(lower[0])) + lower[1:]
-}
-
-func formatBonus(s string) string {
-	parts := strings.Split(s, "_")
-	capitalized := make([]string, len(parts))
-	for i, part := range parts {
-		capitalized[i] = capitalize(part)
-	}
-	return strings.Join(capitalized, ".")
-}
-
-func joinPath(parts ...string) string {
-	nonEmpty := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if p != "" {
-			nonEmpty = append(nonEmpty, p)
+    capitalized := make([]string, len(entry.MediaInfo.Title))
+    for i, part := range entry.MediaInfo.Title {
+        capitalized[i] = capitalize(part)
+    }
+    filename = strings.Join(capitalized, ".")
+    
+    if entry.MediaInfo.Year != nil {
+        filename += "." + strconv.Itoa(*entry.MediaInfo.Year)
+    }
+	if entry.MediaInfo.Season != nil || entry.MediaInfo.Episode != nil {
+		filename += "."
+		if entry.MediaInfo.Season != nil {
+			filename += fmt.Sprintf("S%02d", *entry.MediaInfo.Season)
+		}
+		if entry.MediaInfo.Episode != nil {
+			filename += fmt.Sprintf("E%02d", *entry.MediaInfo.Episode)
 		}
 	}
-	return strings.Join(nonEmpty, "/")
+	if entry.MediaInfo.Resolution != "" {
+		filename += "." + entry.MediaInfo.Resolution
+	}
+	if entry.MediaInfo.Codec != "" {
+		filename += "." + entry.MediaInfo.Codec
+	}
+	if entry.MediaInfo.Source != "" {
+		filename += "." + entry.MediaInfo.Source
+	}
+	if entry.MediaInfo.Audio != "" {
+		filename += "." + entry.MediaInfo.Audio
+	}
+	if entry.MediaInfo.Language != "" {
+		filename += "." + entry.MediaInfo.Language
+	}
+	if entry.MediaInfo.Bonus != "" {
+		filename += "." + entry.MediaInfo.Bonus
+	}
+
+	return filename + "." + strings.ToLower(entry.PathInfo.Ext)
+}
+
+func buildTitlePath(entry *metadata.Entry) string {
+    capitalized := make([]string, len(entry.MediaInfo.Title))
+    for i, part := range entry.MediaInfo.Title {
+        capitalized[i] = capitalize(part)
+    }
+    basePath := strings.Join(capitalized, ".")
+    
+    if entry.MediaInfo.Year != nil {
+        basePath += "." + strconv.Itoa(*entry.MediaInfo.Year)
+    }
+    return basePath
+}
+
+func buildSeasonPath(entry *metadata.Entry) string {
+	if entry.MediaInfo.Season != nil {
+		return fmt.Sprintf("S%02d", *entry.MediaInfo.Season)
+	}
+	return "S01"
+}
+
+func capitalize(s string) string {
+    if s == "" {
+        return ""
+    }
+    r := []rune(s)
+    r[0] = unicode.ToUpper(r[0])
+    return string(r)
 }
