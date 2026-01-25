@@ -1,54 +1,24 @@
 package metadata
 
-// Structure of media torrents
-/*
-Subtitle File
-Bonus File
-Episode File
-Movie File
-
-Subtitle Directory
-└── Subtitle File(s)
-
-Bonus Directory
-├── Bonus File(s)
-└── Subtitle File(s) (optional)
-
-Season Directory
-├── Episode File(s)
-├── Subtitle File(s) (optional)
-└── Subtitle Directory (optional)
-
-Series Directory
-├── Season Directory(s)
-├── Bonus Directory (optional)
-└── Subtitle Directory (optional)
-
-Movie Directory
-├── Movie File
-├── Subtitle File(s) (optional)
-├── Bonus File(s) (optional)
-├── Subtitle Directory (optional)
-└── Bonus Directory (optional)
-*/
-
+// EntryRole classifies the purpose of a file or directory in the media hierarchy.
 type EntryRole int8
 
-// Classification of node that describes purpose of file or directory
+// Entry role constants for files and directories.
 const (
-	UnknownRole		EntryRole = iota
-	SubtitleFile	
-	BonusFile
-	EpisodeFile
-	MovieFile			
-	
-	SubtitleDir
-	BonusDir
-	SeasonDir
-	SeriesDir
-	MovieDir
+	UnknownRole  EntryRole = iota
+	SubtitleFile           // subtitle file (.srt, .sub, etc.)
+	BonusFile              // bonus/extra content file
+	EpisodeFile            // TV episode file
+	MovieFile              // feature film file
+
+	SubtitleDir // directory containing subtitles
+	BonusDir    // directory containing bonus content
+	SeasonDir   // directory representing a TV season
+	SeriesDir   // directory representing a TV series
+	MovieDir    // directory representing a movie and its assets
 )
 
+// String returns the string representation of the EntryRole.
 func (r EntryRole) String() string {
 	switch r {
 	case UnknownRole:
@@ -76,12 +46,13 @@ func (r EntryRole) String() string {
 	}
 }
 
+// ContentType identifies the type of media file.
 type ContentType int8
 
-// Type of file
+// Content type constants.
 const (
-	UnknownType		ContentType = iota
-    Video			
-    Subtitle		
-	//Audio			- Audio classification not yet included		
+	UnknownType ContentType = iota
+	Video
+	Subtitle
+	// Audio - not yet implemented
 )
