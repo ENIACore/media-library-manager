@@ -12,6 +12,9 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
+// Resolve determines destination paths for all entries in the tree based on their classified roles.
+// Routes the root entry to the appropriate resolver function based on its role.
+// Returns an error if the root entry has an invalid role for top-level processing.
 func Resolve(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	switch root.Role {
 	case metadata.SubtitleFile, metadata.BonusFile, metadata.SubtitleDir, metadata.BonusDir:
@@ -35,6 +38,9 @@ func Resolve(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) erro
 	Resolvers
 */
 
+// resolveSubtitleFile sets the destination path for a subtitle file.
+// Requires a basePath from parent. Clears quality metadata (resolution, codec, source, audio, bonus)
+// before building the filename. Sets entry.PathInfo.Dest to the full destination path.
 func resolveSubtitleFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveSubtitleFile")
 
@@ -60,6 +66,9 @@ func resolveSubtitleFile(basePath string, entry *metadata.Entry, cfg *config.Con
 	return nil
 }
 
+// resolveSubtitleDir sets the destination path for a subtitle directory and its children.
+// Requires a basePath from parent. Creates a "Subtitles" subdirectory and resolves all subtitle file children.
+// Sets entry.PathInfo.Dest to the subtitle directory path.
 func resolveSubtitleDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveSubtitleDir")
 
@@ -93,6 +102,8 @@ func resolveSubtitleDir(basePath string, entry *metadata.Entry, cfg *config.Conf
 	return nil
 }
 
+// resolveBonusFile sets the destination path for a bonus content file.
+// Requires a basePath from parent. Builds filename from metadata and sets entry.PathInfo.Dest.
 func resolveBonusFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveBonusFile")
 
@@ -113,6 +124,9 @@ func resolveBonusFile(basePath string, entry *metadata.Entry, cfg *config.Config
 	return nil
 }
 
+// resolveBonusDir sets the destination path for a bonus content directory and its children.
+// Requires a basePath from parent. Creates an "Extras" subdirectory and resolves all bonus and subtitle file children.
+// Sets entry.PathInfo.Dest to the extras directory path.
 func resolveBonusDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveBonusDir")
 
@@ -148,6 +162,9 @@ func resolveBonusDir(basePath string, entry *metadata.Entry, cfg *config.Config,
 	return nil
 }
 
+// resolveEpisodeFile sets the destination path for an episode file.
+// If basePath is empty, constructs path from cfg.ShowPath, title, and season.
+// Clears bonus metadata before building filename. Sets entry.PathInfo.Dest.
 func resolveEpisodeFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveEpisodeFile")
 
@@ -170,6 +187,9 @@ func resolveEpisodeFile(basePath string, entry *metadata.Entry, cfg *config.Conf
 	return nil
 }
 
+// resolveSeasonDir sets the destination path for a season directory and its children.
+// If basePath is empty, constructs path from cfg.ShowPath and title. Appends season subdirectory.
+// Resolves all episode, subtitle file, and subtitle directory children. Sets entry.PathInfo.Dest.
 func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveSeasonDir")
 
@@ -209,7 +229,9 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config
 	return nil
 }
 
-// Top level resolver cannot have basePath from parent
+// resolveSeriesDir sets the destination path for a series directory and its children.
+// Constructs basePath from cfg.ShowPath and title. Resolves all season, bonus, and subtitle directory children.
+// Sets entry.PathInfo.Dest. Top-level resolver, does not accept basePath from parent.
 func resolveSeriesDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveSeriesDir")
 
@@ -244,6 +266,9 @@ func resolveSeriesDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Lo
 	return nil
 }
 
+// resolveMovieFile sets the destination path for a movie file.
+// If basePath is empty, constructs path from cfg.MoviePath and title.
+// Clears season, episode, and bonus metadata before building filename. Sets entry.PathInfo.Dest.
 func resolveMovieFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveMovieFile")
 
@@ -268,7 +293,9 @@ func resolveMovieFile(basePath string, entry *metadata.Entry, cfg *config.Config
 	return nil
 }
 
-// Top level resolver cannot have basePath from parent
+// resolveMovieDir sets the destination path for a movie directory and its children.
+// Constructs basePath from cfg.MoviePath and title. Resolves all movie file, subtitle, and bonus children.
+// Sets entry.PathInfo.Dest. Top-level resolver, does not accept basePath from parent.
 func resolveMovieDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveMovieDir")
 
@@ -312,7 +339,9 @@ func resolveMovieDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Log
 	Resolver Helpers
 */
 
-// Set Entry fields to nil to omit from filename
+// buildFilename constructs a standardized filename from entry metadata.
+// Includes title, year, season, episode, resolution, codec, source, audio, language, and bonus fields.
+// Returns filename with lowercase extension. Nil fields are omitted from output.
 func buildFilename(entry *metadata.Entry) string {
 	filename := ""
 
@@ -356,6 +385,8 @@ func buildFilename(entry *metadata.Entry) string {
 	return filename + "." + strings.ToLower(entry.PathInfo.Ext)
 }
 
+// buildTitlePath constructs a directory path from title and year metadata.
+// Capitalizes each title component and joins with dots. Appends year if present.
 func buildTitlePath(entry *metadata.Entry) string {
     capitalized := make([]string, len(entry.MediaInfo.Title))
     for i, part := range entry.MediaInfo.Title {
@@ -369,6 +400,8 @@ func buildTitlePath(entry *metadata.Entry) string {
     return basePath
 }
 
+// buildSeasonPath constructs a season directory name from season metadata.
+// Returns formatted season (e.g., "S01") or defaults to "S01" if season is nil.
 func buildSeasonPath(entry *metadata.Entry) string {
 	if entry.MediaInfo.Season != nil {
 		return fmt.Sprintf("S%02d", *entry.MediaInfo.Season)
@@ -376,6 +409,8 @@ func buildSeasonPath(entry *metadata.Entry) string {
 	return "S01"
 }
 
+// capitalize returns the string with its first rune converted to uppercase.
+// Returns empty string if input is empty.
 func capitalize(s string) string {
     if s == "" {
         return ""

@@ -17,7 +17,8 @@ type Config struct {
 
 var Load = sync.OnceValue(New)
 
-// Sets global configuration variables using order of precedence args > env > default
+// New creates and returns a new Config with values loaded from command-line flags and environment variables.
+// Precedence order: command-line args > environment variables > defaults.
 func New() *Config {
     defaults := &Config{
         TorrentPath: getEnv("ENIACORE_TORRENT_PATH", "/opt/qbit/downloads"),
@@ -39,6 +40,7 @@ func New() *Config {
     return cfg
 }
 
+// getEnv retrieves an environment variable value or returns the default if not set.
 func getEnv(key, defaultVal string) string {
     if value := os.Getenv(key); value != "" {
         return value
@@ -46,6 +48,7 @@ func getEnv(key, defaultVal string) string {
     return defaultVal
 }
 
+// getEnvBool retrieves a boolean environment variable value or returns the default if not set or invalid.
 func getEnvBool(key string, defaultVal bool) bool {
     if value := os.Getenv(key); value != "" {
         if b, err := strconv.ParseBool(value); err == nil {

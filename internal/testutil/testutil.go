@@ -12,10 +12,15 @@ import (
 
 var logger = slog.Default()
 
+// IntPtr returns a pointer to the provided integer value.
+// Helper function for creating int pointers in test structs.
 func IntPtr(i int) *int {
 	return &i
 }
 
+// CreateTestDir creates a temporary directory structure for testing.
+// Creates subdirectories: source, movies, shows, and manager.
+// Returns the temporary directory path. Cleanup is automatic via t.TempDir().
 func CreateTestDir(t *testing.T) string {
 	t.Helper()
 	tempDir := t.TempDir()
@@ -28,6 +33,8 @@ func CreateTestDir(t *testing.T) string {
 	return tempDir
 }
 
+// CreateTestCfg creates a test configuration pointing to subdirectories within testDir.
+// Sets up paths for movies, shows, and manager directories with DryRun disabled.
 func CreateTestCfg(testDir string) config.Config {
 	return config.Config{
 		MoviePath:   filepath.Join(testDir, "movies"),
@@ -38,6 +45,8 @@ func CreateTestCfg(testDir string) config.Config {
 
 }
 
+// CreateTestSubFile creates a test Entry representing a subtitle file.
+// Returns an Entry with SubtitleFile role, English language, and .srt extension.
 func CreateTestSubFile(parent *metadata.Entry) *metadata.Entry {
 	return &metadata.Entry{
 		Parent: parent,
@@ -67,6 +76,8 @@ func CreateTestSubFile(parent *metadata.Entry) *metadata.Entry {
 	}
 }
 
+// CreateTestBonusFile creates a test Entry representing a bonus content file.
+// Returns an Entry with BonusFile role and "Behind.The.Scenes" bonus metadata.
 func CreateTestBonusFile(parent *metadata.Entry) *metadata.Entry {
 	return &metadata.Entry{
 		Parent: parent,
@@ -100,6 +111,8 @@ func CreateTestBonusFile(parent *metadata.Entry) *metadata.Entry {
 	}
 }
 
+// CreateTestEpFile creates a test Entry representing a TV episode file.
+// Returns an Entry with EpisodeFile role, S01E01 metadata, and video file properties.
 func CreateTestEpFile(parent *metadata.Entry) *metadata.Entry {
 	return &metadata.Entry{
 		Parent: parent,
@@ -133,6 +146,8 @@ func CreateTestEpFile(parent *metadata.Entry) *metadata.Entry {
 	}
 }
 
+// CreateTestMovieFile creates a test Entry representing a movie file.
+// Returns an Entry with MovieFile role, no season/episode metadata, and video file properties.
 func CreateTestMovieFile(parent *metadata.Entry) *metadata.Entry {
 	return &metadata.Entry{
 		Parent: parent,
@@ -165,6 +180,9 @@ func CreateTestMovieFile(parent *metadata.Entry) *metadata.Entry {
 	}
 }
 
+// CreateTestSubDir creates a test Entry representing a subtitle directory.
+// Returns an Entry with SubtitleDir role containing the provided children.
+// Updates child paths to be relative to "subtitles" directory.
 func CreateTestSubDir(parent *metadata.Entry, children ...*metadata.Entry) *metadata.Entry {
 	root := &metadata.Entry{
 		Parent: parent,
@@ -202,6 +220,9 @@ func CreateTestSubDir(parent *metadata.Entry, children ...*metadata.Entry) *meta
 	return root
 }
 
+// CreateTestBonusDir creates a test Entry representing a bonus content directory.
+// Returns an Entry with BonusDir role containing the provided children.
+// Updates child paths to be relative to "extras" directory.
 func CreateTestBonusDir(parent *metadata.Entry, children ...*metadata.Entry) *metadata.Entry {
 	root := &metadata.Entry{
 		Parent: parent,
@@ -239,6 +260,9 @@ func CreateTestBonusDir(parent *metadata.Entry, children ...*metadata.Entry) *me
 	return root
 }
 
+// CreateTestSeasonDir creates a test Entry representing a TV season directory.
+// Returns an Entry with SeasonDir role for Season 1 containing the provided children.
+// Updates child paths to be relative to "S01" directory.
 func CreateTestSeasonDir(parent *metadata.Entry, children ...*metadata.Entry) *metadata.Entry {
 	root := &metadata.Entry{
 		Parent: parent,
@@ -277,6 +301,9 @@ func CreateTestSeasonDir(parent *metadata.Entry, children ...*metadata.Entry) *m
 }
 
 
+// CreateTestSeriesDir creates a test Entry representing a TV series directory.
+// Returns an Entry with SeriesDir role containing the provided children.
+// Updates child paths to be relative to "test.title" directory.
 func CreateTestSeriesDir(parent *metadata.Entry, children ...*metadata.Entry) *metadata.Entry {
 	root := &metadata.Entry{
 		Parent: parent,
@@ -316,6 +343,9 @@ func CreateTestSeriesDir(parent *metadata.Entry, children ...*metadata.Entry) *m
 	return root
 }
 
+// CreateTestMovieDir creates a test Entry representing a movie directory.
+// Returns an Entry with MovieDir role for a 2025 release containing the provided children.
+// Updates child paths to be relative to "test.title" directory.
 func CreateTestMovieDir(parent *metadata.Entry, children ...*metadata.Entry) *metadata.Entry {
 	root := &metadata.Entry{
 		Parent: parent,
@@ -355,6 +385,9 @@ func CreateTestMovieDir(parent *metadata.Entry, children ...*metadata.Entry) *me
 	return root
 }
 
+// CreateTestFiles recursively creates the actual filesystem structure for test entries.
+// Creates directories and empty files based on the Entry tree structure.
+// Updates entry source paths to absolute paths within testDir. Panics on filesystem errors.
 func CreateTestFiles(root *metadata.Entry, testDir string) {
 	source := filepath.Join(testDir, root.PathInfo.Source)	
 	root.PathInfo.Source = source

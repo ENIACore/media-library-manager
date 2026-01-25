@@ -12,10 +12,15 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
+// formatTimestamp formats a timestamp for log directory naming.
+// Returns a string in the format YYYY-MM-DD_HH:MM:SS.
 func formatTimestamp(now time.Time) string {
 	return now.Format("2006-01-02_15:04:05")
 }
 
+// getFile opens or creates a log file for writing.
+// Creates the directory if it doesn't exist. Returns os.Stdout
+// if directory or file creation fails, logging a warning to stderr.
 func getFile(dirpath string, filename string) io.Writer {
 	err := os.MkdirAll(dirpath, 0755)
 	if err != nil {
@@ -33,12 +38,13 @@ func getFile(dirpath string, filename string) io.Writer {
 
 }
 
-// Implements slog.Handler interface
+// multiHandler implements slog.Handler interface by delegating to multiple handlers.
+// This allows writing logs to multiple files simultaneously based on severity level.
 type multiHandler struct {
 	handlers []slog.Handler
 }
 
-// Returns true if ANY handler accepts log
+// Enabled returns true if any handler would accept a log record at the given level.
 func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	for _, handler := range h.handlers {
 		if handler.Enabled(ctx, level) {
@@ -48,7 +54,8 @@ func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return false
 }
 
-// Re-runs Enabled to only call Handle on specific handlers
+// Handle distributes the log record to all enabled handlers.
+// Re-checks Enabled for each handler to ensure proper level filtering.
 func (h *multiHandler) Handle(ctx context.Context, r slog.Record) error {
 	for _, handler := range h.handlers {
 		if handler.Enabled(ctx, r.Level) {
@@ -60,7 +67,7 @@ func (h *multiHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-// Adds WithAttrs to ALL handlers
+// WithAttrs returns a new multiHandler with attributes added to all handlers.
 func (h *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	handlers := make([]slog.Handler, len(h.handlers))
 	for i, handler := range h.handlers {
@@ -69,7 +76,7 @@ func (h *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &multiHandler{handlers: handlers}
 }
 
-// Adds WithGroup to ALL handlers
+// WithGroup returns a new multiHandler with a group added to all handlers.
 func (h *multiHandler) WithGroup(name string) slog.Handler {
 	handlers := make([]slog.Handler, len(h.handlers))
 	for i, handler := range h.handlers {
@@ -82,6 +89,9 @@ var getSessionTimestamp = sync.OnceValue(func() string {
 	return formatTimestamp(time.Now())
 })
 
+// NewLogger creates and returns a structured logger configured to write to multiple log files.
+// Creates separate log files for DEBUG, INFO, and WARN levels in a timestamped session directory.
+// The session timestamp is generated once and reused for all loggers in the process.
 func NewLogger(cfg *config.Config) *slog.Logger {
 	basepath := filepath.Join(cfg.ManagerPath, "logs", getSessionTimestamp())
 

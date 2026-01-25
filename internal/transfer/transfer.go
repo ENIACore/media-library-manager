@@ -11,6 +11,9 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
+// Transfer moves a media entry tree to the appropriate media library directory.
+// Routes to movie or show library based on entry role. Returns immediately if DryRun is enabled.
+// Returns an error if transfer fails or entry has an invalid root role.
 func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Transfer")
 	lg.Info("Moving entries to media dir")
@@ -38,6 +41,8 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 	return nil
 }
 
+// Error moves a failed entry to the error directory for manual review.
+// Returns immediately if DryRun is enabled. Panics if error handling itself fails.
 func Error(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Error")
 	lg.Info("Moving entries to error dir")
@@ -54,6 +59,9 @@ func Error(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	}
 }
 
+// moveEntries recursively moves files in the entry tree to their destination paths.
+// Processes children first, then moves files. Skips directories (only moves files).
+// Resolves filename conflicts by appending numeric suffixes. Creates destination directories as needed.
 func moveEntries(entry *metadata.Entry, destDir string, logger *slog.Logger) error {
 	lg := logger.With("func", "moveEntries")
 
@@ -86,6 +94,9 @@ func moveEntries(entry *metadata.Entry, destDir string, logger *slog.Logger) err
 	return nil
 }
 
+// resolveConflict generates a unique filepath by appending numeric suffixes if the path exists.
+// Tries up to 10000 variations (file_1, file_2, ..., file_10000).
+// Returns the original path if no conflict, or an error if all variations are taken.
 func resolveConflict(path string) (string, error) {
 	if !exists(path) {
 		return path, nil
@@ -105,6 +116,8 @@ func resolveConflict(path string) (string, error) {
 	return "", fmt.Errorf("could not resolve conflict for %v after 10000 attempts", path)
 }
 
+// exists checks if a file or directory exists at the given path.
+// Returns true if the path exists, false otherwise.
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil

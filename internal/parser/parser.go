@@ -9,6 +9,9 @@ import (
 	"log/slog"
 )
 
+// Parse constructs a tree representation of the filesystem starting at path.
+// Recursively walks the directory structure, extracting media and path metadata for each entry.
+// Returns the root Entry after pruning empty directories, or an error if parsing fails.
 func Parse(path string, logger *slog.Logger) (*metadata.Entry, error) {
 	root, err := parseTree(path, nil, 0, logger)
 	if err != nil {
@@ -18,6 +21,9 @@ func Parse(path string, logger *slog.Logger) (*metadata.Entry, error) {
 	return root, nil
 }
 
+// parseTree recursively builds a tree of Entry nodes from a filesystem path.
+// Extracts metadata for files and directories, skipping invalid file types (UnknownType non-directories).
+// Returns nil for skipped entries, allowing the tree to filter them out during construction.
 func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logger) (*metadata.Entry, error) {
 
     info, err := os.Stat(path)
@@ -60,6 +66,9 @@ func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
     return node, nil
 }
 
+// pruneTree removes empty directories from the entry tree.
+// Recursively processes children first, then removes the entry if it's an empty directory.
+// Returns nil if the entry should be pruned, otherwise returns the entry with pruned children.
 func pruneTree(entry *metadata.Entry) *metadata.Entry {
 	if entry.PathInfo.IsDir && len(entry.Children) == 0 {
 		return nil
