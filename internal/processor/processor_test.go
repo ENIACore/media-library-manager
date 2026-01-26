@@ -126,7 +126,6 @@ func TestResolve(t *testing.T) {
 	/*
 		Testing season directory
 	*/
-	/* TODO - Uncomment when ready
 	t.Run("season directory", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
@@ -134,6 +133,8 @@ func TestResolve(t *testing.T) {
 		ep2 := testutil.CreateTestEpFile(nil)
 		sub := testutil.CreateTestSubFile(nil)
 		entry := testutil.CreateTestSeasonDir(nil, ep1, ep2, sub)
+		entry.MediaInfo.Title = ep1.MediaInfo.Title
+		entry.MediaInfo.Year = ep1.MediaInfo.Year
 
 		err := Resolve(entry, &cfg, logger)
 
@@ -146,7 +147,6 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expectedDir)
 		}
 	})
-	*/
 
 	/*
 		Testing series directory
@@ -513,12 +513,15 @@ func TestResolveSeasonDir(t *testing.T) {
 		}
 	})
 
-	/* TODO - Uncomment when ready
+	//TODO
 	t.Run("without base path", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		ep := testutil.CreateTestEpFile(nil)
 		entry := testutil.CreateTestSeasonDir(nil, ep)
+		// Mimic behavior of enricher
+		entry.MediaInfo.Title = ep.MediaInfo.Title
+		entry.MediaInfo.Year = ep.MediaInfo.Year
 
 		err := resolveSeasonDir("", entry, &cfg, logger)
 
@@ -539,6 +542,9 @@ func TestResolveSeasonDir(t *testing.T) {
 		sub := testutil.CreateTestSubFile(nil)
 		subDir := testutil.CreateTestSubDir(nil, sub)
 		entry := testutil.CreateTestSeasonDir(nil, ep, subDir)
+		// Mimic behavior of enricher
+		entry.MediaInfo.Title = ep.MediaInfo.Title
+		entry.MediaInfo.Year = ep.MediaInfo.Year
 
 		err := resolveSeasonDir("", entry, &cfg, logger)
 
@@ -551,7 +557,6 @@ func TestResolveSeasonDir(t *testing.T) {
 			t.Errorf("Subtitle Dir Dest = %v, want %v", entry.Children[1].PathInfo.Dest, expectedSubDir)
 		}
 	})
-	*/
 
 	t.Run("wrong role", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
