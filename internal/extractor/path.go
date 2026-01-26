@@ -19,12 +19,16 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	log := logger.With("func", "ExtractPath")
 	log.Info("extracting path info from path", "path", path)
 
-	filename := filepath.Base(path)
-	sanitizedName := strings.Split(sanitizeName(filename), ".")
-
 	pathInfo := metadata.PathInfo{}
 	pathInfo.Source = path
-	pathInfo.Type, pathInfo.Ext = extractType(sanitizedName)
+	
+	// Extract extension without the leading dot and uppercase it
+	ext := filepath.Ext(path)
+	if ext != "" {
+		ext = strings.ToUpper(ext[1:]) // Remove leading dot and uppercase
+	}
+	pathInfo.Ext = ext
+	pathInfo.Type = extractType(ext)
 
 	if info, err := os.Stat(path); err == nil {
 		pathInfo.IsDir = info.IsDir()
@@ -36,20 +40,25 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	return pathInfo
 }
 
-// extractType returns the content type and extension from segments.
-// Returns UnknownType and empty string if not found or unsupported.
-func extractType(segments []string) (metadata.ContentType, string) {
-	for i := range segments {
-		candidates := segments[i:]
-		if match := parseVideoExt(candidates); match != "" {
-			return metadata.Video, match
-		}
-		if match := parseSubtitleExt(candidates); match != "" {
-			return metadata.Subtitle, match
-		}
-		// TODO: Audio files not yet supported
+// extractType returns the content type from an extension string.
+// Returns UnknownType if not found or unsupported.
+func extractType(ext string) metadata.ContentType {
+	if ext == "" {
+		return metadata.UnknownType
 	}
-	return metadata.UnknownType, ""
+
+	// Create a single-element slice for matching
+	extSegments := []string{ext}
+	
+	if match := parseVideoExt(extSegments); match != "" {
+		return metadata.Video
+	}
+	if match := parseSubtitleExt(extSegments); match != "" {
+		return metadata.Subtitle
+	}
+	// TODO: Audio files not yet supported
+	
+	return metadata.UnknownType
 }
 
 // parseVideoExt checks if segments match a video extension pattern.

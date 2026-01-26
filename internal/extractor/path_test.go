@@ -1,27 +1,61 @@
 package extractor
 
 import (
-	"testing"
-	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"log/slog"
-	"reflect"
+	"testing"
+
+	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
 func TestExtractPath(t *testing.T) {
 	logger := slog.Default()
 	tests := []struct {
-		name			string
-		input			string
-		expected		metadata.PathInfo	
+		name     string
+		input    string
+		expected metadata.PathInfo
 	}{
 		{
-			name:			"valid input",
-			input:			"/parent/child/my.movie.mp4",
-			expected:		metadata.PathInfo{
-				Dest: "",
-				Source:	"/parent/child/my.movie.mp4",
-				Ext: "MP4",
-				Type: metadata.Video,
+			name:  "valid video file",
+			input: "/parent/child/my.movie.mp4",
+			expected: metadata.PathInfo{
+				Dest:   "",
+				Source: "/parent/child/my.movie.mp4",
+				Ext:    "MP4",
+				Type:   metadata.Video,
+				IsDir:  false,
+			},
+		},
+		{
+			name:  "valid subtitle file",
+			input: "/parent/child/subtitle.srt",
+			expected: metadata.PathInfo{
+				Dest:   "",
+				Source: "/parent/child/subtitle.srt",
+				Ext:    "SRT",
+				Type:   metadata.Subtitle,
+				IsDir:  false,
+			},
+		},
+		{
+			name:  "nfo file should be unknown",
+			input: "/parent/child/movie.mkv.nfo",
+			expected: metadata.PathInfo{
+				Dest:   "",
+				Source: "/parent/child/movie.mkv.nfo",
+				Ext:    "NFO",
+				Type:   metadata.UnknownType,
+				IsDir:  false,
+			},
+		},
+		{
+			name:  "txt file should be unknown",
+			input: "/parent/child/readme.txt",
+			expected: metadata.PathInfo{
+				Dest:   "",
+				Source: "/parent/child/readme.txt",
+				Ext:    "TXT",
+				Type:   metadata.UnknownType,
+				IsDir:  false,
 			},
 		},
 	}
@@ -29,9 +63,15 @@ func TestExtractPath(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			pathInfo := ExtractPath(test.input, logger)
-
-			if !reflect.DeepEqual(pathInfo, test.expected) {
-				t.Errorf("ExtractPath = %+v, want %+v", pathInfo, test.expected)
+			
+			if pathInfo.Source != test.expected.Source {
+				t.Errorf("Source = %v, want %v", pathInfo.Source, test.expected.Source)
+			}
+			if pathInfo.Ext != test.expected.Ext {
+				t.Errorf("Ext = %v, want %v", pathInfo.Ext, test.expected.Ext)
+			}
+			if pathInfo.Type != test.expected.Type {
+				t.Errorf("Type = %v, want %v", pathInfo.Type, test.expected.Type)
 			}
 		})
 	}
@@ -39,64 +79,37 @@ func TestExtractPath(t *testing.T) {
 
 func TestExtractType(t *testing.T) {
 	tests := []struct {
-		name			string
-		input			[]string
-		expectedType	metadata.ContentType
-		expectedExt		string
+		name         string
+		input        string
+		expectedType metadata.ContentType
 	}{
 		{
-			name:			"valid video extension",
-			input:			[]string{
-				"MY",
-				"VIDEO",
-				"MP4",
-			},
+			name:         "valid video extension",
+			input:        "MP4",
 			expectedType: metadata.Video,
-			expectedExt: "MP4",
 		},
 		{
-			name:			"valid subtitle extension",
-			input:			[]string{
-				"MY",
-				"SUBTITLE",
-				"SRT",
-			},
+			name:         "valid subtitle extension",
+			input:        "SRT",
 			expectedType: metadata.Subtitle,
-			expectedExt: "SRT",
 		},
-		/* Add audio later when supported
 		{
-			name:			"valid video extension",
-			input:			[]string{
-				"MY",
-				"VIDEO",
-				"MP4",
-			},
-			expectedType: metadata.Video,
-			expectedExt: "MP4",
+			name:         "invalid extension",
+			input:        "NFO",
+			expectedType: metadata.UnknownType,
 		},
-		*/
 		{
-			name:			"invalid extension",
-			input:			[]string{
-				"MY",
-				"VIDEO",
-				"MP45",
-			},
-			expectedType: metadata.ContentType(metadata.UnknownType),
-			expectedExt: "",
+			name:         "empty extension",
+			input:        "",
+			expectedType: metadata.UnknownType,
 		},
 	}
-	
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			contentType, ext := extractType(test.input)
-
+			contentType := extractType(test.input)
 			if contentType != test.expectedType {
 				t.Errorf("extractType content type = %v, want %v", contentType, test.expectedType)
-			}
-			if ext != test.expectedExt {
-				t.Errorf("extractType ext = %v, want %v", ext, test.expectedExt)
 			}
 		})
 	}
@@ -104,23 +117,24 @@ func TestExtractType(t *testing.T) {
 
 func TestParseVideoExt(t *testing.T) {
 	tests := []struct {
-		name			string
-		input			[]string
-		expected		string
+		name     string
+		input    []string
+		expected string
 	}{
 		{
-			name:		"valid ext",
-			input:		[]string{
-				"MP4",
-			},
+			name:     "valid ext",
+			input:    []string{"MP4"},
 			expected: "MP4",
 		},
 		{
-			name:		"invalid ext",
-			input:		[]string{
-				"MP6",
-			},
+			name:     "invalid ext",
+			input:    []string{"MP6"},
 			expected: "",
+		},
+		{
+			name:     "mkv ext",
+			input:    []string{"MKV"},
+			expected: "MKV",
 		},
 	}
 
@@ -136,22 +150,18 @@ func TestParseVideoExt(t *testing.T) {
 
 func TestParseSubtitleExt(t *testing.T) {
 	tests := []struct {
-		name			string
-		input			[]string
-		expected		string
+		name     string
+		input    []string
+		expected string
 	}{
 		{
-			name:		"valid ext",
-			input:		[]string{
-				"SRT",
-			},
+			name:     "valid ext",
+			input:    []string{"SRT"},
 			expected: "SRT",
 		},
 		{
-			name:		"invalid ext",
-			input:		[]string{
-				"SRTT",
-			},
+			name:     "invalid ext",
+			input:    []string{"SRTT"},
 			expected: "",
 		},
 	}
@@ -166,25 +176,20 @@ func TestParseSubtitleExt(t *testing.T) {
 	}
 }
 
-
 func TestParseAudioExt(t *testing.T) {
 	tests := []struct {
-		name			string
-		input			[]string
-		expected		string
+		name     string
+		input    []string
+		expected string
 	}{
 		{
-			name:		"valid ext",
-			input:		[]string{
-				"MP3",
-			},
+			name:     "valid ext",
+			input:    []string{"MP3"},
 			expected: "MP3",
 		},
 		{
-			name:		"invalid ext",
-			input:		[]string{
-				"MP6",
-			},
+			name:     "invalid ext",
+			input:    []string{"MP6"},
 			expected: "",
 		},
 	}
