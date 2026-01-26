@@ -16,8 +16,8 @@ type MediaInfo struct {
 
 // PathInfo contains filesystem path information for an entry.
 type PathInfo struct {
-	Dest   string // destination path set by processor
-	Source string // original source path
+	Dest   	string // destination path set by processor, full path and not relative
+	Source 	string // original source path, full path and not relative
 
 	Ext   string      // file extension, empty if none
 	Type  ContentType // content type, UnknownType if directory or no extension

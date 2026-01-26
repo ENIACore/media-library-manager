@@ -8,6 +8,8 @@ import (
 )
 
 func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "Enrich")
+	lg.Debug("Enriching root entry", "entry", root.PathInfo.Source)
 	var title []string
 	var year *int
 
@@ -23,6 +25,8 @@ func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	default:
 		return fmt.Errorf("Entry %v has unknown role", root.PathInfo.Source)
 	}
+
+	lg.Info("Successfully extracted title and year for root entry", "entry", root.PathInfo.Source, "title", title, "year", year)
 	setEntryValues(root, title, year)
 	return nil
 }
