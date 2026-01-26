@@ -20,6 +20,7 @@
 #     -movie-path="/opt/jellyfin/media/movies" \
 #     -show-path="/opt/jellyfin/media/shows" \
 #     -manager-path="/opt/media_manager" \
+#     -log-stdout
 #     -dry-run
 #
 # Or with environment variables set:
@@ -27,6 +28,7 @@
 #   export ENIACORE_MOVIE_PATH="/opt/jellyfin/media/movies"
 #   export ENIACORE_SHOW_PATH="/opt/jellyfin/media/shows"
 #   export ENIACORE_MANAGER_PATH="/opt/media_manager"
+#   export ENIACORE_LOG_STDOUT="true"
 #   export ENIACORE_DRY_RUN="true"
 #   go run .
 
@@ -58,12 +60,14 @@ prompt_with_default ENIACORE_TORRENT_PATH "Torrent path" "/opt/qbit/downloads"
 prompt_with_default ENIACORE_MOVIE_PATH "Movie path" "/opt/jellyfin/media/movies"
 prompt_with_default ENIACORE_SHOW_PATH "Show path" "/opt/jellyfin/media/shows"
 prompt_with_default ENIACORE_MANAGER_PATH "Manager path" "/opt/media_manager"
+prompt_with_default ENIACORE_LOG_STDOUT "Log standard output (true/false)" "true"
 prompt_with_default ENIACORE_DRY_RUN "Dry run (true/false)" "true"
 
 export ENIACORE_TORRENT_PATH
 export ENIACORE_MOVIE_PATH
 export ENIACORE_SHOW_PATH
 export ENIACORE_MANAGER_PATH
+export ENIACORE_LOG_STDOUT
 export ENIACORE_DRY_RUN
 
 echo "Media Manager environment configured"

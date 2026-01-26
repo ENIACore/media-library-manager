@@ -12,6 +12,7 @@ type Config struct {
     MoviePath   string
     ShowPath    string
     ManagerPath string
+    LogStdout	bool
     DryRun      bool
 }
 
@@ -25,7 +26,8 @@ func New() *Config {
         MoviePath:   getEnv("ENIACORE_MOVIE_PATH", "/opt/jellyfin/media/movies"),
         ShowPath:    getEnv("ENIACORE_SHOW_PATH", "/opt/jellyfin/media/shows"),
         ManagerPath: getEnv("ENIACORE_MANAGER_PATH", "/opt/media_manager"),
-        DryRun:      getEnvBool("ENIACORE_DRY_RUN", false),
+        LogStdout:   getEnvBool("ENIACORE_LOG_STDOUT", true),
+        DryRun:      getEnvBool("ENIACORE_DRY_RUN", true),
     }
 
     // Parse flags with env defaults
@@ -34,6 +36,7 @@ func New() *Config {
     flag.StringVar(&cfg.MoviePath, "movie-path", defaults.MoviePath, "Path to movie library")
     flag.StringVar(&cfg.ShowPath, "show-path", defaults.ShowPath, "Path to show library")
     flag.StringVar(&cfg.ManagerPath, "manager-path", defaults.ManagerPath, "Path to program directory")
+    flag.BoolVar(&cfg.DryRun, "log-stdout", defaults.LogStdout, "Log to standard output")
     flag.BoolVar(&cfg.DryRun, "dry-run", defaults.DryRun, "Run without moving files")
     flag.Parse()
 

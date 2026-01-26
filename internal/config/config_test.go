@@ -22,7 +22,7 @@ func TestNew(t *testing.T) {
 				MoviePath:   "/opt/jellyfin/media/movies",
 				ShowPath:    "/opt/jellyfin/media/shows",
 				ManagerPath: "/opt/media_manager",
-				DryRun:      false,
+				DryRun:      true,
 			},
 		},
 		{

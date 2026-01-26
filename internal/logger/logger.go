@@ -93,6 +93,13 @@ var getSessionTimestamp = sync.OnceValue(func() string {
 // Creates separate log files for DEBUG, INFO, and WARN levels in a timestamped session directory.
 // The session timestamp is generated once and reused for all loggers in the process.
 func NewLogger(cfg *config.Config) *slog.Logger {
+	if cfg.LogStdout {
+		handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions {
+			Level: slog.LevelDebug,
+		})
+		return slog.New(handler)
+	}
+
 	basepath := filepath.Join(cfg.ManagerPath, "logs", getSessionTimestamp())
 
 
