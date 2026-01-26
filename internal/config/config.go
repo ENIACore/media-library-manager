@@ -36,7 +36,7 @@ func New() *Config {
     flag.StringVar(&cfg.MoviePath, "movie-path", defaults.MoviePath, "Path to movie library")
     flag.StringVar(&cfg.ShowPath, "show-path", defaults.ShowPath, "Path to show library")
     flag.StringVar(&cfg.ManagerPath, "manager-path", defaults.ManagerPath, "Path to program directory")
-    flag.BoolVar(&cfg.DryRun, "log-stdout", defaults.LogStdout, "Log to standard output")
+    flag.BoolVar(&cfg.LogStdout, "log-stdout", defaults.LogStdout, "Log to standard output")
     flag.BoolVar(&cfg.DryRun, "dry-run", defaults.DryRun, "Run without moving files")
     flag.Parse()
 
