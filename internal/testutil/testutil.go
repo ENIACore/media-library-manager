@@ -379,7 +379,7 @@ func CreateTestMovieDir(parent *metadata.Entry, children ...*metadata.Entry) *me
 
 	for _, child := range children {
 		child.Parent = root
-		child.PathInfo.Source = filepath.Join("test.title", child.PathInfo.Source)
+		child.PathInfo.Source = filepath.Join("test.title.2025", child.PathInfo.Source)
 	}
 
 	return root
@@ -392,7 +392,12 @@ func CreateTestFiles(root *metadata.Entry, testDir string) {
 	source := filepath.Join(testDir, root.PathInfo.Source)	
 	root.PathInfo.Source = source
 
-	if !root.PathInfo.IsDir {
+	if root.PathInfo.IsDir {
+        // Create the directory itself
+		if err := os.MkdirAll(source, 0755); err != nil {
+			panic("Unable to make test directory")
+		}
+	} else {
 		dir := filepath.Dir(source)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			panic("Unable to make test directory")

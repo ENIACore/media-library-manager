@@ -11,63 +11,16 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
-// Transfer moves a media entry tree to the appropriate media library directory.
-// Routes to movie or show library based on entry role. Returns immediately if DryRun is enabled.
-// Returns an error if transfer fails or entry has an invalid root role.
 func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Transfer")
 	lg.Info("Moving entries to media dir")
-
 	if cfg.DryRun {
 		lg.Info("Dry run true, returning")
 		return nil
 	}
 
-	var mediaPath string
-	switch(entry.Role) {
-	case metadata.MovieDir, metadata.MovieFile:
-		mediaPath = cfg.MoviePath
-	case metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
-		mediaPath = cfg.ShowPath
-	default:
-		return fmt.Errorf("Attempted to transfer root entry %v with invalid role %v", entry.PathInfo.Source, entry.Role)
-	}
-
-	if err := moveEntries(entry, mediaPath, logger); err != nil {
-		lg.Error("Error occurred while transfering entries", "error", err)
-		return err
-	}
-
-	return nil
-}
-
-// Error moves a failed entry to the error directory for manual review.
-// Returns immediately if DryRun is enabled. Panics if error handling itself fails.
-func Error(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
-	lg := logger.With("func", "Error")
-	lg.Info("Moving entries to error dir")
-
-	if cfg.DryRun {
-		lg.Info("Dry run true, returning")
-		return
-	}
-
-	errorPath := filepath.Join(cfg.ManagerPath, "errors")
-	if err := moveEntries(entry, errorPath, logger); err != nil {
-		lg.Error("Error occurred while error handling; non-recoverable", "error", err)
-		panic("Error occurred during error handling")
-	}
-}
-
-// moveEntries recursively moves files in the entry tree to their destination paths.
-// Processes children first, then moves files. Skips directories (only moves files).
-// Resolves filename conflicts by appending numeric suffixes. Creates destination directories as needed.
-func moveEntries(entry *metadata.Entry, destDir string, logger *slog.Logger) error {
-	lg := logger.With("func", "moveEntries")
-
-	var err error
 	for _, child := range entry.Children {
-		if err = moveEntries(child, destDir, logger); err != nil {
+		if err := Transfer(child, cfg, logger); err != nil {
 			return err
 		}
 	}
@@ -76,22 +29,48 @@ func moveEntries(entry *metadata.Entry, destDir string, logger *slog.Logger) err
 		return nil
 	}
 
-	destPath := filepath.Join(destDir, entry.PathInfo.Dest)
-	if err = os.MkdirAll(destDir, 0755); err != nil {
+	destDir := filepath.Dir(entry.PathInfo.Dest)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err
 	}
 
-	if destPath, err = resolveConflict(destPath); err != nil {
+	destPath, err := resolveConflict(entry.PathInfo.Dest)
+	if err != nil {
 		return err
 	}
 
+    lg.Info("Moving entry", "source", entry.PathInfo.Source, "dest", destPath)
+	return os.Rename(entry.PathInfo.Source, destPath)
+}
 
-	lg.Info("Moving entry", "source", entry.PathInfo.Source, "dest", entry.PathInfo.Dest)
-	if err := os.Rename(entry.PathInfo.Source, destPath); err != nil {
-		return err
+func Error(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
+	lg := logger.With("func", "Error")
+	lg.Info("Moving entries to error dir")
+	if cfg.DryRun {
+		lg.Info("Dry run true, returning")
+		return
 	}
 
-	return nil
+	errorPath := filepath.Join(cfg.ManagerPath, "errors")
+    if err := os.MkdirAll(errorPath, 0755); err != nil {
+		lg.Error("Unable to create error dir")
+		panic("Unable to create error dir")
+    }
+
+    sourceName := filepath.Base(entry.PathInfo.Source)
+    destPath := filepath.Join(errorPath, sourceName)
+    destPath, err := resolveConflict(destPath)
+    if err != nil {
+		lg.Error("Unable to resolve conflicting paths in error dir")
+		panic("Unable to resolve conflicting paths in error dir")
+    }
+
+    lg.Info("Moving to error dir", "source", entry.PathInfo.Source, "dest", destPath)
+    err = os.Rename(entry.PathInfo.Source, destPath)
+	if err != nil {
+		lg.Error("Unable to move entry to error dir")
+		panic("Unable to move entry to error dir")
+	}
 }
 
 // resolveConflict generates a unique filepath by appending numeric suffixes if the path exists.
