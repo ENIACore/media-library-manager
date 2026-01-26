@@ -13,7 +13,6 @@ import (
 
 func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Transfer")
-	lg.Info("Moving entries to media dir")
 	if cfg.DryRun {
 		lg.Info("Dry run true, returning")
 		return nil
@@ -26,7 +25,8 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 	}
 
 	if entry.PathInfo.IsDir {
-		return nil
+    	lg.Debug("Removing empty source directory", "source", entry.PathInfo.Source)
+    	return os.RemoveAll(entry.PathInfo.Source)
 	}
 
 	destDir := filepath.Dir(entry.PathInfo.Dest)
