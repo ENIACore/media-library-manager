@@ -1,33 +1,20 @@
 package main
 
 import (
-	/*
 	"os"
 	"path/filepath"
-
 
 	"github.com/ENIACore/media_library_manager/internal/config"
 	"github.com/ENIACore/media_library_manager/internal/logger"
 	"github.com/ENIACore/media_library_manager/internal/parser"
-	*/
-
-	/*
-	"log/slog"
+	"github.com/ENIACore/media_library_manager/internal/classifier"
+	"github.com/ENIACore/media_library_manager/internal/enricher"
 	"github.com/ENIACore/media_library_manager/internal/processor"
-	"github.com/ENIACore/media_library_manager/internal/metadata"
+	"github.com/ENIACore/media_library_manager/internal/transfer"
+)
 
-
-		"github.com/ENIACore/media_library_manager/internal/classifier"
-
-
-		"strings"
-	*/)
-
-var dryRun *bool
-var mediaPath *string
 
 func main() {
-	/*
 	cfg := config.Load()
 	logger := logger.NewLogger(cfg)
 
@@ -36,101 +23,55 @@ func main() {
 		panic("unable to read from torrent path")
 	}
 
-	errorPath := filepath.Join(cfg.ManagerPath, "error")
-
-	numSuccessful := 0
-	numError := 0
-
+	numSuccess := 0
+	numFailure := 0
 	for _, entry := range entries {
+		logger.Info("")
+		logger.Info("==================================================")
+		logger.Info("")
+
 		entryPath := filepath.Join(cfg.TorrentPath, entry.Name())
 
 		root, err := parser.Parse(entryPath, logger)
-	}
-	*/
-	/*
-
-
-	for _, entry := range entries {
-		path := filepath.Join(cfg.MediaPath, entry.Name())
-
-		separator := strings.Repeat("=", 80)
-		logger.Info("processing root entry", "entry", path)
-
-		root, err := parser.ParseTree(path, nil, 0, logger)
-		root = parser.PruneTree(root)
-		if err != nil && cfg.DryRun {
-			numError++
-			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
-			continue
-		}
 		if err != nil {
-			numError++
-			processor.Error(root, errorPath, logger)	
+			numFailure += 1
+			transfer.Error(root, cfg, logger)
 			continue
 		}
 
-		err = classifier.ClassifyEntries(root, logger)
-		if err != nil && cfg.DryRun {
-			numError++
-			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
-			continue
-		}
+		err = classifier.Classify(root, logger)
 		if err != nil {
-			numError++
-			processor.Error(root, errorPath, logger)	
+			numFailure += 1
+			transfer.Error(root, cfg, logger)
 			continue
 		}
 
-		err = processor.ResolveEntries(root, logger)
-		if err != nil && cfg.DryRun {
-			numError++
-			logger.Error("error occurred, skipping error processing due to dry run", "error", err)
-			continue
-		}
+		err = enricher.Enrich(root, cfg, logger)
 		if err != nil {
-			numError++
-			processor.Error(root, errorPath, logger)	
+			numFailure += 1
+			transfer.Error(root, cfg, logger)
 			continue
 		}
 
-		finalLibraryPath := cfg.LibraryPath
-		switch root.Role {
-			case metadata.MovieDir, metadata.MovieFile:
-				finalLibraryPath = filepath.Join(finalLibraryPath, "movies")
-			case metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
-				finalLibraryPath = filepath.Join(finalLibraryPath, "shows")
-		}
-
-
-		if cfg.DryRun {
-			logger.Info("successfully processed media, no action due to dry run", "source", root.PathInfo.Source, "dest", filepath.Join(finalLibraryPath, root.PathInfo.Dest), "classification", root.Role) 
-			logger.Info("")
-			logger.Info(separator)
-			logger.Info("")
-			numSuccessful++
+		err = processor.Resolve(root, cfg, logger)
+		if err != nil {
+			numFailure += 1
+			transfer.Error(root, cfg, logger)
 			continue
 		}
 
-		logger.Info("successfully processed media", "source", root.PathInfo.Source, "dest", filepath.Join(finalLibraryPath, root.PathInfo.Dest), "classification", root.Role) 
+		transfer.Transfer(root, cfg, logger)
+		numSuccess += 1
+
 		logger.Info("")
-		logger.Info(separator)
+		logger.Info("==================================================")
 		logger.Info("")
-		err = processor.Transfer(root, finalLibraryPath, logger)
-		if err != nil {
-			numError++
-			processor.Error(root, errorPath, logger)	
-			continue
-		}
-		if err = os.RemoveAll(path); err != nil {
-			logger.Error("failed to remove empty original directory", "path", path, "err", err)
-		}
-
-		numSuccessful++
 	}
-
 	
-
-	logger.Info("!!total counts!!", "total-successful", numSuccessful, "total-error", numError) 
-	*/
-
+	
+	logger.Info("")
+	logger.Info("==================================================")
+	logger.Info("Total Num Success and Failure", "Success", numSuccess, "Failure", numFailure)
+	logger.Info("==================================================")
+	logger.Info("")
 }
