@@ -34,6 +34,7 @@ func main() {
 
 		root, err := parser.Parse(entryPath, logger)
 		if err != nil {
+			logger.Error("Parse returned error", "error", err)
 			numFailure += 1
 			transfer.Error(root, cfg, logger)
 			continue
@@ -41,6 +42,7 @@ func main() {
 
 		err = classifier.Classify(root, logger)
 		if err != nil {
+			logger.Error("Classify returned error", "error", err)
 			numFailure += 1
 			transfer.Error(root, cfg, logger)
 			continue
@@ -48,6 +50,7 @@ func main() {
 
 		err = enricher.Enrich(root, cfg, logger)
 		if err != nil {
+			logger.Error("Enrich returned error", "error", err)
 			numFailure += 1
 			transfer.Error(root, cfg, logger)
 			continue
@@ -55,12 +58,19 @@ func main() {
 
 		err = processor.Resolve(root, cfg, logger)
 		if err != nil {
+			logger.Error("Resolve returned error", "error", err)
 			numFailure += 1
 			transfer.Error(root, cfg, logger)
 			continue
 		}
 
-		transfer.Transfer(root, cfg, logger)
+		err = transfer.Transfer(root, cfg, logger)
+		if err != nil {
+			logger.Error("Transfer returned error", "error", err)
+			numFailure += 1
+			transfer.Error(root, cfg, logger)
+			continue
+		}
 		numSuccess += 1
 
 		logger.Info("")
