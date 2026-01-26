@@ -17,7 +17,15 @@ func Parse(path string, logger *slog.Logger) (*metadata.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
+	if root == nil {
+		return nil, fmt.Errorf("Parsed tree for path %v is nil", path)
+	}
+
 	root = pruneTree(root)
+	if root == nil {
+		return nil, fmt.Errorf("Pruned tree for path %v is nil", path)
+	}
+
 	return root, nil
 }
 

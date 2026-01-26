@@ -39,11 +39,6 @@ func main() {
 			transfer.Error(root, cfg, logger)
 			continue
 		}
-		if root == nil {
-			logger.Warn("Parse returned nil root (empty directory)", "entry", entryPath)
-			numFailure += 1
-			continue
-		}
 
 		err = classifier.Classify(root, logger)
 		if err != nil {
