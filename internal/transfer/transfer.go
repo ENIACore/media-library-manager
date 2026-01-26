@@ -43,9 +43,13 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 	return os.Rename(entry.PathInfo.Source, destPath)
 }
 
-func Error(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
+func Error(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Error")
 	lg.Info("Moving entries to error dir")
+	if root == nil {
+		lg.Info("Root is nil, ignoring root entry error handling")
+		return
+	}
 	if cfg.DryRun {
 		lg.Info("Dry run true, returning")
 		return
@@ -57,7 +61,7 @@ func Error(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 		panic("Unable to create error dir")
     }
 
-    sourceName := filepath.Base(entry.PathInfo.Source)
+    sourceName := filepath.Base(root.PathInfo.Source)
     destPath := filepath.Join(errorPath, sourceName)
     destPath, err := resolveConflict(destPath)
     if err != nil {
@@ -65,8 +69,8 @@ func Error(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 		panic("Unable to resolve conflicting paths in error dir")
     }
 
-    lg.Info("Moving to error dir", "source", entry.PathInfo.Source, "dest", destPath)
-    err = os.Rename(entry.PathInfo.Source, destPath)
+    lg.Info("Moving to error dir", "source", root.PathInfo.Source, "dest", destPath)
+    err = os.Rename(root.PathInfo.Source, destPath)
 	if err != nil {
 		lg.Error("Unable to move entry to error dir")
 		panic("Unable to move entry to error dir")
