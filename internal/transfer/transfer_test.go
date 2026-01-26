@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ENIACore/media_library_manager/internal/testutil"
+	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
 var logger = slog.Default()
@@ -371,4 +372,127 @@ func TestExists_Directory(t *testing.T) {
 	if !exists(path) {
 		t.Error("exists() = false, want true")
 	}
+}
+
+func TestCleanup(t *testing.T) {
+	t.Run("removes all entries in torrent path", func(t *testing.T) {
+		testDir := t.TempDir()
+		torrentPath := filepath.Join(testDir, "torrents")
+		os.MkdirAll(torrentPath, 0755)
+		
+		cfg := config.Config{
+			TorrentPath: torrentPath,
+			DryRun:      false,
+		}
+
+		// Create test files and directories in torrent path
+		file1 := filepath.Join(torrentPath, "file1.txt")
+		file2 := filepath.Join(torrentPath, "file2.mp4")
+		dir1 := filepath.Join(torrentPath, "dir1")
+		dir2 := filepath.Join(torrentPath, "dir2")
+
+		if _, err := os.Create(file1); err != nil {
+			t.Fatalf("failed to create test file: %v", err)
+		}
+		if _, err := os.Create(file2); err != nil {
+			t.Fatalf("failed to create test file: %v", err)
+		}
+		if err := os.MkdirAll(dir1, 0755); err != nil {
+			t.Fatalf("failed to create test dir: %v", err)
+		}
+		if err := os.MkdirAll(dir2, 0755); err != nil {
+			t.Fatalf("failed to create test dir: %v", err)
+		}
+
+		Cleanup(&cfg, logger)
+
+		// Verify all entries removed
+		entries, err := os.ReadDir(torrentPath)
+		if err != nil {
+			t.Fatalf("failed to read torrent path: %v", err)
+		}
+		if len(entries) != 0 {
+			t.Errorf("expected empty directory, found %d entries", len(entries))
+		}
+
+		// Verify torrent path itself still exists
+		if _, err := os.Stat(torrentPath); os.IsNotExist(err) {
+			t.Error("torrent path was removed")
+		}
+	})
+
+	t.Run("removes nested directories", func(t *testing.T) {
+		testDir := t.TempDir()
+		torrentPath := filepath.Join(testDir, "torrents")
+		os.MkdirAll(torrentPath, 0755)
+		
+		cfg := config.Config{
+			TorrentPath: torrentPath,
+			DryRun:      false,
+		}
+
+		// Create nested structure
+		nestedDir := filepath.Join(torrentPath, "parent", "child", "grandchild")
+		if err := os.MkdirAll(nestedDir, 0755); err != nil {
+			t.Fatalf("failed to create nested dir: %v", err)
+		}
+		nestedFile := filepath.Join(nestedDir, "file.txt")
+		if _, err := os.Create(nestedFile); err != nil {
+			t.Fatalf("failed to create nested file: %v", err)
+		}
+
+		Cleanup(&cfg, logger)
+
+		entries, err := os.ReadDir(torrentPath)
+		if err != nil {
+			t.Fatalf("failed to read torrent path: %v", err)
+		}
+		if len(entries) != 0 {
+			t.Errorf("expected empty directory, found %d entries", len(entries))
+		}
+	})
+
+	t.Run("dry run does not remove files", func(t *testing.T) {
+		testDir := t.TempDir()
+		torrentPath := filepath.Join(testDir, "torrents")
+		os.MkdirAll(torrentPath, 0755)
+		
+		cfg := config.Config{
+			TorrentPath: torrentPath,
+			DryRun:      true,
+		}
+
+		testFile := filepath.Join(torrentPath, "test.txt")
+		if _, err := os.Create(testFile); err != nil {
+			t.Fatalf("failed to create test file: %v", err)
+		}
+
+		Cleanup(&cfg, logger)
+
+		if _, err := os.Stat(testFile); os.IsNotExist(err) {
+			t.Error("file was removed during dry run")
+		}
+	})
+
+	t.Run("empty directory", func(t *testing.T) {
+		testDir := t.TempDir()
+		torrentPath := filepath.Join(testDir, "torrents")
+		os.MkdirAll(torrentPath, 0755)
+		
+		cfg := config.Config{
+			TorrentPath: torrentPath,
+			DryRun:      false,
+		}
+
+		Cleanup(&cfg, logger)
+
+		// Should not error, just do nothing
+		entries, err := os.ReadDir(torrentPath)
+		if err != nil {
+			t.Fatalf("failed to read torrent path: %v", err)
+		}
+		if len(entries) != 0 {
+			t.Errorf("expected empty directory, found %d entries", len(entries))
+		}
+	})
 }

@@ -84,4 +84,6 @@ func main() {
 	logger.Info("Total Num Success and Failure", "Success", numSuccess, "Failure", numFailure)
 	logger.Info("==================================================")
 	logger.Info("")
+
+	transfer.Cleanup(cfg, logger)
 }

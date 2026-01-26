@@ -43,6 +43,28 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 	return os.Rename(entry.PathInfo.Source, destPath)
 }
 
+// Function used to remove any remaining files caused nil root directories (i.e invalid and empty directories at root)
+func Cleanup(cfg *config.Config, logger *slog.Logger) {
+	lg := logger.With("func", "Cleanup")
+	if cfg.DryRun {
+		lg.Info("Dry run true, returning")
+		return
+	}
+
+	entries, err := os.ReadDir(cfg.TorrentPath)
+	if err != nil {
+		lg.Error("Error occurred during cleanup ReadDir call, returning", "error", err)
+		return
+	}
+
+	for _, entry := range entries {
+		if err := os.RemoveAll(filepath.Join(cfg.TorrentPath, entry.Name())); err != nil {
+			lg.Error("Error occurred during cleanup RemoveAll call, returning", "error", err)
+			return
+		}
+	}	
+}
+
 func Error(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Error")
 	lg.Info("Moving entries to error dir")
