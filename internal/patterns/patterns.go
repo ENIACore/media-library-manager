@@ -19,6 +19,17 @@ type CompiledPatternGroup struct {
 	Patterns []*CompiledPattern
 }
 
+// Website/domain patterns commonly found at start of torrent names
+var WebsitePatterns = []Pattern{
+	// Include all TLDs for patterns with explicit prefixes
+	`WWW\.[A-Z0-9]+\.(COM|NET|ORG|IO|CO|TV|ME|INFO|BIZ|US|UK|CA|DE|FR|JP|CN|RU|BR|AU|IN|IT|NL|ES|PL|SE|NO|FI|DK|BE|CH|AT|CZ|PT|GR|HU|RO|SK|BG|HR|SI|LT|LV|EE|IE|LU|MT|CY)`,
+	`HTTP\.[A-Z0-9]+\.(COM|NET|ORG|IO|CO|TV|ME|INFO|BIZ|US|UK|CA|DE|FR|JP|CN|RU|BR|AU|IN|IT|NL|ES|PL|SE|NO|FI|DK|BE|CH|AT|CZ|PT|GR|HU|RO|SK|BG|HR|SI|LT|LV|EE|IE|LU|MT|CY)`,
+	`HTTPS\.[A-Z0-9]+\.(COM|NET|ORG|IO|CO|TV|ME|INFO|BIZ|US|UK|CA|DE|FR|JP|CN|RU|BR|AU|IN|IT|NL|ES|PL|SE|NO|FI|DK|BE|CH|AT|CZ|PT|GR|HU|RO|SK|BG|HR|SI|LT|LV|EE|IE|LU|MT|CY)`,
+	// Use only safe TLDs for patterns without explicit prefix
+	`[A-Z0-9]+\.(COM|NET|ORG|IO|INFO|BIZ)`,
+}
+
+
 // Un-useful metadata of file pertaining to typical patterns found in torrent files
 var MiscPatterns = []Pattern{
 	// === UNUSED QUALITY INDICATORS ===
@@ -217,6 +228,9 @@ var (
 	})
 	GetMiscPatterns = sync.OnceValue(func() []*CompiledPattern {
 		return compilePatterns(MiscPatterns)
+	})
+	GetWebsitePatterns = sync.OnceValue(func() []*CompiledPattern {
+		return compilePatterns(WebsitePatterns)
 	})
 )
 

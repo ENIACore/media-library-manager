@@ -1026,3 +1026,191 @@ func TestParseBonus(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizePrefix(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name: "www.domain.org prefix",
+			input: []string{
+				"WWW",
+				"UINDEX",
+				"ORG",
+				"GOON",
+				"LAST",
+				"OF",
+				"THE",
+				"ENFORCERS",
+			},
+			expected: []string{
+				"GOON",
+				"LAST",
+				"OF",
+				"THE",
+				"ENFORCERS",
+			},
+		},
+		{
+			name: "domain.org without www",
+			input: []string{
+				"UINDEX",
+				"ORG",
+				"THE",
+				"AMAZING",
+				"DIGITAL",
+				"CIRCUS",
+			},
+			expected: []string{
+				"THE",
+				"AMAZING",
+				"DIGITAL",
+				"CIRCUS",
+			},
+		},
+		{
+			name: "domain.com prefix",
+			input: []string{
+				"EXAMPLE",
+				"COM",
+				"MOVIE",
+				"TITLE",
+				"2025",
+			},
+			expected: []string{
+				"MOVIE",
+				"TITLE",
+				"2025",
+			},
+		},
+		{
+			name: "no website prefix",
+			input: []string{
+				"GOON",
+				"LAST",
+				"OF",
+				"THE",
+				"ENFORCERS",
+			},
+			expected: []string{
+				"GOON",
+				"LAST",
+				"OF",
+				"THE",
+				"ENFORCERS",
+			},
+		},
+		{
+			name: "false positive - organization in title",
+			input: []string{
+				"THE",
+				"ORGANIZATION",
+				"MOVIE",
+			},
+			expected: []string{
+				"THE",
+				"ORGANIZATION",
+				"MOVIE",
+			},
+		},
+		{
+			name: "empty segments",
+			input:    []string{},
+			expected: []string{},
+		},
+		{
+			name: "single segment",
+			input: []string{
+				"MOVIE",
+			},
+			expected: []string{
+				"MOVIE",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := sanitizePrefix(test.input)
+			if len(result) != len(test.expected) {
+				t.Errorf("sanitizePrefix() length = %v, want %v", len(result), len(test.expected))
+				return
+			}
+			for i := range result {
+				if result[i] != test.expected[i] {
+					t.Errorf("sanitizePrefix()[%d] = %v, want %v", i, result[i], test.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestParseWebsites(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "www.domain.org",
+			input: []string{
+				"WWW",
+				"UINDEX",
+				"ORG",
+			},
+			expected: "WWW.UINDEX.ORG",
+		},
+		{
+			name: "domain.com",
+			input: []string{
+				"EXAMPLE",
+				"COM",
+			},
+			expected: "EXAMPLE.COM",
+		},
+		{
+			name: "domain.net",
+			input: []string{
+				"SITE",
+				"NET",
+			},
+			expected: "SITE.NET",
+		},
+		{
+			name: "www.domain.io",
+			input: []string{
+				"WWW",
+				"MYSITE",
+				"IO",
+			},
+			expected: "WWW.MYSITE.IO",
+		},
+		{
+			name: "no website pattern",
+			input: []string{
+				"MOVIE",
+				"TITLE",
+			},
+			expected: "",
+		},
+		{
+			name: "invalid TLD",
+			input: []string{
+				"EXAMPLE",
+				"INVALID",
+			},
+			expected: "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := parseWebsites(test.input)
+			if result != test.expected {
+				t.Errorf("parseWebsites() = %v, want %v", result, test.expected)
+			}
+		})
+	}
+}

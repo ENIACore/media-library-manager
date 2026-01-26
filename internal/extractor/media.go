@@ -22,7 +22,10 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	filename := filepath.Base(path)
 
 	sanitizedName := strings.Split(sanitizeName(filename), ".")
+	sanitizedName = sanitizePrefix(sanitizedName)
+
 	mediaInfo := metadata.MediaInfo{}
+	
 	title := extractTitle(sanitizedName)
 	sanitizedName = sanitizedName[len(title):]
 
@@ -39,6 +42,14 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	log.Debug("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
 
 	return mediaInfo
+}
+
+func sanitizePrefix(segments []string) []string {
+	if match := parseWebsites(segments); match != "" {
+		numParts := len(strings.Split(match, "."))
+		return segments[numParts:]
+	}
+	return segments
 }
 
 // extractTitle returns the title starting from the leftmost segment.
@@ -345,6 +356,16 @@ func parseBonus(segments []string) string {
 			if match != nil {
 				return group.Key
 			}
+		}
+	}
+	return ""
+}
+
+func parseWebsites(segments []string) string {
+	for _, re := range patterns.GetWebsitePatterns() {
+		match := matchSegments(segments, (*regexp.Regexp)(re))
+		if match != nil {
+			return match[0]
 		}
 	}
 	return ""
