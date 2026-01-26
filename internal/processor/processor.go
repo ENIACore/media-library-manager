@@ -41,7 +41,7 @@ func Resolve(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) erro
 // resolveSubtitleFile sets the destination path for a subtitle file.
 // Requires a basePath from parent. Clears quality metadata (resolution, codec, source, audio, bonus)
 // before building the filename. Sets entry.PathInfo.Dest to the full destination path.
-func resolveSubtitleFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+func resolveSubtitleFile(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveSubtitleFile")
 
 	if entry.Role != metadata.SubtitleFile {
@@ -69,7 +69,7 @@ func resolveSubtitleFile(basePath string, entry *metadata.Entry, cfg *config.Con
 // resolveSubtitleDir sets the destination path for a subtitle directory and its children.
 // Requires a basePath from parent. Creates a "Subtitles" subdirectory and resolves all subtitle file children.
 // Sets entry.PathInfo.Dest to the subtitle directory path.
-func resolveSubtitleDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+func resolveSubtitleDir(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveSubtitleDir")
 
 	if entry.Role != metadata.SubtitleDir {
@@ -87,7 +87,7 @@ func resolveSubtitleDir(basePath string, entry *metadata.Entry, cfg *config.Conf
 		var err error
 		switch child.Role {
 		case metadata.SubtitleFile:
-			err = resolveSubtitleFile(basePath, child, cfg, logger)
+			err = resolveSubtitleFile(basePath, child, logger)
 		default:
 			err = fmt.Errorf("Unexpected child role for SubtitleDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
@@ -104,7 +104,7 @@ func resolveSubtitleDir(basePath string, entry *metadata.Entry, cfg *config.Conf
 
 // resolveBonusFile sets the destination path for a bonus content file.
 // Requires a basePath from parent. Builds filename from metadata and sets entry.PathInfo.Dest.
-func resolveBonusFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+func resolveBonusFile(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveBonusFile")
 
 	if entry.Role != metadata.BonusFile {
@@ -127,7 +127,7 @@ func resolveBonusFile(basePath string, entry *metadata.Entry, cfg *config.Config
 // resolveBonusDir sets the destination path for a bonus content directory and its children.
 // Requires a basePath from parent. Creates an "Extras" subdirectory and resolves all bonus and subtitle file children.
 // Sets entry.PathInfo.Dest to the extras directory path.
-func resolveBonusDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+func resolveBonusDir(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveBonusDir")
 
 	if entry.Role != metadata.BonusDir {
@@ -145,9 +145,9 @@ func resolveBonusDir(basePath string, entry *metadata.Entry, cfg *config.Config,
 		var err error
 		switch child.Role {
 		case metadata.BonusFile:
-			err = resolveBonusFile(basePath, child, cfg, logger)
+			err = resolveBonusFile(basePath, child, logger)
 		case metadata.SubtitleFile:
-			err = resolveSubtitleFile(basePath, child, cfg, logger)
+			err = resolveSubtitleFile(basePath, child, logger)
 		default:
 			err = fmt.Errorf("Unexpected child role for BonusDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
@@ -212,9 +212,9 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config
 		case metadata.EpisodeFile:
 			err = resolveEpisodeFile(basePath, child, cfg, logger)
 		case metadata.SubtitleFile:
-			err = resolveSubtitleFile(basePath, child, cfg, logger)
+			err = resolveSubtitleFile(basePath, child, logger)
 		case metadata.SubtitleDir:
-			err = resolveSubtitleDir(basePath, child, cfg, logger)
+			err = resolveSubtitleDir(basePath, child, logger)
 		default:
 			err = fmt.Errorf("Unexpected child role for SeasonDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
@@ -249,9 +249,9 @@ func resolveSeriesDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Lo
 		case metadata.SeasonDir:
 			err = resolveSeasonDir(basePath, child, cfg, logger)
 		case metadata.BonusDir:
-			err = resolveBonusDir(basePath, child, cfg, logger)
+			err = resolveBonusDir(basePath, child, logger)
 		case metadata.SubtitleDir:
-			err = resolveSubtitleDir(basePath, child, cfg, logger)
+			err = resolveSubtitleDir(basePath, child, logger)
 		default:
 			return fmt.Errorf("Unexpected child role for SeriesDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
@@ -313,13 +313,13 @@ func resolveMovieDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Log
 		case metadata.MovieFile:
 			err = resolveMovieFile(basePath, child, cfg, logger)
 		case metadata.SubtitleFile:
-			err = resolveSubtitleFile(basePath, child, cfg, logger)
+			err = resolveSubtitleFile(basePath, child, logger)
 		case metadata.BonusFile:
-			err = resolveBonusFile(basePath, child, cfg, logger)
+			err = resolveBonusFile(basePath, child, logger)
 		case metadata.SubtitleDir:
-			err = resolveSubtitleDir(basePath, child, cfg, logger)
+			err = resolveSubtitleDir(basePath, child, logger)
 		case metadata.BonusDir:
-			err = resolveBonusDir(basePath, child, cfg, logger)
+			err = resolveBonusDir(basePath, child, logger)
 		default:
 			return fmt.Errorf("Unexpected child role for MovieDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
