@@ -409,12 +409,13 @@ func buildSeasonPath(entry *metadata.Entry) string {
 	return "S01"
 }
 
-// capitalize returns the string with its first rune converted to uppercase.
+// capitalize returns the string with its first rune converted to uppercase and all others to lowercase.
 // Returns empty string if input is empty.
 func capitalize(s string) string {
     if s == "" {
         return ""
     }
+    s = strings.ToLower(s)
     r := []rune(s)
     r[0] = unicode.ToUpper(r[0])
     return string(r)

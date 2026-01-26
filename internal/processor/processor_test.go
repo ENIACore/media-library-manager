@@ -75,7 +75,7 @@ func TestResolve(t *testing.T) {
 		if err != nil {
 			t.Errorf("Resolve unexpected error: %v", err)
 		}
-		expected := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025", "TEST.TITLE.2025.1080p.x264.Remux.Atmos.English.mp4")
+		expected := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Test.Title.2025.1080p.x264.Remux.Atmos.English.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -94,7 +94,7 @@ func TestResolve(t *testing.T) {
 		if err != nil {
 			t.Errorf("Resolve unexpected error: %v", err)
 		}
-		expected := filepath.Join(cfg.ShowPath, "TEST.TITLE.2025", "S01", "TEST.TITLE.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
+		expected := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01", "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -117,7 +117,7 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve unexpected error: %v", err)
 		}
 
-		expectedDir := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		expectedDir := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 		if entry.PathInfo.Dest != expectedDir {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expectedDir)
 		}
@@ -142,7 +142,7 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve unexpected error: %v", err)
 		}
 
-		expectedDir := filepath.Join(cfg.ShowPath, "TEST.TITLE.2025", "S01")
+		expectedDir := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01")
 		if entry.PathInfo.Dest != expectedDir {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expectedDir)
 		}
@@ -168,22 +168,22 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve unexpected error: %v", err)
 		}
 
-		expectedDir := filepath.Join(cfg.ShowPath, "TEST.TITLE")
+		expectedDir := filepath.Join(cfg.ShowPath, "Test.Title")
 		if entry.PathInfo.Dest != expectedDir {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expectedDir)
 		}
 
-		expectedSeasonDir := filepath.Join(cfg.ShowPath, "TEST.TITLE", "S01")
+		expectedSeasonDir := filepath.Join(cfg.ShowPath, "Test.Title", "S01")
 		if entry.Children[0].PathInfo.Dest != expectedSeasonDir {
 			t.Errorf("Season Dir Dest = %v, want %v", entry.Children[0].PathInfo.Dest, expectedSeasonDir)
 		}
 
-		expectedBonusDir := filepath.Join(cfg.ShowPath, "TEST.TITLE", "Extras")
+		expectedBonusDir := filepath.Join(cfg.ShowPath, "Test.Title", "Extras")
 		if entry.Children[1].PathInfo.Dest != expectedBonusDir {
 			t.Errorf("Bonus Dir Dest = %v, want %v", entry.Children[1].PathInfo.Dest, expectedBonusDir)
 		}
 
-		expectedSubtitleDir := filepath.Join(cfg.ShowPath, "TEST.TITLE", "Subtitles")
+		expectedSubtitleDir := filepath.Join(cfg.ShowPath, "Test.Title", "Subtitles")
 		if entry.Children[2].PathInfo.Dest != expectedSubtitleDir {
 			t.Errorf("Subtitle Dir Dest = %v, want %v", entry.Children[2].PathInfo.Dest, expectedSubtitleDir)
 		}
@@ -215,14 +215,14 @@ func TestResolveMovieFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestMovieFile(nil)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveMovieFile(basePath, entry, &cfg, logger)
 
 		if err != nil {
 			t.Errorf("resolveMovieFile unexpected error: %v", err)
 		}
-		expected := filepath.Join(basePath, "TEST.TITLE.2025.1080p.x264.Remux.Atmos.English.mp4")
+		expected := filepath.Join(basePath, "Test.Title.2025.1080p.x264.Remux.Atmos.English.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -238,7 +238,7 @@ func TestResolveMovieFile(t *testing.T) {
 		if err != nil {
 			t.Errorf("resolveMovieFile unexpected error: %v", err)
 		}
-		expected := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025", "TEST.TITLE.2025.1080p.x264.Remux.Atmos.English.mp4")
+		expected := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Test.Title.2025.1080p.x264.Remux.Atmos.English.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -248,7 +248,7 @@ func TestResolveMovieFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestSubFile(nil)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveMovieFile(basePath, entry, &cfg, logger)
 
@@ -263,14 +263,14 @@ func TestResolveEpisodeFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestEpFile(nil)
-		basePath := filepath.Join(cfg.ShowPath, "TEST.TITLE.2025", "S01")
+		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01")
 
 		err := resolveEpisodeFile(basePath, entry, &cfg, logger)
 
 		if err != nil {
 			t.Errorf("resolveEpisodeFile unexpected error: %v", err)
 		}
-		expected := filepath.Join(basePath, "TEST.TITLE.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
+		expected := filepath.Join(basePath, "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -286,7 +286,7 @@ func TestResolveEpisodeFile(t *testing.T) {
 		if err != nil {
 			t.Errorf("resolveEpisodeFile unexpected error: %v", err)
 		}
-		expected := filepath.Join(cfg.ShowPath, "TEST.TITLE.2025", "S01", "TEST.TITLE.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
+		expected := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01", "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -296,7 +296,7 @@ func TestResolveEpisodeFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestMovieFile(nil)
-		basePath := filepath.Join(cfg.ShowPath, "TEST.TITLE.2025", "S01")
+		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01")
 
 		err := resolveEpisodeFile(basePath, entry, &cfg, logger)
 
@@ -311,7 +311,7 @@ func TestResolveSubtitleFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestSubFile(nil)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveSubtitleFile(basePath, entry, logger)
 
@@ -329,7 +329,7 @@ func TestResolveSubtitleFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestMovieFile(nil)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveSubtitleFile(basePath, entry, logger)
 
@@ -356,7 +356,7 @@ func TestResolveSubtitleDir(t *testing.T) {
 		sub1 := testutil.CreateTestSubFile(nil)
 		sub2 := testutil.CreateTestSubFile(nil)
 		entry := testutil.CreateTestSubDir(nil, sub1, sub2)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveSubtitleDir(basePath, entry, logger)
 
@@ -375,7 +375,7 @@ func TestResolveSubtitleDir(t *testing.T) {
 		cfg := testutil.CreateTestCfg(testDir)
 		movie := testutil.CreateTestMovieFile(nil)
 		entry := testutil.CreateTestMovieDir(nil, movie)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveSubtitleDir(basePath, entry, logger)
 
@@ -401,14 +401,14 @@ func TestResolveBonusFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestBonusFile(nil)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025", "Extras")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Extras")
 
 		err := resolveBonusFile(basePath, entry, logger)
 
 		if err != nil {
 			t.Errorf("resolveBonusFile unexpected error: %v", err)
 		}
-		expected := filepath.Join(basePath, "TEST.TITLE.2025.1080p.x264.Remux.Atmos.English.Behind.The.Scenes.mp4")
+		expected := filepath.Join(basePath, "Test.Title.2025.1080p.x264.Remux.Atmos.English.Behind.The.Scenes.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -418,7 +418,7 @@ func TestResolveBonusFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestMovieFile(nil)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025", "Extras")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Extras")
 
 		err := resolveBonusFile(basePath, entry, logger)
 
@@ -445,7 +445,7 @@ func TestResolveBonusDir(t *testing.T) {
 		bonus := testutil.CreateTestBonusFile(nil)
 		sub := testutil.CreateTestSubFile(nil)
 		entry := testutil.CreateTestBonusDir(nil, bonus, sub)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveBonusDir(basePath, entry, logger)
 
@@ -464,7 +464,7 @@ func TestResolveBonusDir(t *testing.T) {
 		cfg := testutil.CreateTestCfg(testDir)
 		movie := testutil.CreateTestMovieFile(nil)
 		entry := testutil.CreateTestMovieDir(nil, movie)
-		basePath := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveBonusDir(basePath, entry, logger)
 
@@ -491,7 +491,7 @@ func TestResolveSeasonDir(t *testing.T) {
 		cfg := testutil.CreateTestCfg(testDir)
 		ep := testutil.CreateTestEpFile(nil)
 		entry := testutil.CreateTestSeasonDir(nil, ep)
-		basePath := filepath.Join(cfg.ShowPath, "TEST.TITLE.2025")
+		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 
 		err := resolveSeasonDir(basePath, entry, &cfg, logger)
 
@@ -505,7 +505,6 @@ func TestResolveSeasonDir(t *testing.T) {
 		}
 	})
 
-	//TODO
 	t.Run("without base path", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
@@ -521,7 +520,7 @@ func TestResolveSeasonDir(t *testing.T) {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
 		}
 
-		expected := filepath.Join(cfg.ShowPath, "TEST.TITLE.2025", "S01")
+		expected := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -544,7 +543,7 @@ func TestResolveSeasonDir(t *testing.T) {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
 		}
 
-		expectedSubDir := filepath.Join(cfg.ShowPath, "TEST.TITLE.2025", "S01", "Subtitles")
+		expectedSubDir := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01", "Subtitles")
 		if entry.Children[1].PathInfo.Dest != expectedSubDir {
 			t.Errorf("Subtitle Dir Dest = %v, want %v", entry.Children[1].PathInfo.Dest, expectedSubDir)
 		}
@@ -582,12 +581,12 @@ func TestResolveSeriesDir(t *testing.T) {
 			t.Errorf("resolveSeriesDir unexpected error: %v", err)
 		}
 
-		expected := filepath.Join(cfg.ShowPath, "TEST.TITLE")
+		expected := filepath.Join(cfg.ShowPath, "Test.Title")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
 
-		expectedSeason := filepath.Join(cfg.ShowPath, "TEST.TITLE", "S01")
+		expectedSeason := filepath.Join(cfg.ShowPath, "Test.Title", "S01")
 		if entry.Children[0].PathInfo.Dest != expectedSeason {
 			t.Errorf("Season Dir Dest = %v, want %v", entry.Children[0].PathInfo.Dest, expectedSeason)
 		}
@@ -622,7 +621,7 @@ func TestResolveMovieDir(t *testing.T) {
 			t.Errorf("resolveMovieDir unexpected error: %v", err)
 		}
 
-		expected := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025")
+		expected := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -644,12 +643,12 @@ func TestResolveMovieDir(t *testing.T) {
 			t.Errorf("resolveMovieDir unexpected error: %v", err)
 		}
 
-		expectedBonusDir := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025", "Extras")
+		expectedBonusDir := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Extras")
 		if entry.Children[1].PathInfo.Dest != expectedBonusDir {
 			t.Errorf("Bonus Dir Dest = %v, want %v", entry.Children[1].PathInfo.Dest, expectedBonusDir)
 		}
 
-		expectedSubtitleDir := filepath.Join(cfg.MoviePath, "TEST.TITLE.2025", "Subtitles")
+		expectedSubtitleDir := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Subtitles")
 		if entry.Children[2].PathInfo.Dest != expectedSubtitleDir {
 			t.Errorf("Subtitle Dir Dest = %v, want %v", entry.Children[2].PathInfo.Dest, expectedSubtitleDir)
 		}
@@ -689,7 +688,7 @@ func TestBuildFilename(t *testing.T) {
 				e.MediaInfo.Bonus = ""
 				return e
 			},
-			expected: "TEST.TITLE.2025.1080p.x264.Remux.Atmos.English.mp4",
+			expected: "Test.Title.2025.1080p.x264.Remux.Atmos.English.mp4",
 		},
 		{
 			name: "episode file",
@@ -698,7 +697,7 @@ func TestBuildFilename(t *testing.T) {
 				e.MediaInfo.Bonus = ""
 				return e
 			},
-			expected: "TEST.TITLE.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4",
+			expected: "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4",
 		},
 		{
 			name: "subtitle file - metadata cleared by resolver",
@@ -719,7 +718,7 @@ func TestBuildFilename(t *testing.T) {
 			entry: func() *metadata.Entry {
 				return testutil.CreateTestBonusFile(nil)
 			},
-			expected: "TEST.TITLE.2025.1080p.x264.Remux.Atmos.English.Behind.The.Scenes.mp4",
+			expected: "Test.Title.2025.1080p.x264.Remux.Atmos.English.Behind.The.Scenes.mp4",
 		},
 	}
 	for _, test := range tests {
@@ -744,7 +743,7 @@ func TestBuildTitlePath(t *testing.T) {
 			entry: func() *metadata.Entry {
 				return testutil.CreateTestMovieFile(nil)
 			},
-			expected: "TEST.TITLE.2025",
+			expected: "Test.Title.2025",
 		},
 		{
 			name: "without year",
@@ -753,7 +752,7 @@ func TestBuildTitlePath(t *testing.T) {
 				entry.MediaInfo.Year = nil
 				return entry
 			},
-			expected: "TEST.TITLE",
+			expected: "Test.Title",
 		},
 		{
 			name: "empty title",
@@ -826,19 +825,19 @@ func TestCapitalize(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "uppercase - first char stays upper, rest unchanged",
+			name:     "all uppercase - first char stays upper, rest lowercased",
 			input:    "TEST",
-			expected: "TEST",
+			expected: "Test",
 		},
 		{
-			name:     "lowercase - first char uppercased",
+			name:     "all lowercase - first char uppercased",
 			input:    "test",
 			expected: "Test",
 		},
 		{
-			name:     "mixed - first char uppercased, rest unchanged",
+			name:     "mixed case - first char uppercased, rest lowercased",
 			input:    "tEsT",
-			expected: "TEsT",
+			expected: "Test",
 		},
 		{
 			name:     "empty",
