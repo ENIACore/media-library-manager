@@ -52,13 +52,34 @@ func sanitizePrefix(segments []string) []string {
 	return segments
 }
 
+// isTerminator determines if the leftmost segment is a terminator.
+// A terminator is any segment that is not a part of the title or year (i.e., "terminates" extraction).
+// The title and year are different from terminators because terminators are the only segments 
+// that can be deterministically determined, while titles can be any set of characters (and can include years)
+func isTerminator(segments []string) bool {
+	if parseResolution(segments) != "" ||
+		parseCodec(segments) != "" ||
+		parseSource(segments) != "" ||
+		parseAudio(segments) != "" ||
+		parseSeason(segments) != nil ||
+		parseEpisode(segments) != nil ||
+		parseVideoExt(segments) != "" ||
+		parseSubtitleExt(segments) != "" ||
+		parseMisc(segments) != "" ||
+		parseAudioExt(segments) != "" ||
+		parseBonus(segments) != "" ||
+		parseLanguage(segments) != "" {  // Fix: check return value
+		return true
+	}
+	return false
+}
+
 // extractTitle returns the title starting from the leftmost segment.
-// Extraction stops at the first recognized pattern (resolution, codec,
-// source, audio, season, episode, extension, misc, or bonus).
+// Extraction stops at the first terminator
 //
 // Segment order:
 //
-//	<title>.<year>.<pattern>...
+//	<title>.<year>.<terminator>...
 //	<title>.<year>
 //
 // Year is optional in all patterns.
@@ -67,17 +88,7 @@ func extractTitle(segments []string) []string {
 	var year *int
 	for i, segment := range segments {
 		candidates := segments[i:]
-		if parseResolution(candidates) != "" ||
-			parseCodec(candidates) != "" ||
-			parseSource(candidates) != "" ||
-			parseAudio(candidates) != "" ||
-			parseSeason(candidates) != nil ||
-			parseEpisode(candidates) != nil ||
-			parseVideoExt(candidates) != "" ||
-			parseSubtitleExt(candidates) != "" ||
-			parseMisc(candidates) != "" ||
-			parseAudioExt(candidates) != "" ||
-			parseBonus(candidates) != "" {
+		if isTerminator(candidates) {
 			break
 		}
 
@@ -93,22 +104,12 @@ func extractTitle(segments []string) []string {
 }
 
 // extractYear returns the year from segments, or nil if not found.
-// Scans segments until a recognized pattern is encountered.
+// Scans segments until a terminator is encountered.
 func extractYear(segments []string) *int {
 	var year *int
 	for i, segment := range segments {
 		candidates := segments[i:]
-		if parseResolution(candidates) != "" ||
-			parseCodec(candidates) != "" ||
-			parseSource(candidates) != "" ||
-			parseAudio(candidates) != "" ||
-			parseSeason(candidates) != nil ||
-			parseEpisode(candidates) != nil ||
-			parseVideoExt(candidates) != "" ||
-			parseSubtitleExt(candidates) != "" ||
-			parseMisc(candidates) != "" ||
-			parseAudioExt(candidates) != "" ||
-			parseBonus(candidates) != "" {
+		if isTerminator(candidates) {
 			return year
 		}
 		year = parseYear(segment)
