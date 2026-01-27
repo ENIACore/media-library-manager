@@ -28,11 +28,13 @@
 //	Movie File                          (root or embedded)
 //
 //	Subtitle Directory                  (embedded only)
-//	└── Subtitle File(s)
+//	├── Subtitle File(s)
+//	└── Subtitle Directory(s)           (optional) (max depth = 1)
 //
 //	Bonus Directory                     (embedded only)
 //	├── Bonus File(s)
-//	└── Subtitle File(s)                (optional)
+//	├── Subtitle File(s)                (optional)
+//	└── Bonus Directory(s)           	(optional) (max depth = 1)
 //
 //	Season Directory                    (root or embedded)
 //	├── Episode File(s)
@@ -52,4 +54,6 @@
 //	└── Bonus Directory                 (optional)
 //
 // Note: Subtitle File and Bonus File cannot exist at root level.
+// Note: Allowed to embed 1 level of subtitle directories inside subtitle directories, typically to encapsulate specific episodes (those intermediary directories will be removed in the final output
+// Note: Allowed to embed 1 level of bonus directories inside bonus directories, typically to encapsulate specific episodes (those intermediary directories will be removed in the final output
 package metadata

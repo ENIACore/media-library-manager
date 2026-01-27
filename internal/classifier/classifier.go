@@ -34,18 +34,20 @@ func Classify(root *metadata.Entry, logger *slog.Logger) error {
 // Returns true and sets entry.Role to SubtitleDir if classification succeeds.
 func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifySubtitleDir")
-	if !entry.PathInfo.IsDir || entry.Height() > 1 {
+	if !entry.PathInfo.IsDir || entry.Height() > 2 {
 		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
 		return false
 	}
 
 	hasSubtitle := false
 	for _, child := range entry.Children {
-		if !classifySubtitleFile(child) {
+		if classifySubtitleFile(child) {
+			hasSubtitle = true
+		} else if classifySubtitleDir(child, logger)  { // Allows for intermediary directory, multiple interm=ediaries prevented with Height() limit
+			hasSubtitle = true
+		} else {
 			return false
-
 		}
-		hasSubtitle = true
 	}
 
 	entry.Role = metadata.SubtitleDir
@@ -58,7 +60,7 @@ func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) bool {
 // Returns true and sets entry.Role to BonusDir if classification succeeds.
 func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifyBonusDir")
-	if !entry.PathInfo.IsDir || entry.Height() > 1 {
+	if !entry.PathInfo.IsDir || entry.Height() > 2 {
 		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
 		return false
 	}
@@ -71,7 +73,9 @@ func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
 
 		if classifyBonusFile(child) {
 			hasBonus = true
-		}  else {
+		}  else if classifyBonusDir(child, logger) { // Allows for intermediary directory, multiple interm=ediaries prevented with Height() limit
+			hasBonus = true
+		} else {
 			return false
 		}
 	}
@@ -82,11 +86,11 @@ func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
 }
 
 // classifySeasonDir classifies a directory as SeasonDir if it contains episode files.
-// Only directories with height 2 or less are considered. Subtitle files and directories are allowed.
+// Only directories with height 3 or less are considered. Subtitle files and directories are allowed.
 // Returns true and sets entry.Role to SeasonDir if classification succeeds.
 func classifySeasonDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifySeasonDir")
-	if !entry.PathInfo.IsDir || entry.Height() > 2 {
+	if !entry.PathInfo.IsDir || entry.Height() > 3 {
 		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
 		return false
 	}

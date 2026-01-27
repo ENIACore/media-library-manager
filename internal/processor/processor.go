@@ -81,6 +81,7 @@ func resolveSubtitleDir(basePath string, entry *metadata.Entry, logger *slog.Log
 		return fmt.Errorf("Expected base path for SubtitleDir role, for node %v", entry.PathInfo.Source)
 	}
 
+	origBasePath := basePath
 	basePath = filepath.Join(basePath, "Subtitles")
 
 	for _, child := range entry.Children {
@@ -88,6 +89,9 @@ func resolveSubtitleDir(basePath string, entry *metadata.Entry, logger *slog.Log
 		switch child.Role {
 		case metadata.SubtitleFile:
 			err = resolveSubtitleFile(basePath, child, logger)
+		case metadata.SubtitleDir:
+			// Allows for intermediary subtitle dirs, flattens dir structure
+			err = resolveSubtitleDir(origBasePath, child, logger)
 		default:
 			err = fmt.Errorf("Unexpected child role for SubtitleDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
@@ -139,6 +143,7 @@ func resolveBonusDir(basePath string, entry *metadata.Entry, logger *slog.Logger
 		return fmt.Errorf("Expected base path for BonusDir role, for node %v", entry.PathInfo.Source)
 	}
 
+	origBasePath := basePath
 	basePath = filepath.Join(basePath, "Extras")
 
 	for _, child := range entry.Children {
@@ -148,6 +153,9 @@ func resolveBonusDir(basePath string, entry *metadata.Entry, logger *slog.Logger
 			err = resolveBonusFile(basePath, child, logger)
 		case metadata.SubtitleFile:
 			err = resolveSubtitleFile(basePath, child, logger)
+		case metadata.BonusDir:
+			// Allows for intermediary subtitle dirs, flattens dir structure
+			err = resolveSubtitleDir(origBasePath, child, logger)
 		default:
 			err = fmt.Errorf("Unexpected child role for BonusDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}

@@ -3,111 +3,156 @@ package enricher
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
+// Propogates title and year of movie/show to all files
+// Enriches subtitle and bonus files found inside intermediary directories
 func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Enrich")
-	lg.Debug("Enriching root entry", "entry", root.PathInfo.Source)
-	var title []string
-	var year *int
 
-	switch root.Role {
-	case metadata.SubtitleFile, metadata.BonusFile, metadata.SubtitleDir, metadata.BonusDir:
-		return fmt.Errorf("Entry %v cannot be enriched at root level", root.PathInfo.Source)
-	case metadata.EpisodeFile, metadata.SeasonDir, metadata.SeriesDir:
-		title = getShowTitle(root)	
-		year = getShowYear(root)
-	case metadata.MovieFile, metadata.MovieDir:
-		title = getMovieTitle(root)
-		year = getShowYear(root)
-	default:
-		return fmt.Errorf("Entry %v has unknown role", root.PathInfo.Source)
+	if root == nil {
+		return fmt.Errorf("Cannot enrich nil root entry")
 	}
 
-	lg.Info("Successfully extracted title and year for root entry", "entry", root.PathInfo.Source, "title", title, "year", year)
-	setEntryValues(root, title, year)
+	lg.Debug("Enriching root entry", "entry", root.PathInfo.Source)
+	switch root.Role {
+	case metadata.SubtitleFile, metadata.BonusFile, metadata.SubtitleDir, metadata.BonusDir, metadata.UnknownRole:
+		return fmt.Errorf("Entry %v cannot be enriched at root level", root.PathInfo.Source)
+	}
+
+
+	enrichEntries(root)
+	enrichIntermediaryEntries(root)
 	return nil
 }
 
-// Determines title using order of precedence: Series > Season > Episode > nil
-func getShowTitle(root *metadata.Entry) []string {
+func enrichEntries(root *metadata.Entry) {
+	var roles []metadata.EntryRole
+	switch root.Role {
+	case metadata.MovieFile, metadata.MovieDir:
+		roles = []metadata.EntryRole{
+			metadata.MovieDir,
+			metadata.MovieFile,
+			metadata.BonusFile,
+			metadata.SubtitleFile,
+		}
+	case metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
+		roles = []metadata.EntryRole{
+			metadata.SeriesDir,
+			metadata.SeasonDir,
+			metadata.EpisodeFile,
+			metadata.BonusFile,
+			metadata.SubtitleFile,
+		}
+	}
+
+	title := getTitle(root, roles)
+	year := getYear(root, roles)
+
+	mediaInfo := metadata.MediaInfo{}
+	if title != nil {
+		mediaInfo.Title = title
+	}
+	if year != nil {
+		mediaInfo.Year = year
+	}
+
+	propogateDown(root, &mediaInfo, roles)
+}
+
+func getTitle(root *metadata.Entry, roles []metadata.EntryRole) []string {
 	if root == nil {
 		return nil
 	}
-	if root.Role == metadata.EpisodeFile {
-		return root.MediaInfo.Title
-	}
-	if len(root.MediaInfo.Title) > 0 {
-		return root.MediaInfo.Title
-	}
-	for _, child := range root.Children {
-		if title := getShowTitle(child); len(title) > 0 {
-			return title
+
+	queue := []*metadata.Entry{root}
+
+	for len(queue) > 0 {
+		entry := queue[0]
+		queue = queue[1:]
+
+		for _, role := range roles {
+			if entry.Role == role && len(entry.MediaInfo.Title) > 0 {
+				return entry.MediaInfo.Title
+			}
 		}
+
+		queue = append(queue, entry.Children...)
 	}
-	return root.MediaInfo.Title
+
+	return nil
 }
 
-func getShowYear(root *metadata.Entry) *int {
+func getYear(root *metadata.Entry, roles []metadata.EntryRole) *int {
 	if root == nil {
 		return nil
 	}
-	if root.Role == metadata.EpisodeFile {
-		return root.MediaInfo.Year
-	}
-	if root.MediaInfo.Year != nil {
-		return root.MediaInfo.Year
-	}
-	for _, child := range root.Children {
-		if year := getShowYear(child); year != nil {
-			return year
+
+	queue := []*metadata.Entry{root}
+
+	for len(queue) > 0 {
+		entry := queue[0]
+		queue = queue[1:]
+
+		for _, role := range roles {
+			if entry.Role == role && entry.MediaInfo.Year != nil {
+				return entry.MediaInfo.Year
+			}
 		}
+
+		queue = append(queue, entry.Children...)
 	}
-	return root.MediaInfo.Year
+
+	return nil
 }
 
-func getMovieTitle(root *metadata.Entry) []string {
-	if root == nil {
-		return nil
-	}
-	if root.Role == metadata.MovieFile {
-		return root.MediaInfo.Title
-	}
-	if len(root.MediaInfo.Title) > 0 {
-		return root.MediaInfo.Title
-	}
-	for _, child := range root.Children {
-		if title := getMovieTitle(child); len(title) > 0 {
-			return title
+func enrichIntermediaryEntries(entry *metadata.Entry) {
+	switch entry.Role {
+	case metadata.SubtitleDir, metadata.BonusDir:
+		if entry.Height() == 2 {
+			for _, child := range entry.Children {
+				mediaInfo := metadata.MediaInfo{
+					Season:  child.MediaInfo.Season,
+					Episode: child.MediaInfo.Episode,
+				}
+				propogateDown(child, &mediaInfo, []metadata.EntryRole{metadata.BonusFile, metadata.SubtitleFile})
+			}
+		} else {
+			for _, child := range entry.Children {
+				enrichIntermediaryEntries(child)
+			}
+		}
+	default:
+		for _, child := range entry.Children {
+			enrichIntermediaryEntries(child)
 		}
 	}
-	return root.MediaInfo.Title
 }
 
-func getMovieYear(root *metadata.Entry) *int {
-	if root == nil {
-		return nil
-	}
-	if root.Role == metadata.MovieFile {
-		return root.MediaInfo.Year
-	}
-	if root.MediaInfo.Year != nil {
-		return root.MediaInfo.Year
-	}
-	for _, child := range root.Children {
-		if year := getMovieYear(child); year != nil {
-			return year
+func propogateDown(entry *metadata.Entry,  src *metadata.MediaInfo, roles []metadata.EntryRole) {
+	if slices.Contains(roles, entry.Role) || roles == nil {
+		if src.Title != nil {
+			entry.MediaInfo.Title = append([]string(nil), src.Title...)
+		}
+		if src.Year != nil {
+			yearCopy := *src.Year
+			entry.MediaInfo.Year = &yearCopy
+		}
+		if src.Season != nil {
+			seasonCopy := *src.Season
+			entry.MediaInfo.Season = &seasonCopy
+		}
+		if src.Episode != nil {
+			episodeCopy := *src.Episode
+			entry.MediaInfo.Episode = &episodeCopy
 		}
 	}
-	return root.MediaInfo.Year
-}
 
-func setEntryValues(root *metadata.Entry, title []string, year *int) {
-	root.MediaInfo.Title = title
-	root.MediaInfo.Year = year
-	for _, child := range root.Children {
-		setEntryValues(child, title, year)
+	for _, child := range entry.Children {
+		propogateDown(child, src, roles)
 	}
 }
+

@@ -99,6 +99,13 @@ func TestEnrich(t *testing.T) {
 			},
 			expectError: true,
 		},
+		{
+			name: "nil entry - should error",
+			entry: func() *metadata.Entry {
+				return nil
+			},
+			expectError: true,
+		},
 	}
 
 	testDir := testutil.CreateTestDir(t)
@@ -120,28 +127,38 @@ func TestEnrich(t *testing.T) {
 	}
 }
 
-func TestGetShowTitle(t *testing.T) {
+func TestGetTitle(t *testing.T) {
 	tests := []struct {
 		name     string
 		entry    func() *metadata.Entry
+		roles    []metadata.EntryRole
 		expected []string
 	}{
+		{
+			name: "movie file with title",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			roles:    []metadata.EntryRole{metadata.MovieFile},
+			expected: []string{"TEST", "TITLE"},
+		},
 		{
 			name: "episode file with title",
 			entry: func() *metadata.Entry {
 				return testutil.CreateTestEpFile(nil)
 			},
+			roles:    []metadata.EntryRole{metadata.EpisodeFile},
 			expected: []string{"TEST", "TITLE"},
 		},
 		{
-			name: "season dir with episode children",
+			name: "movie dir with movie file child",
 			entry: func() *metadata.Entry {
-				ep1 := testutil.CreateTestEpFile(nil)
-				ep2 := testutil.CreateTestEpFile(nil)
-				seasonDir := testutil.CreateTestSeasonDir(nil, ep1, ep2)
-				seasonDir.MediaInfo.Title = []string{}
-				return seasonDir
+				movieFile := testutil.CreateTestMovieFile(nil)
+				movieDir := testutil.CreateTestMovieDir(nil, movieFile)
+				movieDir.MediaInfo.Title = []string{}
+				return movieDir
 			},
+			roles:    []metadata.EntryRole{metadata.MovieDir, metadata.MovieFile},
 			expected: []string{"TEST", "TITLE"},
 		},
 		{
@@ -154,45 +171,46 @@ func TestGetShowTitle(t *testing.T) {
 				seasonDir.MediaInfo.Title = []string{}
 				return seriesDir
 			},
+			roles:    []metadata.EntryRole{metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile},
 			expected: []string{"TEST", "TITLE"},
 		},
 		{
-			name: "season dir with own title",
+			name: "parent takes precedence over child",
 			entry: func() *metadata.Entry {
-				ep := testutil.CreateTestEpFile(nil)
-				ep.MediaInfo.Title = []string{"EPISODE", "TITLE"}
-				seasonDir := testutil.CreateTestSeasonDir(nil, ep)
-				seasonDir.MediaInfo.Title = []string{"SEASON", "TITLE"}
-				return seasonDir
+				movieFile := testutil.CreateTestMovieFile(nil)
+				movieFile.MediaInfo.Title = []string{"CHILD", "TITLE"}
+				movieDir := testutil.CreateTestMovieDir(nil, movieFile)
+				movieDir.MediaInfo.Title = []string{"PARENT", "TITLE"}
+				return movieDir
 			},
-			expected: []string{"SEASON", "TITLE"},
-		},
-		{
-			name: "series dir with own title",
-			entry: func() *metadata.Entry {
-				ep := testutil.CreateTestEpFile(nil)
-				seasonDir := testutil.CreateTestSeasonDir(nil, ep)
-				seriesDir := testutil.CreateTestSeriesDir(nil, seasonDir)
-				seriesDir.MediaInfo.Title = []string{"SERIES", "TITLE"}
-				return seriesDir
-			},
-			expected: []string{"SERIES", "TITLE"},
+			roles:    []metadata.EntryRole{metadata.MovieDir, metadata.MovieFile},
+			expected: []string{"PARENT", "TITLE"},
 		},
 		{
 			name: "nil entry",
 			entry: func() *metadata.Entry {
 				return nil
 			},
+			roles:    []metadata.EntryRole{metadata.MovieFile},
 			expected: nil,
 		},
 		{
 			name: "entry with empty title",
 			entry: func() *metadata.Entry {
-				ep := testutil.CreateTestEpFile(nil)
-				ep.MediaInfo.Title = []string{}
-				return ep
+				entry := testutil.CreateTestMovieFile(nil)
+				entry.MediaInfo.Title = []string{}
+				return entry
 			},
-			expected: []string{},
+			roles:    []metadata.EntryRole{metadata.MovieFile},
+			expected: nil,
+		},
+		{
+			name: "no matching roles",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			roles:    []metadata.EntryRole{metadata.EpisodeFile},
+			expected: nil,
 		},
 	}
 
@@ -200,15 +218,15 @@ func TestGetShowTitle(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			entry := test.entry()
 
-			result := getShowTitle(entry)
+			result := getTitle(entry, test.roles)
 
 			if len(result) != len(test.expected) {
-				t.Errorf("getShowTitle = %v, want %v", result, test.expected)
+				t.Errorf("getTitle = %v, want %v", result, test.expected)
 				return
 			}
 			for i := range result {
 				if result[i] != test.expected[i] {
-					t.Errorf("getShowTitle = %v, want %v", result, test.expected)
+					t.Errorf("getTitle = %v, want %v", result, test.expected)
 					return
 				}
 			}
@@ -216,28 +234,38 @@ func TestGetShowTitle(t *testing.T) {
 	}
 }
 
-func TestGetShowYear(t *testing.T) {
+func TestGetYear(t *testing.T) {
 	tests := []struct {
 		name     string
 		entry    func() *metadata.Entry
+		roles    []metadata.EntryRole
 		expected *int
 	}{
+		{
+			name: "movie file with year",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			roles:    []metadata.EntryRole{metadata.MovieFile},
+			expected: testutil.IntPtr(2025),
+		},
 		{
 			name: "episode file with year",
 			entry: func() *metadata.Entry {
 				return testutil.CreateTestEpFile(nil)
 			},
+			roles:    []metadata.EntryRole{metadata.EpisodeFile},
 			expected: testutil.IntPtr(2025),
 		},
 		{
-			name: "season dir with episode children",
+			name: "movie dir with movie file child",
 			entry: func() *metadata.Entry {
-				ep1 := testutil.CreateTestEpFile(nil)
-				ep2 := testutil.CreateTestEpFile(nil)
-				seasonDir := testutil.CreateTestSeasonDir(nil, ep1, ep2)
-				seasonDir.MediaInfo.Year = nil
-				return seasonDir
+				movieFile := testutil.CreateTestMovieFile(nil)
+				movieDir := testutil.CreateTestMovieDir(nil, movieFile)
+				movieDir.MediaInfo.Year = nil
+				return movieDir
 			},
+			roles:    []metadata.EntryRole{metadata.MovieDir, metadata.MovieFile},
 			expected: testutil.IntPtr(2025),
 		},
 		{
@@ -250,162 +278,11 @@ func TestGetShowYear(t *testing.T) {
 				seasonDir.MediaInfo.Year = nil
 				return seriesDir
 			},
+			roles:    []metadata.EntryRole{metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile},
 			expected: testutil.IntPtr(2025),
 		},
 		{
-			name: "season dir with own year",
-			entry: func() *metadata.Entry {
-				ep := testutil.CreateTestEpFile(nil)
-				ep.MediaInfo.Year = testutil.IntPtr(2020)
-				seasonDir := testutil.CreateTestSeasonDir(nil, ep)
-				seasonDir.MediaInfo.Year = testutil.IntPtr(2021)
-				return seasonDir
-			},
-			expected: testutil.IntPtr(2021),
-		},
-		{
-			name: "series dir with own year",
-			entry: func() *metadata.Entry {
-				ep := testutil.CreateTestEpFile(nil)
-				seasonDir := testutil.CreateTestSeasonDir(nil, ep)
-				seriesDir := testutil.CreateTestSeriesDir(nil, seasonDir)
-				seriesDir.MediaInfo.Year = testutil.IntPtr(2022)
-				return seriesDir
-			},
-			expected: testutil.IntPtr(2022),
-		},
-		{
-			name: "nil entry",
-			entry: func() *metadata.Entry {
-				return nil
-			},
-			expected: nil,
-		},
-		{
-			name: "entry with nil year",
-			entry: func() *metadata.Entry {
-				ep := testutil.CreateTestEpFile(nil)
-				ep.MediaInfo.Year = nil
-				return ep
-			},
-			expected: nil,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			entry := test.entry()
-
-			result := getShowYear(entry)
-
-			if test.expected == nil && result != nil {
-				t.Errorf("getShowYear = %v, want nil", *result)
-			} else if test.expected != nil && result == nil {
-				t.Errorf("getShowYear = nil, want %v", *test.expected)
-			} else if test.expected != nil && result != nil && *result != *test.expected {
-				t.Errorf("getShowYear = %v, want %v", *result, *test.expected)
-			}
-		})
-	}
-}
-
-func TestGetMovieTitle(t *testing.T) {
-	tests := []struct {
-		name     string
-		entry    func() *metadata.Entry
-		expected []string
-	}{
-		{
-			name: "movie file with title",
-			entry: func() *metadata.Entry {
-				return testutil.CreateTestMovieFile(nil)
-			},
-			expected: []string{"TEST", "TITLE"},
-		},
-		{
-			name: "movie dir with movie file child",
-			entry: func() *metadata.Entry {
-				movieFile := testutil.CreateTestMovieFile(nil)
-				movieDir := testutil.CreateTestMovieDir(nil, movieFile)
-				movieDir.MediaInfo.Title = []string{}
-				return movieDir
-			},
-			expected: []string{"TEST", "TITLE"},
-		},
-		{
-			name: "movie dir with own title",
-			entry: func() *metadata.Entry {
-				movieFile := testutil.CreateTestMovieFile(nil)
-				movieFile.MediaInfo.Title = []string{"CHILD", "TITLE"}
-				movieDir := testutil.CreateTestMovieDir(nil, movieFile)
-				movieDir.MediaInfo.Title = []string{"PARENT", "TITLE"}
-				return movieDir
-			},
-			expected: []string{"PARENT", "TITLE"},
-		},
-		{
-			name: "nil entry",
-			entry: func() *metadata.Entry {
-				return nil
-			},
-			expected: nil,
-		},
-		{
-			name: "entry with empty title",
-			entry: func() *metadata.Entry {
-				movie := testutil.CreateTestMovieFile(nil)
-				movie.MediaInfo.Title = []string{}
-				return movie
-			},
-			expected: []string{},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			entry := test.entry()
-
-			result := getMovieTitle(entry)
-
-			if len(result) != len(test.expected) {
-				t.Errorf("getMovieTitle = %v, want %v", result, test.expected)
-				return
-			}
-			for i := range result {
-				if result[i] != test.expected[i] {
-					t.Errorf("getMovieTitle = %v, want %v", result, test.expected)
-					return
-				}
-			}
-		})
-	}
-}
-
-func TestGetMovieYear(t *testing.T) {
-	tests := []struct {
-		name     string
-		entry    func() *metadata.Entry
-		expected *int
-	}{
-		{
-			name: "movie file with year",
-			entry: func() *metadata.Entry {
-				return testutil.CreateTestMovieFile(nil)
-			},
-			expected: testutil.IntPtr(2025),
-		},
-		{
-			name: "movie dir with movie file child",
-			entry: func() *metadata.Entry {
-				movieFile := testutil.CreateTestMovieFile(nil)
-				movieDir := testutil.CreateTestMovieDir(nil, movieFile)
-				movieDir.MediaInfo.Year = nil
-				return movieDir
-			},
-			expected: testutil.IntPtr(2025),
-		},
-		{
-			name: "movie dir with own year",
+			name: "parent takes precedence over child",
 			entry: func() *metadata.Entry {
 				movieFile := testutil.CreateTestMovieFile(nil)
 				movieFile.MediaInfo.Year = testutil.IntPtr(2020)
@@ -413,6 +290,7 @@ func TestGetMovieYear(t *testing.T) {
 				movieDir.MediaInfo.Year = testutil.IntPtr(2021)
 				return movieDir
 			},
+			roles:    []metadata.EntryRole{metadata.MovieDir, metadata.MovieFile},
 			expected: testutil.IntPtr(2021),
 		},
 		{
@@ -420,15 +298,25 @@ func TestGetMovieYear(t *testing.T) {
 			entry: func() *metadata.Entry {
 				return nil
 			},
+			roles:    []metadata.EntryRole{metadata.MovieFile},
 			expected: nil,
 		},
 		{
 			name: "entry with nil year",
 			entry: func() *metadata.Entry {
-				movie := testutil.CreateTestMovieFile(nil)
-				movie.MediaInfo.Year = nil
-				return movie
+				entry := testutil.CreateTestMovieFile(nil)
+				entry.MediaInfo.Year = nil
+				return entry
 			},
+			roles:    []metadata.EntryRole{metadata.MovieFile},
+			expected: nil,
+		},
+		{
+			name: "no matching roles",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			roles:    []metadata.EntryRole{metadata.EpisodeFile},
 			expected: nil,
 		},
 	}
@@ -437,44 +325,46 @@ func TestGetMovieYear(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			entry := test.entry()
 
-			result := getMovieYear(entry)
+			result := getYear(entry, test.roles)
 
 			if test.expected == nil && result != nil {
-				t.Errorf("getMovieYear = %v, want nil", *result)
+				t.Errorf("getYear = %v, want nil", *result)
 			} else if test.expected != nil && result == nil {
-				t.Errorf("getMovieYear = nil, want %v", *test.expected)
+				t.Errorf("getYear = nil, want %v", *test.expected)
 			} else if test.expected != nil && result != nil && *result != *test.expected {
-				t.Errorf("getMovieYear = %v, want %v", *result, *test.expected)
+				t.Errorf("getYear = %v, want %v", *result, *test.expected)
 			}
 		})
 	}
 }
 
-func TestSetEntryValues(t *testing.T) {
-	t.Run("set values on single entry", func(t *testing.T) {
+func TestPropogateDown(t *testing.T) {
+	t.Run("propogate to single entry", func(t *testing.T) {
 		entry := testutil.CreateTestMovieFile(nil)
 		entry.MediaInfo.Title = []string{"OLD", "TITLE"}
 		entry.MediaInfo.Year = testutil.IntPtr(2020)
 
-		newTitle := []string{"NEW", "TITLE"}
-		newYear := testutil.IntPtr(2025)
+		src := &metadata.MediaInfo{
+			Title: []string{"NEW", "TITLE"},
+			Year:  testutil.IntPtr(2025),
+		}
 
-		setEntryValues(entry, newTitle, newYear)
+		propogateDown(entry, src, []metadata.EntryRole{metadata.MovieFile})
 
-		if len(entry.MediaInfo.Title) != len(newTitle) {
-			t.Errorf("Title = %v, want %v", entry.MediaInfo.Title, newTitle)
+		if len(entry.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Title = %v, want %v", entry.MediaInfo.Title, src.Title)
 		}
 		for i := range entry.MediaInfo.Title {
-			if entry.MediaInfo.Title[i] != newTitle[i] {
-				t.Errorf("Title = %v, want %v", entry.MediaInfo.Title, newTitle)
+			if entry.MediaInfo.Title[i] != src.Title[i] {
+				t.Errorf("Title = %v, want %v", entry.MediaInfo.Title, src.Title)
 			}
 		}
-		if *entry.MediaInfo.Year != *newYear {
-			t.Errorf("Year = %v, want %v", *entry.MediaInfo.Year, *newYear)
+		if *entry.MediaInfo.Year != *src.Year {
+			t.Errorf("Year = %v, want %v", *entry.MediaInfo.Year, *src.Year)
 		}
 	})
 
-	t.Run("set values on entry with children", func(t *testing.T) {
+	t.Run("propogate to entry with children", func(t *testing.T) {
 		movieFile := testutil.CreateTestMovieFile(nil)
 		bonusFile := testutil.CreateTestBonusFile(nil)
 		movieDir := testutil.CreateTestMovieDir(nil, movieFile, bonusFile)
@@ -482,56 +372,142 @@ func TestSetEntryValues(t *testing.T) {
 		movieFile.MediaInfo.Title = []string{"OLD", "TITLE"}
 		bonusFile.MediaInfo.Title = []string{"OLD", "TITLE"}
 
-		newTitle := []string{"NEW", "TITLE"}
-		newYear := testutil.IntPtr(2025)
-
-		setEntryValues(movieDir, newTitle, newYear)
-
-		if len(movieDir.MediaInfo.Title) != len(newTitle) {
-			t.Errorf("Parent Title = %v, want %v", movieDir.MediaInfo.Title, newTitle)
+		src := &metadata.MediaInfo{
+			Title: []string{"NEW", "TITLE"},
+			Year:  testutil.IntPtr(2025),
 		}
-		if len(movieFile.MediaInfo.Title) != len(newTitle) {
-			t.Errorf("Child 1 Title = %v, want %v", movieFile.MediaInfo.Title, newTitle)
+
+		propogateDown(movieDir, src, []metadata.EntryRole{metadata.MovieDir, metadata.MovieFile, metadata.BonusFile})
+
+		if len(movieDir.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Parent Title = %v, want %v", movieDir.MediaInfo.Title, src.Title)
 		}
-		if len(bonusFile.MediaInfo.Title) != len(newTitle) {
-			t.Errorf("Child 2 Title = %v, want %v", bonusFile.MediaInfo.Title, newTitle)
+		if len(movieFile.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Child 1 Title = %v, want %v", movieFile.MediaInfo.Title, src.Title)
+		}
+		if len(bonusFile.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Child 2 Title = %v, want %v", bonusFile.MediaInfo.Title, src.Title)
 		}
 	})
 
-	t.Run("set values on nested structure", func(t *testing.T) {
+	t.Run("propogate to nested structure", func(t *testing.T) {
 		ep := testutil.CreateTestEpFile(nil)
 		seasonDir := testutil.CreateTestSeasonDir(nil, ep)
 		seriesDir := testutil.CreateTestSeriesDir(nil, seasonDir)
 
-		newTitle := []string{"ENRICHED", "TITLE"}
-		newYear := testutil.IntPtr(2026)
+		src := &metadata.MediaInfo{
+			Title: []string{"ENRICHED", "TITLE"},
+			Year:  testutil.IntPtr(2026),
+		}
 
-		setEntryValues(seriesDir, newTitle, newYear)
+		propogateDown(seriesDir, src, []metadata.EntryRole{metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile})
 
-		if len(seriesDir.MediaInfo.Title) != len(newTitle) {
-			t.Errorf("Series Title = %v, want %v", seriesDir.MediaInfo.Title, newTitle)
+		if len(seriesDir.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Series Title = %v, want %v", seriesDir.MediaInfo.Title, src.Title)
 		}
-		if len(seasonDir.MediaInfo.Title) != len(newTitle) {
-			t.Errorf("Season Title = %v, want %v", seasonDir.MediaInfo.Title, newTitle)
+		if len(seasonDir.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Season Title = %v, want %v", seasonDir.MediaInfo.Title, src.Title)
 		}
-		if len(ep.MediaInfo.Title) != len(newTitle) {
-			t.Errorf("Episode Title = %v, want %v", ep.MediaInfo.Title, newTitle)
+		if len(ep.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Episode Title = %v, want %v", ep.MediaInfo.Title, src.Title)
 		}
-		if *ep.MediaInfo.Year != *newYear {
-			t.Errorf("Episode Year = %v, want %v", *ep.MediaInfo.Year, *newYear)
+		if *ep.MediaInfo.Year != *src.Year {
+			t.Errorf("Episode Year = %v, want %v", *ep.MediaInfo.Year, *src.Year)
 		}
 	})
 
-	t.Run("set nil values", func(t *testing.T) {
-		entry := testutil.CreateTestMovieFile(nil)
+	t.Run("only propogate to matching roles", func(t *testing.T) {
+		movieFile := testutil.CreateTestMovieFile(nil)
+		bonusFile := testutil.CreateTestBonusFile(nil)
+		movieDir := testutil.CreateTestMovieDir(nil, movieFile, bonusFile)
 
-		setEntryValues(entry, nil, nil)
+		originalBonusTitle := append([]string(nil), bonusFile.MediaInfo.Title...)
 
-		if entry.MediaInfo.Title != nil {
-			t.Errorf("Title = %v, want nil", entry.MediaInfo.Title)
+		src := &metadata.MediaInfo{
+			Title: []string{"NEW", "TITLE"},
+			Year:  testutil.IntPtr(2025),
 		}
-		if entry.MediaInfo.Year != nil {
-			t.Errorf("Year = %v, want nil", entry.MediaInfo.Year)
+
+		propogateDown(movieDir, src, []metadata.EntryRole{metadata.MovieDir, metadata.MovieFile})
+
+		if len(movieFile.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Movie Title = %v, want %v", movieFile.MediaInfo.Title, src.Title)
+		}
+		// Bonus file should not be changed
+		if len(bonusFile.MediaInfo.Title) != len(originalBonusTitle) {
+			t.Errorf("Bonus Title changed = %v, want unchanged %v", bonusFile.MediaInfo.Title, originalBonusTitle)
+		}
+	})
+
+	t.Run("propogate with nil roles propogates to all", func(t *testing.T) {
+		movieFile := testutil.CreateTestMovieFile(nil)
+		bonusFile := testutil.CreateTestBonusFile(nil)
+		movieDir := testutil.CreateTestMovieDir(nil, movieFile, bonusFile)
+
+		src := &metadata.MediaInfo{
+			Title: []string{"NEW", "TITLE"},
+			Year:  testutil.IntPtr(2025),
+		}
+
+		propogateDown(movieDir, src, nil)
+
+		if len(movieDir.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Dir Title = %v, want %v", movieDir.MediaInfo.Title, src.Title)
+		}
+		if len(movieFile.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Movie Title = %v, want %v", movieFile.MediaInfo.Title, src.Title)
+		}
+		if len(bonusFile.MediaInfo.Title) != len(src.Title) {
+			t.Errorf("Bonus Title = %v, want %v", bonusFile.MediaInfo.Title, src.Title)
+		}
+	})
+}
+
+func TestEnrichIntermediaryEntries(t *testing.T) {
+	t.Run("enrich bonus dir at height 2", func(t *testing.T) {
+		bonus := testutil.CreateTestBonusFile(nil)
+		bonus.MediaInfo.Season = testutil.IntPtr(5)
+		bonus.MediaInfo.Episode = testutil.IntPtr(10)
+		bonusDir := testutil.CreateTestBonusDir(nil, bonus)
+
+		enrichIntermediaryEntries(bonusDir)
+
+		if bonus.MediaInfo.Season == nil || *bonus.MediaInfo.Season != 5 {
+			t.Errorf("Bonus Season = %v, want 5", bonus.MediaInfo.Season)
+		}
+		if bonus.MediaInfo.Episode == nil || *bonus.MediaInfo.Episode != 10 {
+			t.Errorf("Bonus Episode = %v, want 10", bonus.MediaInfo.Episode)
+		}
+	})
+
+	t.Run("enrich subtitle dir at height 2", func(t *testing.T) {
+		sub := testutil.CreateTestSubFile(nil)
+		sub.MediaInfo.Season = testutil.IntPtr(3)
+		sub.MediaInfo.Episode = testutil.IntPtr(7)
+		subDir := testutil.CreateTestSubDir(nil, sub)
+
+		enrichIntermediaryEntries(subDir)
+
+		if sub.MediaInfo.Season == nil || *sub.MediaInfo.Season != 3 {
+			t.Errorf("Sub Season = %v, want 3", sub.MediaInfo.Season)
+		}
+		if sub.MediaInfo.Episode == nil || *sub.MediaInfo.Episode != 7 {
+			t.Errorf("Sub Episode = %v, want 7", sub.MediaInfo.Episode)
+		}
+	})
+
+	t.Run("does not enrich at height != 2", func(t *testing.T) {
+		bonus := testutil.CreateTestBonusFile(nil)
+		bonus.MediaInfo.Season = nil
+		bonus.MediaInfo.Episode = nil
+
+		enrichIntermediaryEntries(bonus)
+
+		if bonus.MediaInfo.Season != nil {
+			t.Errorf("Bonus Season should remain nil")
+		}
+		if bonus.MediaInfo.Episode != nil {
+			t.Errorf("Bonus Episode should remain nil")
 		}
 	})
 }
