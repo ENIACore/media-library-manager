@@ -31,6 +31,10 @@ func main() {
 		logger.Info("")
 
 		entryPath := filepath.Join(cfg.TorrentPath, entry.Name())
+		if entry.IsDir() && entry.Name() == "temp" {
+        	logger.Debug("Skipping temp directory", "name", entry.Name())
+        	continue
+    	}
 
 		root, err := parser.Parse(entryPath, logger)
 		if err != nil {
