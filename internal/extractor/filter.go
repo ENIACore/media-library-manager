@@ -34,6 +34,7 @@ func Filter(path string, logger *slog.Logger) bool {
 	filename := filepath.Base(path)
 	sanitizedName := strings.Split(sanitizeName(filename), ".")
 	
+	// Considered sample if sample is at front of name
 	if isSample(sanitizedName) {
 		lg.Debug("Path is sample, filtering path", "path", path)
 		return true
@@ -43,7 +44,7 @@ func Filter(path string, logger *slog.Logger) bool {
 }
 
 func isSample(segments []string) bool {
-	if len(segments) == 1 && parseSamples(segments) != "" {
+	if parseSamples(segments) != "" {
 		return true
 	}
 	return false

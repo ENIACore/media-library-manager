@@ -31,8 +31,8 @@ var WebsitePatterns = []Pattern{
 
 // Patterns that indicate directory or file is a sample and should be ignored
 var SamplePatterns = []Pattern{
-	`SAMPLE[S]`,
-	`PREVIEW[S]`,
+	`SAMPLE[S]?`,
+	`PREVIEW[S]?`,
 }
 
 // Un-useful metadata of file pertaining to typical patterns found in torrent files
