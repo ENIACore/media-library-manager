@@ -38,9 +38,7 @@ func Resolve(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) erro
 	Resolvers
 */
 
-// resolveSubtitleFile sets the destination path for a subtitle file.
-// Requires a basePath from parent. Clears quality metadata (resolution, codec, source, audio, bonus)
-// before building the filename. Sets entry.PathInfo.Dest to the full destination path.
+// resolveSubtitleFile - TODO documentation, subtitle files will determine their own path based on context of parent and self
 func resolveSubtitleFile(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveSubtitleFile")
 
@@ -52,6 +50,16 @@ func resolveSubtitleFile(basePath string, entry *metadata.Entry, logger *slog.Lo
 		lg.Debug("Expected base path for SubtitleFile role", "path", entry.PathInfo.Source, "role", entry.Role)
 		return fmt.Errorf("Expected base path for SubtitlFile role, for node %v", entry.PathInfo.Source)
 	}
+	
+	// Subtitle files will group themselves under the same Subtitle folder, seperated by season if necessary
+	if entry.MediaInfo.Season != nil {
+		seasonPath := buildSeasonPath(entry)	
+		basePath = filepath.Join(basePath, seasonPath) 
+	}
+	if entry.Parent != nil && entry.Parent.Role == metadata.BonusDir {
+		basePath = filepath.Join(basePath, "Extras")
+	}
+	basePath = filepath.Join(basePath, "Subtitles")
 
 	entry.MediaInfo.Resolution = ""
 	entry.MediaInfo.Codec = ""
@@ -81,9 +89,6 @@ func resolveSubtitleDir(basePath string, entry *metadata.Entry, logger *slog.Log
 		return fmt.Errorf("Expected base path for SubtitleDir role, for node %v", entry.PathInfo.Source)
 	}
 
-	origBasePath := basePath
-	basePath = filepath.Join(basePath, "Subtitles")
-
 	for _, child := range entry.Children {
 		var err error
 		switch child.Role {
@@ -91,7 +96,7 @@ func resolveSubtitleDir(basePath string, entry *metadata.Entry, logger *slog.Log
 			err = resolveSubtitleFile(basePath, child, logger)
 		case metadata.SubtitleDir:
 			// Allows for intermediary subtitle dirs, flattens dir structure
-			err = resolveSubtitleDir(origBasePath, child, logger)
+			err = resolveSubtitleDir(basePath, child, logger)
 		default:
 			err = fmt.Errorf("Unexpected child role for SubtitleDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
