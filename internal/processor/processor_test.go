@@ -3,6 +3,7 @@ package processor
 import (
 	"log/slog"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ENIACore/media_library_manager/internal/metadata"
@@ -125,6 +126,7 @@ func TestResolve(t *testing.T) {
 
 	/*
 		Testing season directory
+		SeasonDir dest is title-only; episodes determine their own season paths
 	*/
 	t.Run("season directory", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
@@ -142,9 +144,16 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve unexpected error: %v", err)
 		}
 
-		expectedDir := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01")
+		// SeasonDir dest is title-only; episodes add their own season
+		expectedDir := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 		if entry.PathInfo.Dest != expectedDir {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expectedDir)
+		}
+
+		// Verify episodes are placed in correct season directory
+		expectedEp := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01", "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
+		if ep1.PathInfo.Dest != expectedEp {
+			t.Errorf("Episode Dest = %v, want %v", ep1.PathInfo.Dest, expectedEp)
 		}
 	})
 
@@ -173,7 +182,8 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expectedDir)
 		}
 
-		expectedSeasonDir := filepath.Join(cfg.ShowPath, "Test.Title", "S01")
+		// SeasonDir dest is title-only
+		expectedSeasonDir := filepath.Join(cfg.ShowPath, "Test.Title")
 		if entry.Children[0].PathInfo.Dest != expectedSeasonDir {
 			t.Errorf("Season Dir Dest = %v, want %v", entry.Children[0].PathInfo.Dest, expectedSeasonDir)
 		}
@@ -259,18 +269,19 @@ func TestResolveMovieFile(t *testing.T) {
 }
 
 func TestResolveEpisodeFile(t *testing.T) {
-	t.Run("with base path", func(t *testing.T) {
+	t.Run("with title-only base path adds season", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestEpFile(nil)
-		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01")
+		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 
 		err := resolveEpisodeFile(basePath, entry, &cfg, logger)
 
 		if err != nil {
 			t.Errorf("resolveEpisodeFile unexpected error: %v", err)
 		}
-		expected := filepath.Join(basePath, "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
+		// Episode adds its own season path
+		expected := filepath.Join(basePath, "S01", "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -292,11 +303,34 @@ func TestResolveEpisodeFile(t *testing.T) {
 		}
 	})
 
+	t.Run("different seasons from same source dir", func(t *testing.T) {
+		testDir := testutil.CreateTestDir(t)
+		cfg := testutil.CreateTestCfg(testDir)
+
+		ep1 := testutil.CreateTestEpFile(nil)
+		ep1.MediaInfo.Season = testutil.IntPtr(1)
+
+		ep2 := testutil.CreateTestEpFile(nil)
+		ep2.MediaInfo.Season = testutil.IntPtr(3)
+
+		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025")
+
+		_ = resolveEpisodeFile(basePath, ep1, &cfg, logger)
+		_ = resolveEpisodeFile(basePath, ep2, &cfg, logger)
+
+		if !strings.Contains(ep1.PathInfo.Dest, "/S01/") {
+			t.Errorf("ep1 should be in S01, got %v", ep1.PathInfo.Dest)
+		}
+		if !strings.Contains(ep2.PathInfo.Dest, "/S03/") {
+			t.Errorf("ep2 should be in S03, got %v", ep2.PathInfo.Dest)
+		}
+	})
+
 	t.Run("wrong role", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestMovieFile(nil)
-		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01")
+		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 
 		err := resolveEpisodeFile(basePath, entry, &cfg, logger)
 
@@ -499,9 +533,16 @@ func TestResolveSeasonDir(t *testing.T) {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
 		}
 
-		expected := filepath.Join(basePath, "S01")
+		// SeasonDir dest is basePath (title-only); episodes add their own season
+		expected := basePath
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
+		}
+
+		// Verify episode is placed correctly with season
+		expectedEp := filepath.Join(basePath, "S01", "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
+		if ep.PathInfo.Dest != expectedEp {
+			t.Errorf("Episode Dest = %v, want %v", ep.PathInfo.Dest, expectedEp)
 		}
 	})
 
@@ -520,7 +561,8 @@ func TestResolveSeasonDir(t *testing.T) {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
 		}
 
-		expected := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01")
+		// SeasonDir dest is title-only
+		expected := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -543,9 +585,39 @@ func TestResolveSeasonDir(t *testing.T) {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
 		}
 
-		expectedSubDir := filepath.Join(cfg.ShowPath, "Test.Title.2025", "S01", "Subtitles")
+		// Subtitle dir is at title level (same as SeasonDir dest)
+		expectedSubDir := filepath.Join(cfg.ShowPath, "Test.Title.2025", "Subtitles")
 		if entry.Children[1].PathInfo.Dest != expectedSubDir {
 			t.Errorf("Subtitle Dir Dest = %v, want %v", entry.Children[1].PathInfo.Dest, expectedSubDir)
+		}
+	})
+
+	t.Run("episodes from different seasons placed correctly", func(t *testing.T) {
+		testDir := testutil.CreateTestDir(t)
+		cfg := testutil.CreateTestCfg(testDir)
+
+		ep1 := testutil.CreateTestEpFile(nil)
+		ep1.MediaInfo.Season = testutil.IntPtr(1)
+
+		ep2 := testutil.CreateTestEpFile(nil)
+		ep2.MediaInfo.Season = testutil.IntPtr(3)
+
+		entry := testutil.CreateTestSeasonDir(nil, ep1, ep2)
+		entry.MediaInfo.Title = ep1.MediaInfo.Title
+		entry.MediaInfo.Year = ep1.MediaInfo.Year
+
+		err := resolveSeasonDir("", entry, &cfg, logger)
+
+		if err != nil {
+			t.Errorf("resolveSeasonDir unexpected error: %v", err)
+		}
+
+		// Each episode determines its own season path
+		if !strings.Contains(ep1.PathInfo.Dest, "/S01/") {
+			t.Errorf("ep1 should be in S01, got %v", ep1.PathInfo.Dest)
+		}
+		if !strings.Contains(ep2.PathInfo.Dest, "/S03/") {
+			t.Errorf("ep2 should be in S03, got %v", ep2.PathInfo.Dest)
 		}
 	})
 
@@ -586,9 +658,16 @@ func TestResolveSeriesDir(t *testing.T) {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
 
-		expectedSeason := filepath.Join(cfg.ShowPath, "Test.Title", "S01")
+		// SeasonDir dest is title-only
+		expectedSeason := filepath.Join(cfg.ShowPath, "Test.Title")
 		if entry.Children[0].PathInfo.Dest != expectedSeason {
 			t.Errorf("Season Dir Dest = %v, want %v", entry.Children[0].PathInfo.Dest, expectedSeason)
+		}
+
+		// Episode should be in its own season folder
+		expectedEp := filepath.Join(cfg.ShowPath, "Test.Title", "S01", "Test.Title.2025.S01E01.1080p.x264.Remux.Atmos.English.mp4")
+		if ep.PathInfo.Dest != expectedEp {
+			t.Errorf("Episode Dest = %v, want %v", ep.PathInfo.Dest, expectedEp)
 		}
 	})
 
