@@ -58,6 +58,10 @@ func Cleanup(cfg *config.Config, logger *slog.Logger) {
 	}
 
 	for _, entry := range entries {
+		if entry.IsDir() && entry.Name() == filepath.Base(cfg.IncompletePath) {
+        	lg.Debug("Skipping temp directory", "name", entry.Name())
+        	continue
+    	}
 		if err := os.RemoveAll(filepath.Join(cfg.TorrentPath, entry.Name())); err != nil {
 			lg.Error("Error occurred during cleanup RemoveAll call, returning", "error", err)
 			return

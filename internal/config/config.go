@@ -8,12 +8,13 @@ import (
 )
 
 type Config struct {
-    TorrentPath string
-    MoviePath   string
-    ShowPath    string
-    ManagerPath string
-    LogStdout	bool
-    DryRun      bool
+    TorrentPath 	string
+	IncompletePath 	string
+    MoviePath   	string
+    ShowPath    	string
+    ManagerPath 	string
+    LogStdout		bool
+    DryRun      	bool
 }
 
 var Load = sync.OnceValue(New)
@@ -23,6 +24,7 @@ var Load = sync.OnceValue(New)
 func New() *Config {
     defaults := &Config{
         TorrentPath: getEnv("ENIACORE_TORRENT_PATH", "/opt/qbit/downloads"),
+        IncompletePath: getEnv("ENIACORE_INCOMPLETE_PATH", "/opt/qbit/downloads/temp"),
         MoviePath:   getEnv("ENIACORE_MOVIE_PATH", "/opt/jellyfin/media/movies"),
         ShowPath:    getEnv("ENIACORE_SHOW_PATH", "/opt/jellyfin/media/shows"),
         ManagerPath: getEnv("ENIACORE_MANAGER_PATH", "/opt/media_manager"),
@@ -33,6 +35,7 @@ func New() *Config {
     // Parse flags with env defaults
     cfg := &Config{}
     flag.StringVar(&cfg.TorrentPath, "torrent-path", defaults.TorrentPath, "Path to downloaded torrents")
+    flag.StringVar(&cfg.IncompletePath, "incomplete-path", defaults.IncompletePath, "Path to in-progress (incomplete) torrents")
     flag.StringVar(&cfg.MoviePath, "movie-path", defaults.MoviePath, "Path to movie library")
     flag.StringVar(&cfg.ShowPath, "show-path", defaults.ShowPath, "Path to show library")
     flag.StringVar(&cfg.ManagerPath, "manager-path", defaults.ManagerPath, "Path to program directory")
