@@ -1,4 +1,4 @@
-package processor
+package resolver
 
 import (
 	"log/slog"
@@ -188,12 +188,13 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Season Dir Dest = %v, want %v", entry.Children[0].PathInfo.Dest, expectedSeasonDir)
 		}
 
-		expectedBonusDir := filepath.Join(cfg.ShowPath, "Test.Title", "Extras")
+		// BonusDir and SubtitleDir now set dest to basePath (children add "Extras"/"Subtitles")
+		expectedBonusDir := filepath.Join(cfg.ShowPath, "Test.Title")
 		if entry.Children[1].PathInfo.Dest != expectedBonusDir {
 			t.Errorf("Bonus Dir Dest = %v, want %v", entry.Children[1].PathInfo.Dest, expectedBonusDir)
 		}
 
-		expectedSubtitleDir := filepath.Join(cfg.ShowPath, "Test.Title", "Subtitles")
+		expectedSubtitleDir := filepath.Join(cfg.ShowPath, "Test.Title")
 		if entry.Children[2].PathInfo.Dest != expectedSubtitleDir {
 			t.Errorf("Subtitle Dir Dest = %v, want %v", entry.Children[2].PathInfo.Dest, expectedSubtitleDir)
 		}
@@ -353,7 +354,8 @@ func TestResolveSubtitleFile(t *testing.T) {
 			t.Errorf("resolveSubtitleFile unexpected error: %v", err)
 		}
 		// testutil.CreateTestSubFile has empty Title array, so filename starts with year
-		expected := filepath.Join(basePath, ".2025.English.srt")
+		// resolveSubtitleFile now adds "Subtitles" to the path
+		expected := filepath.Join(basePath, "Subtitles", ".2025.English.srt")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -398,7 +400,8 @@ func TestResolveSubtitleDir(t *testing.T) {
 			t.Errorf("resolveSubtitleDir unexpected error: %v", err)
 		}
 
-		expected := filepath.Join(basePath, "Subtitles")
+		// resolveSubtitleDir now sets dest to basePath (children add "Subtitles")
+		expected := basePath
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -435,14 +438,15 @@ func TestResolveBonusFile(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestBonusFile(nil)
-		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Extras")
+		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
 		err := resolveBonusFile(basePath, entry, logger)
 
 		if err != nil {
 			t.Errorf("resolveBonusFile unexpected error: %v", err)
 		}
-		expected := filepath.Join(basePath, "Test.Title.2025.1080p.x264.Remux.Atmos.English.Behind.The.Scenes.mp4")
+		// resolveBonusFile now adds "Extras" to the path
+		expected := filepath.Join(basePath, "Extras", "Test.Title.2025.1080p.x264.Remux.Atmos.English.Behind.The.Scenes.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -487,7 +491,8 @@ func TestResolveBonusDir(t *testing.T) {
 			t.Errorf("resolveBonusDir unexpected error: %v", err)
 		}
 
-		expected := filepath.Join(basePath, "Extras")
+		// resolveBonusDir now sets dest to basePath (children add "Extras")
+		expected := basePath
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
 		}
@@ -586,7 +591,8 @@ func TestResolveSeasonDir(t *testing.T) {
 		}
 
 		// Subtitle dir is at title level (same as SeasonDir dest)
-		expectedSubDir := filepath.Join(cfg.ShowPath, "Test.Title.2025", "Subtitles")
+		// SubtitleDir now sets dest to basePath (children add "Subtitles")
+		expectedSubDir := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 		if entry.Children[1].PathInfo.Dest != expectedSubDir {
 			t.Errorf("Subtitle Dir Dest = %v, want %v", entry.Children[1].PathInfo.Dest, expectedSubDir)
 		}
@@ -722,12 +728,13 @@ func TestResolveMovieDir(t *testing.T) {
 			t.Errorf("resolveMovieDir unexpected error: %v", err)
 		}
 
-		expectedBonusDir := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Extras")
+		// BonusDir and SubtitleDir now set dest to basePath (children add "Extras"/"Subtitles")
+		expectedBonusDir := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 		if entry.Children[1].PathInfo.Dest != expectedBonusDir {
 			t.Errorf("Bonus Dir Dest = %v, want %v", entry.Children[1].PathInfo.Dest, expectedBonusDir)
 		}
 
-		expectedSubtitleDir := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Subtitles")
+		expectedSubtitleDir := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 		if entry.Children[2].PathInfo.Dest != expectedSubtitleDir {
 			t.Errorf("Subtitle Dir Dest = %v, want %v", entry.Children[2].PathInfo.Dest, expectedSubtitleDir)
 		}

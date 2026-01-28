@@ -9,7 +9,7 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/parser"
 	"github.com/ENIACore/media_library_manager/internal/classifier"
 	"github.com/ENIACore/media_library_manager/internal/enricher"
-	"github.com/ENIACore/media_library_manager/internal/processor"
+	"github.com/ENIACore/media_library_manager/internal/resolver"
 	"github.com/ENIACore/media_library_manager/internal/transfer"
 )
 
@@ -60,7 +60,7 @@ func main() {
 			continue
 		}
 
-		err = processor.Resolve(root, cfg, logger)
+		err = resolver.Resolve(root, cfg, logger)
 		if err != nil {
 			logger.Error("Resolve returned error", "error", err)
 			numFailure += 1

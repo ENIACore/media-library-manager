@@ -35,4 +35,4 @@
 // The package contains role-specific resolvers (resolveMovieFile, resolveEpisodeFile, etc.)
 // that are called recursively based on each entry's [metadata.Role].
 // Helper functions like buildFilename and buildTitlePath handle string formatting.
-package processor
+package resolver
