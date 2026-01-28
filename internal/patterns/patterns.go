@@ -120,6 +120,9 @@ var MiscPatterns = []Pattern{
 	`STAN`,
 	`CRITERION`,
 
+	// === SCENE / P2P RELEASE GROUP WEBSITES
+	`YTS\.MX`,
+
 	// === TV SPECIFIC ===
 	`COMPLETE`, `COMPLETE\.SERIES`,
 	`MINISERIES`, `MINI\.SERIES`,
@@ -139,7 +142,7 @@ var MiscPatterns = []Pattern{
 var LanguagePatternGroups = []PatternGroup{
 	{Key: `English`, Patterns: []Pattern{`ENGLISH`, `ENG`, `EN`}},
 	{Key: `Spanish`, Patterns: []Pattern{`SPANISH`, `CASTELLANO`, `SPA`, `ESPAÑOL`, `ESPANOL`}},
-	{Key: `Latin American Spanish`, Patterns: []Pattern{`LATIN.AMERICAN`, `LATINOAMERICANO`, `LATAM`, `MX`}},
+	{Key: `Latin-American-Spanish`, Patterns: []Pattern{`LATIN.AMERICAN`, `LATINOAMERICANO`, `LATAM`, }},
 	{Key: `French`, Patterns: []Pattern{`FRENCH`, `FRANCAIS`, `FRANÇAIS`, `FRA`, `FR`, `FRE`}},
 	{Key: `Canadian-French`, Patterns: []Pattern{`CANADIAN`, `QUEBEC`, `QC`}},
 	{Key: `German`, Patterns: []Pattern{`GERMAN`, `DEUTSCH`, `GER`, `DE`, `DEU`}},
