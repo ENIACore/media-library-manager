@@ -171,8 +171,7 @@ func resolveBonusDir(basePath string, entry *metadata.Entry, logger *slog.Logger
 }
 
 // resolveEpisodeFile sets the destination path for an episode file.
-// If basePath is empty, constructs path from cfg.ShowPath, title, and season.
-// Clears bonus metadata before building filename. Sets entry.PathInfo.Dest.
+// Always appends its own season path to basePath based on episode metadata.
 func resolveEpisodeFile(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveEpisodeFile")
 
@@ -182,10 +181,14 @@ func resolveEpisodeFile(basePath string, entry *metadata.Entry, cfg *config.Conf
 	}
 
 	if basePath == "" {
-		titlePath := buildTitlePath(entry)	
-		seasonPath := buildSeasonPath(entry)
-		basePath = filepath.Join(cfg.ShowPath, titlePath, seasonPath)
+		titlePath := buildTitlePath(entry)
+		basePath = filepath.Join(cfg.ShowPath, titlePath)
 	}
+
+	// Episode always determines its own season directory
+	seasonPath := buildSeasonPath(entry)
+	basePath = filepath.Join(basePath, seasonPath)
+
 	entry.MediaInfo.Bonus = ""
 	filename := buildFilename(entry)
 
@@ -196,8 +199,7 @@ func resolveEpisodeFile(basePath string, entry *metadata.Entry, cfg *config.Conf
 }
 
 // resolveSeasonDir sets the destination path for a season directory and its children.
-// If basePath is empty, constructs path from cfg.ShowPath and title. Appends season subdirectory.
-// Resolves all episode, subtitle file, and subtitle directory children. Sets entry.PathInfo.Dest.
+// Passes title-only basePath to episode children, letting them determine their own season paths.
 func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "resolveSeasonDir")
 
@@ -206,36 +208,38 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config
 		return fmt.Errorf("Expected SeasonDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
 	}
 
-	seasonPath := buildSeasonPath(entry)
+	// Build title-only basePath for children - episodes will add their own season
 	if basePath == "" {
 		titlePath := buildTitlePath(entry)
-		basePath = filepath.Join(cfg.ShowPath, titlePath, seasonPath)	
-	} else {
-		basePath = filepath.Join(basePath, seasonPath)
+		basePath = filepath.Join(cfg.ShowPath, titlePath)
 	}
 
 	for _, child := range entry.Children {
 		var err error
 		switch child.Role {
 		case metadata.EpisodeFile:
+			// Pass title-only basePath; episode builds its own season path
 			err = resolveEpisodeFile(basePath, child, cfg, logger)
 		case metadata.SubtitleFile:
 			err = resolveSubtitleFile(basePath, child, logger)
 		case metadata.SubtitleDir:
 			err = resolveSubtitleDir(basePath, child, logger)
 		default:
-			err = fmt.Errorf("Unexpected child role for SeasonDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
+			err = fmt.Errorf("Unexpected child role for SeasonDir, received role %v for node %v", child.Role, child.PathInfo.Source)
 		}
 		if err != nil {
 			return err
 		}
 	}
 
+	// SeasonDir dest is informational only - actual structure determined by children
 	entry.PathInfo.Dest = basePath
 	lg.Debug("Resolved season dir destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
 
 	return nil
 }
+
+
 
 // resolveSeriesDir sets the destination path for a series directory and its children.
 // Constructs basePath from cfg.ShowPath and title. Resolves all season, bonus, and subtitle directory children.

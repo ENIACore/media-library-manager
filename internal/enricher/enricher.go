@@ -24,9 +24,27 @@ func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	}
 
 
+	enrichEpisodeFiles(root)
 	enrichEntries(root)
 	enrichIntermediaryEntries(root)
 	return nil
+}
+
+// enrichEpisodeFiles gives episode files season based on parent if season is missing
+func enrichEpisodeFiles(root *metadata.Entry) {
+	if root.Role == metadata.SeriesDir {
+		for _, child := range root.Children {
+			enrichEpisodeFiles(child)
+		}
+	}
+	if root.Role == metadata.SeasonDir && root.MediaInfo.Season != nil {
+		for _, child := range root.Children {
+			if child.Role == metadata.EpisodeFile && child.MediaInfo.Season != nil {
+				seasonCopy := *root.MediaInfo.Season
+				child.MediaInfo.Season = &seasonCopy 
+			}
+		}
+	}
 }
 
 func enrichEntries(root *metadata.Entry) {
