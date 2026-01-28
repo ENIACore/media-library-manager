@@ -56,6 +56,7 @@ func resolveSubtitleFile(basePath string, entry *metadata.Entry, logger *slog.Lo
 		seasonPath := buildSeasonPath(entry)	
 		basePath = filepath.Join(basePath, seasonPath) 
 	}
+	// If parent is bonus dir, group subtitles under resulting bonus dir
 	if entry.Parent != nil && entry.Parent.Role == metadata.BonusDir {
 		basePath = filepath.Join(basePath, "Extras")
 	}
@@ -125,6 +126,13 @@ func resolveBonusFile(basePath string, entry *metadata.Entry, logger *slog.Logge
 		return fmt.Errorf("Expected base path for BonusFile role, for node %v", entry.PathInfo.Source)
 	}
 
+	// Bonus files will group themselves under the same bonus folder, seperated by season if necessary
+	if entry.MediaInfo.Season != nil {
+		seasonPath := buildSeasonPath(entry)	
+		basePath = filepath.Join(basePath, seasonPath) 
+	}
+	basePath = filepath.Join(basePath, "Extras")
+
 	filename := buildFilename(entry)
 
 	entry.PathInfo.Dest = filepath.Join(basePath, filename)
@@ -148,9 +156,6 @@ func resolveBonusDir(basePath string, entry *metadata.Entry, logger *slog.Logger
 		return fmt.Errorf("Expected base path for BonusDir role, for node %v", entry.PathInfo.Source)
 	}
 
-	origBasePath := basePath
-	basePath = filepath.Join(basePath, "Extras")
-
 	for _, child := range entry.Children {
 		var err error
 		switch child.Role {
@@ -159,8 +164,8 @@ func resolveBonusDir(basePath string, entry *metadata.Entry, logger *slog.Logger
 		case metadata.SubtitleFile:
 			err = resolveSubtitleFile(basePath, child, logger)
 		case metadata.BonusDir:
-			// Allows for intermediary subtitle dirs, flattens dir structure
-			err = resolveSubtitleDir(origBasePath, child, logger)
+			// Allows for intermediary bonus dirs, flattens dir structure
+			err = resolveBonusDir(basePath, child, logger)
 		default:
 			err = fmt.Errorf("Unexpected child role for BonusDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
