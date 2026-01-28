@@ -371,3 +371,13 @@ func parseWebsites(segments []string) string {
 	}
 	return ""
 }
+
+func parseSamples(segments []string) string {
+	for _, re := range patterns.GetSamplePatterns() {
+		match := matchSegments(segments, (*regexp.Regexp)(re))
+		if match != nil {
+			return match [0]
+		}
+	}
+	return ""
+}

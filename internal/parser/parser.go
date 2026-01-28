@@ -39,6 +39,11 @@ func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
 		return nil, fmt.Errorf("stat path %s, %w", path, err)
     }
 
+	// If node is a file or dir to filter skip it
+	if extractor.Filter(path, logger) {
+		return nil, nil	
+	}
+
     node := &metadata.Entry{
         Parent:		parent,
 		Depth:		depth,
@@ -46,10 +51,6 @@ func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
 		PathInfo: extractor.ExtractPath(path, logger),
     }
 
-	// If node is invalid file (txt, jpg, etc), skip it
-	if node.PathInfo.Type == metadata.UnknownType && !node.PathInfo.IsDir {
-		return nil, nil
-	} 
 	if !info.IsDir() {
 		return node, nil
 	} 

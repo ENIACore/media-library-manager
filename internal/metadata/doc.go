@@ -54,6 +54,7 @@
 //	└── Bonus Directory                 (optional)
 //
 // Note: Subtitle File and Bonus File cannot exist at root level.
+// Note: Sample directories and files are ignored
 // Note: Allowed to embed 1 level of subtitle directories inside subtitle directories, typically to encapsulate specific episodes (those intermediary directories will be removed in the final output
 // Note: Allowed to embed 1 level of bonus directories inside bonus directories, typically to encapsulate specific episodes (those intermediary directories will be removed in the final output
 package metadata

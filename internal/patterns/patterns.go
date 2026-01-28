@@ -29,6 +29,11 @@ var WebsitePatterns = []Pattern{
 	`[A-Z0-9]+\.(COM|NET|ORG|IO|INFO|BIZ)`,
 }
 
+// Patterns that indicate directory or file is a sample and should be ignored
+var SamplePatterns = []Pattern{
+	`SAMPLE[S]`,
+	`PREVIEW[S]`,
+}
 
 // Un-useful metadata of file pertaining to typical patterns found in torrent files
 var MiscPatterns = []Pattern{
@@ -247,6 +252,9 @@ var (
 	})
 	GetBonusPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
 		return compilePatternGroups(BonusPatternGroups)
+	})
+	GetSamplePatterns = sync.OnceValue(func() []*CompiledPattern {
+		return compilePatterns(SamplePatterns)
 	})
 	GetMiscPatterns = sync.OnceValue(func() []*CompiledPattern {
 		return compilePatterns(MiscPatterns)
