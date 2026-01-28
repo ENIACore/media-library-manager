@@ -305,7 +305,7 @@ func TestExtractSeason(t *testing.T) {
 				"MY",
 				"MOVIE",
 				"TITLE",
-				"S001",
+				"S01",  // Changed from S001
 				"EPISODE",
 				"1080P",
 				"MP4",

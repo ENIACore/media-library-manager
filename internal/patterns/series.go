@@ -5,47 +5,47 @@ import (
 )
 
 var SeasonPatterns = []Pattern{
-	// Matches S<number>
-	`S(\d+)`,
-	// Matches S.<number>
-	`S\.(\d+)`,
-	// Matches SEA<number>
-	`SEA(\d+)`,
-	// Matches SEA.<number>
-	`SEA\.(\d+)`,
-	// Matches SEASON<number>
-	`SEASON(\d+)`,
-	// Matches SEASON.<number>
-	`SEASON\.(\d+)`,
-	// Matches SEASON
+	// Matches S<1-2 digits>
+	`S(\d{1,2})`,
+	// Matches S.<1-2 digits>
+	`S\.(\d{1,2})`,
+	// Matches SEA<1-2 digits> or SEAS<1-2 digits>
+	`SEAS?(\d{1,2})`,
+	// Matches SEA.<1-2 digits> or SEAS.<1-2 digits>
+	`SEAS?\.(\d{1,2})`,
+	// Matches SEASON<1-2 digits>
+	`SEASON(\d{1,2})`,
+	// Matches SEASON.<1-2 digits>
+	`SEASON\.(\d{1,2})`,
+	// Matches exactly SEASON (full word only)
 	`SEASON`,
-	// Matches S<number>E<number>
-	`S(\d+)E\d+`,
+	// Matches S<1-2 digits>E<1-3 digits>
+	`S(\d{1,2})E\d{1,3}`,
 }
 
 var EpisodePatterns = []Pattern{
-	// Matches E<number>
-	`E(\d+)`,
-	// Matches E.<number>
-	`E\.(\d+)`,
-	// Matches EP<number>
-	`EP(\d+)`,
-	// Matches EP.<number>
-	`EP\.(\d+)`,
-	// Matches EPISODE<number>
-	`EPISODE(\d+)`,
-	// Matches EPISODE.<number>
-	`EPISODE\.(\d+)`,
+	// Matches E<1-3 digits>
+	`E(\d{1,3})`,
+	// Matches E.<1-3 digits>
+	`E\.(\d{1,3})`,
+	// Matches EP<1-3 digits>
+	`EP(\d{1,3})`,
+	// Matches EP.<1-3 digits>
+	`EP\.(\d{1,3})`,
+	// Matches EPISODE<1-3 digits>
+	`EPISODE(\d{1,3})`,
+	// Matches EPISODE.<1-3 digits>
+	`EPISODE\.(\d{1,3})`,
 	// Matches EPISODE
 	`EPISODE`,
 	// Matches EP
 	`EP`,
-	// Matches S<number>E<number>
-	`S\d+E(\d+)`,
-	// Matches <number>X<number>
-	`\d+X(\d+)`,
-	// Matches <number>.X.<number> (e.g., 1.X.01, 2.X.15)
-	`\d+\.X\.(\d+)`,
+	// Matches S<1-2 digits>E<1-3 digits>
+	`S\d{1,2}E(\d{1,3})`,
+	// Matches <1-2 digits>X<1-3 digits>
+	`\d{1,2}X(\d{1,3})`,
+	// Matches <1-2 digits>.X.<1-3 digits> (e.g., 1.X.01, 2.X.15)
+	`\d{1,2}\.X\.(\d{1,3})`,
 }
 
 var (
