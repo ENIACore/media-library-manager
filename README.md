@@ -7,7 +7,6 @@
 
 
 # To comment (in order)
-- metadata
 - extractor
 - parser
 - classifier

@@ -1,6 +1,7 @@
 package metadata
 
-// Entry represents a node in the media file hierarchy, forming a tree where each node contains metadata about file or directory
+// Entry represents a file or directory in a tree datastructure.
+// It contains media, path, and role information used by other packages.
 type Entry struct {
 	Parent   *Entry
 	Children []*Entry
@@ -11,8 +12,7 @@ type Entry struct {
 	Role      EntryRole
 }
 
-// Height returns the maximum depth from this entry to its deepest descendant.
-// Returns 0 for leaf nodes (entries with no children).
+// Height returns the maximum depth from this entry to its deepest descendant, starting at 0.
 func (entry *Entry) Height() int {
 	if entry.Children == nil {
 		return 0

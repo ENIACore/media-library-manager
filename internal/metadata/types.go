@@ -1,24 +1,23 @@
 package metadata
 
-// EntryRole classifies the purpose of a file or directory in the media hierarchy.
+// EntryRole describes the purpose of a file or directory in relation to the media library.
 type EntryRole int8
 
-// Entry role constants for files and directories.
 const (
 	UnknownRole  EntryRole = iota
-	SubtitleFile           // subtitle file (.srt, .sub, etc.)
-	BonusFile              // bonus/extra content file
-	EpisodeFile            // TV episode file
-	MovieFile              // feature film file
+	SubtitleFile
+	BonusFile
+	EpisodeFile
+	MovieFile
 
-	SubtitleDir // directory containing subtitles
-	BonusDir    // directory containing bonus content
-	SeasonDir   // directory representing a TV season
-	SeriesDir   // directory representing a TV series
-	MovieDir    // directory representing a movie and its assets
+	SubtitleDir
+	BonusDir
+	SeasonDir
+	SeriesDir
+	MovieDir
 )
 
-// String returns the string representation of the EntryRole.
+// String returns the string representation of EntryRole for logging purposes.
 func (r EntryRole) String() string {
 	switch r {
 	case UnknownRole:
@@ -46,13 +45,13 @@ func (r EntryRole) String() string {
 	}
 }
 
-// ContentType identifies the type of media file.
+// ContentType identifies the type of file.
+// UnknownType can mean path is either unknown file type or a directory
+// TODO: Add audio file and PDF file support
 type ContentType int8
 
-// Content type constants.
 const (
 	UnknownType ContentType = iota
 	Video
 	Subtitle
-	// Audio - not yet implemented
 )

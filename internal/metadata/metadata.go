@@ -1,12 +1,13 @@
 package metadata
 
-// MediaInfo contains metadata extracted from a media file or directory name.
+// MediaInfo describes the movie, show, or episode the related file or directory pertains too.
+// nil or "" indicates missing pattern or information in file or directory.
 type MediaInfo struct {
 	Title      []string
-	Year       *int   // nil if not found
-	Episode    *int   // nil = no pattern, 0 = pattern but no number, >0 = episode number
-	Season     *int   // nil = no pattern, 0 = pattern but no number, >0 = season number
-	Resolution string // empty if not found
+	Year       *int
+	Episode    *int   // 0 = pattern found w/o number, >0 = episode number
+	Season     *int   // 0 = pattern found w/o number, >0 = season number
+	Resolution string
 	Codec      string
 	Source     string
 	Audio      string
@@ -14,12 +15,14 @@ type MediaInfo struct {
 	Bonus      string
 }
 
-// PathInfo contains filesystem path information for an entry.
+// PathInfo describes the file or directory related information.
+// All paths are full paths and not relative.
+// [ContentType] has a value of [UnknownType] for directories.
 type PathInfo struct {
-	Dest   	string // destination path set by processor, full path and not relative
-	Source 	string // original source path, full path and not relative
+	Dest   	string
+	Source 	string
 
-	Ext   string      // file extension, empty if none
-	Type  ContentType // content type, UnknownType if directory or no extension
+	Ext   string
+	Type  ContentType
 	IsDir bool
 }
