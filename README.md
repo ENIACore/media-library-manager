@@ -14,3 +14,21 @@
 - resolver
 - transfer
 - main
+
+# Temporary
+
+// # Pipeline
+//
+//	parser.Parse ◄─ metadata.Entry ─► extractor.ExtractMedia ─and─ extractor.ExtractPath
+//	       │
+//	       ▼
+//	classifier.Classify
+//	       │
+//	       ▼
+//	enricher.Enrich
+//	       │
+//	       ▼
+//	processor.Process
+//	       │
+//	       ▼
+//	transfer.Transfer ─or─ transfer.Error

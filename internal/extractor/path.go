@@ -12,9 +12,8 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/patterns"
 )
 
-// ExtractPath extracts filesystem metadata from a file or directory path.
-// Returns a populated PathInfo containing source path, content type,
-// file extension, and whether the path is a directory.
+// ExtractPath extracts path metadata from a file or directory path.
+// Uses golang 'os' and 'filepath' library to accurately determine file or directory information.
 func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	log := logger.With("func", "ExtractPath")
 	log.Info("extracting path info from path", "path", path)
@@ -40,14 +39,12 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	return pathInfo
 }
 
-// extractType returns the content type from an extension string.
-// Returns UnknownType if not found or unsupported.
+// extractType returns the content type based on file extension
+// Returns UnknownType if extension empty, not found or unsupported.
 func extractType(ext string) metadata.ContentType {
 	if ext == "" {
 		return metadata.UnknownType
 	}
-
-	// Create a single-element slice for matching
 	extSegments := []string{ext}
 	
 	if match := parseVideoExt(extSegments); match != "" {
@@ -61,8 +58,9 @@ func extractType(ext string) metadata.ContentType {
 	return metadata.UnknownType
 }
 
-// parseVideoExt checks if segments match a video extension pattern.
-// Returns the matched extension or empty string.
+// parseBonus returns the video ext pattern if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseVideoExt(segments []string) string {
 	for _, re := range patterns.GetVideoExtensionPatterns() {
 		match := matchSegments(segments, (*regexp.Regexp)(re))
@@ -73,8 +71,9 @@ func parseVideoExt(segments []string) string {
 	return ""
 }
 
-// parseSubtitleExt checks if segments match a subtitle extension pattern.
-// Returns the matched extension or empty string.
+// parseSubtitleExt returns the subtitle ext pattern if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseSubtitleExt(segments []string) string {
 	for _, re := range patterns.GetSubtitleExtensionPatterns() {
 		match := matchSegments(segments, (*regexp.Regexp)(re))
@@ -85,8 +84,9 @@ func parseSubtitleExt(segments []string) string {
 	return ""
 }
 
-// parseAudioExt checks if segments match an audio extension pattern.
-// Returns the matched extension or empty string.
+// parseAudioExt returns the audio ext pattern if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseAudioExt(segments []string) string {
 	for _, re := range patterns.GetAudioExtensionPatterns() {
 		match := matchSegments(segments, (*regexp.Regexp)(re))

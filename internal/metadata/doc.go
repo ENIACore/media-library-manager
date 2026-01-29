@@ -52,4 +52,3 @@ Subtitle and bonus directories can be embedded in their own type, once, to allow
 	└── Bonus Directory                 (optional)
 */
 package metadata
-

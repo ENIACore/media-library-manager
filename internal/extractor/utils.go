@@ -6,8 +6,10 @@ import (
 )
 
 // sanitizeName normalizes a filename for pattern matching.
-// Converts to uppercase, removes quotes, replaces non-alphanumeric
-// characters with dots, and trims leading/trailing spaces and dots.
+//	- Converts to uppercase
+//	- Replaces all non-alphanumeric characters with '.'
+//	- Trims leading and trailing '.'
+// Result of transformations are alphanumeric words seperated by exactly one '.' rune.
 func sanitizeName(name string) string {
 	name = strings.ToUpper(name)
 	name = strings.ReplaceAll(name, "'", "")
@@ -20,9 +22,9 @@ func sanitizeName(name string) string {
 	return name
 }
 
-// matchSegments joins segments and attempts a full regex match.
-// Joins only as many segments as needed based on literal dots in the pattern.
-// Returns the match slice (full match + capture groups) or nil.
+// matchSegments matches regex pattern across multiple strings
+// Enables multi-word pattern matching across sanitized file or directory name
+// Returns [full match, capture groups...]
 func matchSegments(segments []string, re *regexp.Regexp) []string {
 	numDots := strings.Count(re.String(), `\.`)
 	end := min(numDots+1, len(segments))

@@ -5,10 +5,16 @@ import (
 	"path/filepath"
 	"os"
 	"strings"
+	"regexp"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
+	"github.com/ENIACore/media_library_manager/internal/patterns"
 )
 
-// Filter 
+// Filter determines if path should be included in [metadata.Entry] tree stucture.
+// # Validations
+//	- Returns true if file is unrecognized type
+//	- Returns true if file or directory is a 'sample'
+// Returns true if path should be filtered and false otherwise.
 func Filter(path string, logger *slog.Logger) bool {
 	lg := logger.With("func", "Filter")
 	lg.Info("Determining if path should be filtered", "path", path)
@@ -43,9 +49,24 @@ func Filter(path string, logger *slog.Logger) bool {
 	return false
 }
 
+// isSample determines if sanitized name contains pattern(s) indicating path is for sample(s) 
+// A sample is a file that represents the video quality of a movie or show
 func isSample(segments []string) bool {
-	if parseSamples(segments) != "" {
+	if parseSample(segments) != "" {
 		return true
 	}
 	return false
+}
+
+// parseSample returns the sample pattern if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for isSample.
+func parseSample(segments []string) string {
+	for _, re := range patterns.GetSamplePatterns() {
+		match := matchSegments(segments, (*regexp.Regexp)(re))
+		if match != nil {
+			return match [0]
+		}
+	}
+	return ""
 }

@@ -14,8 +14,8 @@ import (
 )
 
 // ExtractMedia extracts media metadata from a file or directory path.
-// Returns a populated MediaInfo containing title, year, episode, season,
-// resolution, codec, source, audio, language, and bonus information.
+// Season, Episode, Resolution, Codec, Source, Audio, Language, and Bonus are all deterministic patterns (i.e 'terminators')
+// Title and Year are undeterministic patterns and matched first from left most segment until the first terminator is encountered
 func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	log := logger.With("func", "ExtractMedia")
 	log.Info("extracting media info from path", "path", path)
@@ -44,18 +44,17 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	return mediaInfo
 }
 
+// sanitizePrefix finds common unwanted patterns at the beginning of file names (i.e websites) and removes them from the slice
 func sanitizePrefix(segments []string) []string {
-	if match := parseWebsites(segments); match != "" {
+	if match := parseWebsite(segments); match != "" {
 		numParts := len(strings.Split(match, "."))
 		return segments[numParts:]
 	}
 	return segments
 }
 
-// isTerminator determines if the leftmost segment is a terminator.
-// A terminator is any segment that is not a part of the title or year (i.e., "terminates" extraction).
-// The title and year are different from terminators because terminators are the only segments 
-// that can be deterministically determined, while titles can be any set of characters (and can include years)
+// isTerminator determines if the leftmost portion of a []string is a terminator
+// A terminator is a pattern whose meaning can be deterministically determined
 func isTerminator(segments []string) bool {
 	if parseResolution(segments) != "" ||
 		parseCodec(segments) != "" ||
@@ -76,13 +75,7 @@ func isTerminator(segments []string) bool {
 
 // extractTitle returns the title starting from the leftmost segment.
 // Extraction stops at the first terminator
-//
-// Segment order:
-//
-//	<title>.<year>.<terminator>...
-//	<title>.<year>
-//
-// Year is optional in all patterns.
+// A Year is determined to be part of the title if it is not succeeded by a terminator or is is succeeded by a valid movie year
 func extractTitle(segments []string) []string {
 	var title []string
 	var year *int
@@ -103,8 +96,8 @@ func extractTitle(segments []string) []string {
 	return title
 }
 
-// extractYear returns the year from segments, or nil if not found.
-// Scans segments until a terminator is encountered.
+// extractYear returns the year from segments or nil if not found.
+// Scans segments until a terminator is encountered
 func extractYear(segments []string) *int {
 	var year *int
 	for i, segment := range segments {
@@ -117,7 +110,7 @@ func extractYear(segments []string) *int {
 	return year
 }
 
-// extractSeason returns the season number from segments.
+// extractSeason returns the season number from segments by iterating through each segment.
 // Returns nil if no pattern, 0 if pattern without number, >0 for season number.
 func extractSeason(segments []string) *int {
 	for i := range segments {
@@ -129,7 +122,7 @@ func extractSeason(segments []string) *int {
 	return nil
 }
 
-// extractEpisode returns the episode number from segments.
+// extractEpisode returns the episode number from segments by iterating through each segment.
 // Returns nil if no pattern, 0 if pattern without number, >0 for episode number.
 func extractEpisode(segments []string) *int {
 	for i := range segments {
@@ -141,7 +134,8 @@ func extractEpisode(segments []string) *int {
 	return nil
 }
 
-// extractResolution returns the resolution pattern from segments, or empty string.
+// extractResolution returns the resolution pattern from segments by iterating through each segment.
+// Returns empty string if resolution is not found.
 func extractResolution(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -152,7 +146,8 @@ func extractResolution(segments []string) string {
 	return ""
 }
 
-// extractCodec returns the codec pattern from segments, or empty string.
+// extractCodec returns the codec pattern from segments by iterating through each segment.
+// Returns empty string if codec is not found.
 func extractCodec(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -163,7 +158,8 @@ func extractCodec(segments []string) string {
 	return ""
 }
 
-// extractSource returns the source pattern from segments, or empty string.
+// extractSource returns the source pattern from segments by iterating through each segment.
+// Returns empty string if source is not found.
 func extractSource(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -174,7 +170,8 @@ func extractSource(segments []string) string {
 	return ""
 }
 
-// extractAudio returns the audio pattern from segments, or empty string.
+// extractAudio returns the audio pattern from segments by iterating through each segment.
+// Returns empty string if audio is not found.
 func extractAudio(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -185,7 +182,8 @@ func extractAudio(segments []string) string {
 	return ""
 }
 
-// extractLanguage returns the language pattern from segments, or empty string.
+// extractLanguage returns the language pattern from segments by iterating through each segment.
+// Returns empty string if language is not found.
 func extractLanguage(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -196,7 +194,8 @@ func extractLanguage(segments []string) string {
 	return ""
 }
 
-// extractBonus returns the bonus pattern from segments, or empty string.
+// extractBonus returns the bonus pattern from segments by iterating through each segment.
+// Returns empty string if bonus is not found.
 func extractBonus(segments []string) string {
 	for i := range segments {
 		candidates := segments[i:]
@@ -207,8 +206,9 @@ func extractBonus(segments []string) string {
 	return ""
 }
 
-// parseResolution checks if the leftmost segments match a resolution pattern.
-// Returns the resolution key or empty string.
+// parseResolution returns the resolution if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseResolution(segments []string) string {
 	for _, group := range patterns.GetResolutionPatternGroups() {
 		for _, re := range group.Patterns {
@@ -220,8 +220,9 @@ func parseResolution(segments []string) string {
 	return ""
 }
 
-// parseCodec checks if the leftmost segments match a codec pattern.
-// Returns the codec key or empty string.
+// parseCodec returns the codec if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseCodec(segments []string) string {
 	for _, group := range patterns.GetCodecPatternGroups() {
 		for _, re := range group.Patterns {
@@ -233,8 +234,9 @@ func parseCodec(segments []string) string {
 	return ""
 }
 
-// parseSource checks if the leftmost segments match a source pattern.
-// Returns the source key or empty string.
+// parseSource returns the source if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseSource(segments []string) string {
 	for _, group := range patterns.GetSourcePatternGroups() {
 		for _, re := range group.Patterns {
@@ -246,8 +248,9 @@ func parseSource(segments []string) string {
 	return ""
 }
 
-// parseAudio checks if the leftmost segments match an audio pattern.
-// Returns the audio key or empty string.
+// parseAudio returns the audio if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseAudio(segments []string) string {
 	for _, group := range patterns.GetAudioPatternGroups() {
 		for _, re := range group.Patterns {
@@ -259,8 +262,9 @@ func parseAudio(segments []string) string {
 	return ""
 }
 
-// parseYear validates and returns a year from a segment.
-// Returns nil if invalid (not 4 digits, not between 1930 and current year).
+// parseAudio returns the year if the input string is a valid year.
+// A valid year is a 4 digit number between current year and 1930.
+// Used as helper function for extractor.
 func parseYear(s string) *int {
 	if len(s) != 4 {
 		return nil
@@ -278,8 +282,13 @@ func parseYear(s string) *int {
 	return &year
 }
 
-// parseSeason checks if segments match a season pattern.
-// Returns nil if no match, 0 if pattern without number, >0 for season number.
+// parseSeason returns the season number from segments by iterating through each segment.
+// Returns nil if no pattern, 0 if pattern without number, >0 for season number.
+
+
+
+// parseSeason returns the season number if the left most segment(s) are a pattern match.
+// Returns nil if no pattern, 0 if pattern without number, >0 for season number.
 func parseSeason(segments []string) *int {
 	unknown := 0
 	for _, re := range patterns.GetSeasonPatterns() {
@@ -301,8 +310,8 @@ func parseSeason(segments []string) *int {
 	return nil
 }
 
-// parseEpisode checks if segments match an episode pattern.
-// Returns nil if no match, 0 if pattern without number, >0 for episode number.
+// parseEpisode returns the episode number if the left most segment(s) are a pattern match.
+// Returns nil if no pattern, 0 if pattern without number, >0 for episode number.
 func parseEpisode(segments []string) *int {
 	unknown := 0
 	for _, re := range patterns.GetEpisodePatterns() {
@@ -323,8 +332,9 @@ func parseEpisode(segments []string) *int {
 	return nil
 }
 
-// parseLanguage checks if segments match a language pattern.
-// Returns the language key or empty string.
+// parseLanguage returns the language if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseLanguage(segments []string) string {
 	for _, group := range patterns.GetLanguagePatternGroups() {
 		for _, re := range group.Patterns {
@@ -337,8 +347,9 @@ func parseLanguage(segments []string) string {
 	return ""
 }
 
-// parseMisc checks if segments match a miscellaneous pattern.
-// Returns the matched string or empty string.
+// parseMisc returns the misc pattern if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for isTerminator.
 func parseMisc(segments []string) string {
 	for _, re := range patterns.GetMiscPatterns() {
 		if match := matchSegments(segments, (*regexp.Regexp)(re)); match != nil {
@@ -348,8 +359,9 @@ func parseMisc(segments []string) string {
 	return ""
 }
 
-// parseBonus checks if segments match a bonus content pattern.
-// Returns the bonus key or empty string.
+// parseBonus returns the bonus pattern if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
 func parseBonus(segments []string) string {
 	for _, group := range patterns.GetBonusPatternGroups() {
 		for _, re := range group.Patterns {
@@ -362,21 +374,14 @@ func parseBonus(segments []string) string {
 	return ""
 }
 
-func parseWebsites(segments []string) string {
+// parseWebsites returns the website pattern if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for sanitizePrefix..
+func parseWebsite(segments []string) string {
 	for _, re := range patterns.GetWebsitePatterns() {
 		match := matchSegments(segments, (*regexp.Regexp)(re))
 		if match != nil {
 			return match[0]
-		}
-	}
-	return ""
-}
-
-func parseSamples(segments []string) string {
-	for _, re := range patterns.GetSamplePatterns() {
-		match := matchSegments(segments, (*regexp.Regexp)(re))
-		if match != nil {
-			return match [0]
 		}
 	}
 	return ""
