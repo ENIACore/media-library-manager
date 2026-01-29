@@ -1,3 +1,5 @@
+// Package parser creates [metadata.Entry] tree by recursively parsing file system path.
+// Package relies on extractor package to create tree and produces output used by classifier package.  
 package parser
 
 import (
@@ -9,9 +11,9 @@ import (
 	"log/slog"
 )
 
-// Parse constructs a tree representation of the filesystem starting at path.
-// Recursively walks the directory structure, extracting media and path metadata for each entry.
-// Returns the root Entry after pruning empty directories, or an error if parsing fails.
+// Parse constructs [metadata.Entry] tree starting at given path.
+// Throws error if file system error occurs or no valid [metadata.Entry] object can be created.
+// Returns root of [metadata.Entry] tree.
 func Parse(path string, logger *slog.Logger) (*metadata.Entry, error) {
 	root, err := parseTree(path, nil, 0, logger)
 	if err != nil {
@@ -29,9 +31,9 @@ func Parse(path string, logger *slog.Logger) (*metadata.Entry, error) {
 	return root, nil
 }
 
-// parseTree recursively builds a tree of Entry nodes from a filesystem path.
-// Extracts metadata for files and directories, skipping invalid file types (UnknownType non-directories).
-// Returns nil for skipped entries, allowing the tree to filter them out during construction.
+// parseTree recursively builds a tree of [metadata.Entry] objects from given path and is a helper function to [Parse].
+// It skips creating [metadata.Entry] object when [extractor.Filter] returns true.
+// It uses [extractor.ExtractPath] and [extractor.ExtractMedia] to extract media and path information related to entry.
 func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logger) (*metadata.Entry, error) {
 
     info, err := os.Stat(path)
@@ -75,9 +77,7 @@ func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
     return node, nil
 }
 
-// pruneTree removes empty directories from the entry tree.
-// Recursively processes children first, then removes the entry if it's an empty directory.
-// Returns nil if the entry should be pruned, otherwise returns the entry with pruned children.
+// pruneTree recursively removes empty directories from [metadata.Entry] tree.
 func pruneTree(entry *metadata.Entry) *metadata.Entry {
 	if entry.PathInfo.IsDir && len(entry.Children) == 0 {
 		return nil
