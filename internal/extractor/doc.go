@@ -21,5 +21,9 @@ The sanitized name is stored in []string format; to support multi-word pattern m
 [ExtractPath] extracts file system information about a file or directory. It does this using golang's os package for accurate information, along with helper functions. This is used in the creation of the [metadata.PathInfo] field, of [metadata.Entry] objects.
 
 [Filter] determines if a file has a recognized file extension. It does this using golang's os package for accurate information. This is used to prevent creation of unwanted [metadata.Entry] objects in [parser.Parse]
+
+# Pipeline
+
+Package relies on no package and is an essential dependency of parser to allow for [metadata.Entry] tree creation. 
 */
 package extractor
