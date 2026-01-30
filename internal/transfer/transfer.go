@@ -1,3 +1,5 @@
+// Package transfer moves media files to their final destinations or error directory.
+// Package relies on resolver package for destination paths and is final stage of processing pipeline.
 package transfer
 
 import (
@@ -11,6 +13,8 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
+// Transfer recursively moves media entries to their final destinations.
+// Uses [resolveConflict] to handle duplicate filenames. Returns error if move fails.
 func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Transfer")
 	if cfg.DryRun {
@@ -43,7 +47,8 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 	return os.Rename(entry.PathInfo.Source, destPath)
 }
 
-// Function used to remove any remaining files caused nil root directories (i.e invalid and empty directories at root)
+// Cleanup removes all remaining entries from torrent directory after processing.
+// Skips incomplete directory specified in [config.Config.IncompletePath].
 func Cleanup(cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Cleanup")
 	if cfg.DryRun {
@@ -69,6 +74,8 @@ func Cleanup(cfg *config.Config, logger *slog.Logger) {
 	}	
 }
 
+// Error moves failed entry to manager's error directory for manual review.
+// Uses [resolveConflict] to handle duplicate names. Panics if unable to create or move to error directory.
 func Error(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Error")
 	lg.Info("Moving entries to error dir")

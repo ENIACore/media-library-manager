@@ -1,3 +1,5 @@
+// Package main is entry point for media library manager application.
+// Orchestrates processing pipeline: [parser], [classifier], [enricher], [resolver], and [transfer].
 package main
 
 import (
@@ -14,6 +16,8 @@ import (
 )
 
 
+// main loads configuration and processes each torrent directory entry through processing pipeline.
+// Failed entries are moved to error directory. Logs summary of successful and failed processing counts.
 func main() {
 	cfg := config.Load()
 	logger := logger.NewLogger(cfg)

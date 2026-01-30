@@ -7,7 +7,6 @@
 
 
 # To comment (in order)
-- enricher
 - resolver
 - transfer
 - main
