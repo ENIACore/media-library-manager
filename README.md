@@ -7,7 +7,6 @@
 
 
 # To comment (in order)
-- classifier
 - enricher
 - resolver
 - transfer

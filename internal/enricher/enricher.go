@@ -1,3 +1,6 @@
+// Package enricher passes important contextual information through the [metadata.Entry] tree bi-directionally.
+// Enrichment allows for more accurate resolutions by contextualizing entries.
+// Package relies on classifier package for necessary information and produces output used by resolver package.  
 package enricher
 
 import (
@@ -8,8 +11,12 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
-// Propogates title and year of movie/show to all files
-// Enriches subtitle and bonus files found inside intermediary directories
+// Enrich uses helper functions to propogate necessary information throughout tree. 
+// Propogated information:
+//	- Titles
+//	- Year
+//	- Season and episode numbers
+// Returns error if invalid Role found at root.
 func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Enrich")
 
@@ -30,7 +37,7 @@ func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	return nil
 }
 
-// enrichEpisodeFiles gives episode files season based on parent if season is missing
+// enrichEpisodeFiles recursively passes season information to all children of season directory
 func enrichEpisodeFiles(root *metadata.Entry) {
 	if root.Role == metadata.SeriesDir {
 		for _, child := range root.Children {
@@ -41,12 +48,39 @@ func enrichEpisodeFiles(root *metadata.Entry) {
 		for _, child := range root.Children {
 			if child.Role == metadata.EpisodeFile && child.MediaInfo.Season != nil {
 				seasonCopy := *root.MediaInfo.Season
-				child.MediaInfo.Season = &seasonCopy 
+				child.MediaInfo.Season = &seasonCopy
 			}
 		}
 	}
 }
 
+// enrichIntermediaryEntries recursively passes season and episode information from intermediary entries to children
+// An intermediary entry is a subtitle directory inside a bonus or subtitle directory, or a bonus directory inside a bonus directory
+// Intermediary entries typically are used to encapsulate subtitle and/or bonus files of specific episodes
+func enrichIntermediaryEntries(entry *metadata.Entry) {
+	switch entry.Role {
+	case metadata.SubtitleDir, metadata.BonusDir:
+		if entry.Height() == 2 {
+			for _, child := range entry.Children {
+				mediaInfo := metadata.MediaInfo{
+					Season:  child.MediaInfo.Season,
+					Episode: child.MediaInfo.Episode,
+				}
+				propogateDown(child, &mediaInfo, []metadata.EntryRole{metadata.BonusFile, metadata.SubtitleFile})
+			}
+		} else {
+			for _, child := range entry.Children {
+				enrichIntermediaryEntries(child)
+			}
+		}
+	default:
+		for _, child := range entry.Children {
+			enrichIntermediaryEntries(child)
+		}
+	}
+}
+
+// enrichEntries passes title and year from root node to children nodes of specified type
 func enrichEntries(root *metadata.Entry) {
 	var roles []metadata.EntryRole
 	switch root.Role {
@@ -81,6 +115,8 @@ func enrichEntries(root *metadata.Entry) {
 	propogateDown(root, &mediaInfo, roles)
 }
 
+// getTitle is a recursive function that returns the first valid title, from a identified Role 
+// This enables series and movie titles to be passed to all children
 func getTitle(root *metadata.Entry, roles []metadata.EntryRole) []string {
 	if root == nil {
 		return nil
@@ -104,6 +140,8 @@ func getTitle(root *metadata.Entry, roles []metadata.EntryRole) []string {
 	return nil
 }
 
+// getYear is a recursive function that returns the first valid year, from a identified Role 
+// This enables the inception year of a movie or series to be passed to all children
 func getYear(root *metadata.Entry, roles []metadata.EntryRole) *int {
 	if root == nil {
 		return nil
@@ -127,29 +165,8 @@ func getYear(root *metadata.Entry, roles []metadata.EntryRole) *int {
 	return nil
 }
 
-func enrichIntermediaryEntries(entry *metadata.Entry) {
-	switch entry.Role {
-	case metadata.SubtitleDir, metadata.BonusDir:
-		if entry.Height() == 2 {
-			for _, child := range entry.Children {
-				mediaInfo := metadata.MediaInfo{
-					Season:  child.MediaInfo.Season,
-					Episode: child.MediaInfo.Episode,
-				}
-				propogateDown(child, &mediaInfo, []metadata.EntryRole{metadata.BonusFile, metadata.SubtitleFile})
-			}
-		} else {
-			for _, child := range entry.Children {
-				enrichIntermediaryEntries(child)
-			}
-		}
-	default:
-		for _, child := range entry.Children {
-			enrichIntermediaryEntries(child)
-		}
-	}
-}
 
+// propogateDown is a recursive helper function to perform deep copy from non-empty src fields to entry objects.
 func propogateDown(entry *metadata.Entry,  src *metadata.MediaInfo, roles []metadata.EntryRole) {
 	if slices.Contains(roles, entry.Role) || roles == nil {
 		if src.Title != nil {
