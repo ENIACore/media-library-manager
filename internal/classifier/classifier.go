@@ -6,10 +6,10 @@ import (
 	"log/slog"
 )
 
-// Classify determines the role of a media entry in the library hierarchy.
-// Attempts classification in order of specificity, first checking if entry
-// is a directory or file, then trying type-specific classifiers.
-// Returns an error if classification fails for the root entry.
+// Classify calls recursive helper functions to determine classification for all [metadata.Entry] objects in tree.
+// Classify (and its helper functions) use order of most specificity to ensure proper classification.
+//	Dir order: subtitle > bonus > season > series > movie
+//	File order: subtitle > bonus > episode > movie
 func Classify(root *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "Classify")
 
@@ -35,9 +35,9 @@ func Classify(root *metadata.Entry, logger *slog.Logger) error {
 	return fmt.Errorf("Failed to classify root entry %v", root.PathInfo.Source)
 }
 
-// classifySubtitleDir classifies a directory as SubtitleDir if it contains only subtitle files.
-// Only directories with height 1 or less (leaf or near-leaf) are considered.
-// Returns true and sets entry.Role to SubtitleDir if classification succeeds.
+// classifySubtitleDir recursively determines if entry is [metadata.SubtitleDir].
+// It assigns Role field for entry and all children; whether successful or not.
+// Returns true if successful classification, false otherwise.
 func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifySubtitleDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 2 {
@@ -61,9 +61,9 @@ func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	return hasSubtitle
 }
 
-// classifyBonusDir classifies a directory as BonusDir if it contains bonus content files.
-// Only directories with height 1 or less are considered. Subtitle files are allowed.
-// Returns true and sets entry.Role to BonusDir if classification succeeds.
+// classifyBonusDir recursively determines if entry is [metadata.BonusDir].
+// It assigns Role field for entry and all children; whether successful or not.
+// Returns true if successful classification, false otherwise.
 func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifyBonusDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 2 {
@@ -91,9 +91,9 @@ func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	return hasBonus
 }
 
-// classifySeasonDir classifies a directory as SeasonDir if it contains episode files.
-// Only directories with height 3 or less are considered. Subtitle files and directories are allowed.
-// Returns true and sets entry.Role to SeasonDir if classification succeeds.
+// classifySeasonDir recursively determines if entry is [metadata.SeasonDir].
+// It assigns Role field for entry and all children; whether successful or not.
+// Returns true if successful classification, false otherwise.
 func classifySeasonDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifySeasonDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 3 {
@@ -123,9 +123,9 @@ func classifySeasonDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	return hasEpisode
 }
 
-// classifySeriesDir classifies a directory as SeriesDir if it contains season directories.
-// Only directories with height 3 or less are considered. Bonus and subtitle directories are allowed.
-// Returns true and sets entry.Role to SeriesDir if classification succeeds.
+// classifySeriesDir recursively determines if entry is [metadata.SeriesDir].
+// It assigns Role field for entry and all children; whether successful or not.
+// Returns true if successful classification, false otherwise.
 func classifySeriesDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifySeriesDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 3 {
@@ -155,10 +155,9 @@ func classifySeriesDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	return hasSeason
 }
 
-// classifyMovieDir classifies a directory as MovieDir if it contains exactly one movie file.
-// Only directories with height 2 or less are considered. Entry must not have season or episode metadata.
-// Subtitle and bonus content (files and directories) are allowed.
-// Returns true and sets entry.Role to MovieDir if classification succeeds.
+// classifyMovieDir recursively determines if entry is [metadata.MovieDir].
+// It assigns Role field for entry and all children; whether successful or not.
+// Returns true if successful classification, false otherwise.
 func classifyMovieDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifyMovieDir")
 	if !entry.PathInfo.IsDir || entry.Height() > 2 {
@@ -201,8 +200,8 @@ func classifyMovieDir(entry *metadata.Entry, logger *slog.Logger) bool {
 }
 
 
-// classifySubtitleFile classifies a file as SubtitleFile based on its content type.
-// Returns true and sets entry.Role to SubtitleFile if the file type is Subtitle.
+// classifySubtitleFile determines if entry is [metadata.SubtitleFile].
+// Assigns role if successful.
 func classifySubtitleFile(entry *metadata.Entry) bool {
 	if entry.PathInfo.Type == metadata.Subtitle {
 		entry.Role = metadata.SubtitleFile
@@ -211,8 +210,8 @@ func classifySubtitleFile(entry *metadata.Entry) bool {
 	return false
 }
 
-// classifyBonusFile classifies a file as BonusFile if it contains bonus content metadata.
-// Returns true and sets entry.Role to BonusFile if the file is a video with bonus metadata.
+// classifyBonusFile determines if entry is [metadata.BonusFile].
+// Assigns role if successful.
 func classifyBonusFile(entry *metadata.Entry) bool {
 	if entry.PathInfo.Type == metadata.Video && entry.MediaInfo.Bonus != "" {
 		entry.Role = metadata.BonusFile
@@ -221,9 +220,8 @@ func classifyBonusFile(entry *metadata.Entry) bool {
 	return false
 }
 
-// classifyEpisodeFile classifies a file as EpisodeFile based on episode or season metadata.
-// Returns true and sets entry.Role to EpisodeFile if the file is a video without bonus metadata
-// and has episode/season metadata in the file or parent directory.
+// classifyEpisodeFile determines if entry is [metadata.EpisodeFile].
+// Assigns role if successful.
 func classifyEpisodeFile(entry *metadata.Entry) bool {
 	if entry.PathInfo.Type == metadata.Video && entry.MediaInfo.Bonus == "" {
 		if entry.MediaInfo.Episode != nil || entry.MediaInfo.Season != nil || (entry.Parent != nil && entry.Parent.MediaInfo.Season != nil) {
@@ -234,9 +232,8 @@ func classifyEpisodeFile(entry *metadata.Entry) bool {
 	return false
 }
 
-// classifyMovieFile classifies a file as MovieFile if it lacks series metadata.
-// Returns true and sets entry.Role to MovieFile if the file is a video without
-// episode, season, or bonus metadata.
+// classifyMovieFile determines if entry is [metadata.MovieFile].
+// Assigns role if successful.
 func classifyMovieFile(entry *metadata.Entry) bool {
 	if entry.PathInfo.Type == metadata.Video && entry.MediaInfo.Episode == nil && entry.MediaInfo.Season == nil && entry.MediaInfo.Bonus == "" {
 		entry.Role = metadata.MovieFile
