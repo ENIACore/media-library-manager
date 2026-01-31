@@ -1147,7 +1147,7 @@ func TestSanitizePrefix(t *testing.T) {
 	}
 }
 
-func TestParseWebsites(t *testing.T) {
+func TestParseWebsite(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []string
@@ -1207,9 +1207,9 @@ func TestParseWebsites(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := parseWebsites(test.input)
+			result := parseWebsite(test.input)
 			if result != test.expected {
-				t.Errorf("parseWebsites() = %v, want %v", result, test.expected)
+				t.Errorf("parseWebsite() = %v, want %v", result, test.expected)
 			}
 		})
 	}

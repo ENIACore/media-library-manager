@@ -14,23 +14,17 @@ func Classify(root *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "Classify")
 
 	if root.PathInfo.IsDir {
-		if classifySubtitleDir(root, logger) || classifyBonusDir(root, logger) {
-			return fmt.Errorf("Entry %v is has invalid classification %v at root level", root.PathInfo.Source, root.Role)
-		}
-		if classifySeasonDir(root, logger) || classifySeriesDir(root, logger) || classifyMovieDir(root, logger) {
+		if classifySubtitleDir(root, logger) || classifyBonusDir(root, logger) || classifySeasonDir(root, logger) || classifySeriesDir(root, logger) || classifyMovieDir(root, logger) {
 			lg.Info("Root entry classification determined", "entry", root.PathInfo.Source, "role", root.Role)
 			return nil
 		}
 	} else {
-		if classifySubtitleFile(root) || classifyBonusFile(root) {
-			return fmt.Errorf("Entry %v is has invalid classification %v at root level", root.PathInfo.Source, root.Role)
-		}
-		if classifyEpisodeFile(root) || classifyMovieFile(root) {
+		if classifySubtitleFile(root) || classifyBonusFile(root) || classifyEpisodeFile(root) || classifyMovieFile(root) {
 			lg.Info("Root entry classification determined", "entry", root.PathInfo.Source, "role", root.Role)
 			return nil
-		} 
+		}
 	}
-	
+
 	lg.Error("Unable to classify entry", "entry", root.PathInfo.Source)
 	return fmt.Errorf("Failed to classify root entry %v", root.PathInfo.Source)
 }
