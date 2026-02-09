@@ -310,6 +310,12 @@ func parseSeason(segments []string) *int {
 	return nil
 }
 
+// Add to your extractor
+func isRomanNumeral(s string) bool {
+    romanPattern := regexp.MustCompile(`^(?i)(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX)$`)
+    return romanPattern.MatchString(s)
+}
+
 // parseEpisode returns the episode number if the left most segment(s) are a pattern match.
 // Returns nil if no pattern, 0 if pattern without number, >0 for episode number.
 func parseEpisode(segments []string) *int {
@@ -320,6 +326,12 @@ func parseEpisode(segments []string) *int {
 		if match == nil {
 			continue
 		}
+
+		// If episode followed by roman numeral, it is a part of the title (e.g Star Wars Episode VII...)
+		if len(match) == 1 && len(segments) > 2 && isRomanNumeral(segments[1]) {
+			return nil
+		}
+
 		if len(match) == 1 {
 			return &unknown
 		}

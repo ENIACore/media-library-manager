@@ -272,15 +272,26 @@ The Media Library Manager uses a five-stage processing pipeline:
 - [x] Subtitle and bonus content handling
 - [x] Pattern-based metadata extraction
 - [x] Error handling and quarantine
-- [ ] Web UI for monitoring and configuration
+- [ ] Readable dry run output
 - [ ] API integration (TMDB, TVDB) for metadata enrichment
 - [ ] Custom pattern configuration
-- [ ] Notification system (Discord, Slack, etc.)
 - [ ] Advanced duplicate detection
+- [ ] Advanced collision avoidance
+- [ ] Advanced aggregator
+- [ ] Advanced language detection (subtitles)
 
 See the [open issues](https://github.com/ENIACore/media_library_manager/issues) for a full list of proposed features and known issues.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+## TODO
+- Add better dry run output
+- Fix Test batch 4 (1) failing test
+- Add advanced aggregator (e.g If year missing from one show, combine under the show with the year ect...)
+- Detect duplicates
+- TMDB integration to ensure movie title correctness
+- Language detection for subtitles to correct file names
 
 <!-- CONTRIBUTING -->
 ## Contributing
