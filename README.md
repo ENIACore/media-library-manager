@@ -288,6 +288,7 @@ See the [open issues](https://github.com/ENIACore/media_library_manager/issues) 
 ## TODO
 - Add better dry run output
 - Fix Test batch 4 (1) failing test
+- Fix Test batch 1, "Walk The Line" Line is being recognized as an Audio value
 - Add advanced aggregator (e.g If year missing from one show, combine under the show with the year ect...)
 - Detect duplicates
 - TMDB integration to ensure movie title correctness
