@@ -4,7 +4,10 @@ package main
 
 import (
 	"os"
+	"os/exec"
+	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/ENIACore/media_library_manager/internal/config"
 	"github.com/ENIACore/media_library_manager/internal/logger"
@@ -25,6 +28,15 @@ func main() {
 	entries, err := os.ReadDir(cfg.TorrentPath)
 	if err != nil {
 		panic("unable to read from torrent path")
+	}
+
+	var tempDir string
+	if cfg.DryRun {
+		tempDir, err = os.MkdirTemp("", "media-library-manager-*")
+		if err != nil {
+			logger.Error("Error creating temporary directory for dummy output", "error", err)
+		}
+		defer os.RemoveAll(tempDir)
 	}
 
 	numSuccess := 0
@@ -72,21 +84,40 @@ func main() {
 			continue
 		}
 
-		err = transfer.Transfer(root, cfg, logger)
-		if err != nil {
+		
+		fmt.Println("\n===== Original to New =====\n")
+		output := tree(root.PathInfo.Source)
+		fmt.Println(output)
+		fmt.Println("")
+		fmt.Println("---------------------------")
+		fmt.Println("")
+
+
+		if cfg.DryRun {
+			err = transfer.TestTransfer(root, tempDir, logger)
+		} else {
+			err = transfer.Transfer(root, cfg, logger)
+		}
+
+		if err == nil {
+			output = tree(root.PathInfo.Dest)
+			fmt.Println(output)
+		} else {
 			logger.Error("Transfer returned error", "error", err)
 			numFailure += 1
 			transfer.Error(root, cfg, logger)
 			continue
 		}
+
+
 		numSuccess += 1
+		
 
 		logger.Info("")
 		logger.Info("==================================================")
 		logger.Info("")
 	}
-	
-	
+
 	logger.Info("")
 	logger.Info("==================================================")
 	logger.Info("Total Num Success and Failure", "Success", numSuccess, "Failure", numFailure)
@@ -94,4 +125,17 @@ func main() {
 	logger.Info("")
 
 	transfer.Cleanup(cfg, logger)
+}
+
+func tree(path string) string {
+	cmd := exec.Command("tree", "--noreport", "-C", path)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Sprintf("Error executing tree command: %v", err)
+	}
+	lines := strings.SplitN(string(output), "\n", 2)
+	if len(lines) == 2 {
+		return filepath.Base(path) + "\n" + strings.TrimRight(lines[1], "\n")
+	}
+	return string(output)
 }

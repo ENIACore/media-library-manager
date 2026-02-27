@@ -52,7 +52,7 @@ var SourcePatternGroups = []PatternGroup{
 	{Key: `PPV`, Patterns: []Pattern{`PPV`, `PPVRIP`}},
 	{Key: `VODRip`, Patterns: []Pattern{`VODRIP`, `VOD`}},
 	{Key: `HC`, Patterns: []Pattern{`HC`, `HCHDCAM`}},
-	{Key: `Line`, Patterns: []Pattern{`LINE`}},
+	//{Key: `Line`, Patterns: []Pattern{`LINE`}},
 	{Key: `HDTS`, Patterns: []Pattern{`HDTS`, `HD\.TS`}},
 	{Key: `HDTC`, Patterns: []Pattern{`HDTC`, `HD\.TC`}},
 	{Key: `TVRip`, Patterns: []Pattern{`TVRIP`, `SATRIP`, `DTTVRIP`}},

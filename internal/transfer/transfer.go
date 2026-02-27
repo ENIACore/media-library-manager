@@ -13,6 +13,44 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
+//os.MkdirTemp("", "media-library-manager-*")
+func TestTransfer(entry * metadata.Entry, tempDir string, logger *slog.Logger) error {
+	lg := logger.With("func", "TestTransfer")
+
+	for _, child := range entry.Children {
+		if err := TestTransfer(child, tempDir, logger); err != nil {
+			return err
+		}
+	}
+
+	if entry.PathInfo.IsDir {
+		entry.PathInfo.Dest = filepath.Join(tempDir, entry.PathInfo.Dest)
+    	lg.Debug("Skipping directory", "source", entry.PathInfo.Source)
+		return nil
+	}
+
+	destDir := filepath.Dir(entry.PathInfo.Dest)
+	destDir = filepath.Join(tempDir, destDir)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return err
+	}
+
+	var err error
+	entry.PathInfo.Dest = filepath.Join(tempDir, entry.PathInfo.Dest)
+	entry.PathInfo.Dest, err = resolveConflict(entry.PathInfo.Dest)
+	if err != nil {
+		return err
+	}
+
+    lg.Info("Creating dummy entry", "source", entry.PathInfo.Source, "dest", entry.PathInfo.Dest)
+	f, err := os.Create(entry.PathInfo.Dest)
+	if err != nil {
+    	return err
+	}
+	return f.Close()
+
+}
+
 // Transfer recursively moves media entries to their final destinations.
 // Uses [resolveConflict] to handle duplicate filenames. Returns error if move fails.
 func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
@@ -38,13 +76,14 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 		return err
 	}
 
-	destPath, err := resolveConflict(entry.PathInfo.Dest)
+	var err error
+	entry.PathInfo.Dest, err = resolveConflict(entry.PathInfo.Dest)
 	if err != nil {
 		return err
 	}
 
-    lg.Info("Moving entry", "source", entry.PathInfo.Source, "dest", destPath)
-	return os.Rename(entry.PathInfo.Source, destPath)
+    lg.Info("Moving entry", "source", entry.PathInfo.Source, "dest", entry.PathInfo.Dest)
+	return os.Rename(entry.PathInfo.Source, entry.PathInfo.Dest)
 }
 
 // Cleanup removes all remaining entries from torrent directory after processing.
@@ -138,3 +177,5 @@ func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
+
+
