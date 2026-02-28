@@ -585,48 +585,6 @@ func TestExtractLanguage(t *testing.T) {
 	}
 }
 
-func TestExtractBonus(t *testing.T) {
-	tests := []struct{
-		name		string
-		input		[]string
-		expected	string
-	}{
-		{
-			name:		"valid bonus",
-			input:		[]string{
-				"MY",
-				"MOVIE",
-				"2025",
-				"BEHIND",	
-				"THE",	
-				"SCENES",	
-			},
-			expected:	"Behind.The.Scenes",
-		},
-		{
-			name:		"invalid bonus",
-			input:		[]string{
-				"MY",
-				"MOVIE",
-				"2025",
-				"XBEHIND",	
-				"XTHE",	
-				"XSCENES",	
-			},
-			expected:	"",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			bonus := extractBonus(test.input)
-			if bonus != test.expected {
-				t.Errorf("extractBonus = %v, want %v", bonus, test.expected)
-			}
-		})
-	}
-}
-
 func TestParseResolution(t *testing.T) {
 	tests := []struct {
 		name		string
@@ -987,41 +945,6 @@ func TestParseLanguage(t *testing.T) {
 			language := parseLanguage(test.input)
 			if language != test.expected {
 				t.Errorf("parseLanguage = %v, want %v", language, test.expected)
-			}
-		})
-	}
-}
-func TestParseBonus(t *testing.T) {
-	tests := []struct {
-		name		string
-		input		[]string
-		expected	string
-	}{
-		{
-			name:		"valid bonus",
-			input:		[]string{
-				"BEHIND",
-				"THE",
-				"SCENES",
-			},
-			expected:	"Behind.The.Scenes",
-		},
-		{
-			name:		"invalid bonus",
-			input:		[]string{
-				"XBEHIND",
-				"XTHE",
-				"XSCENES",
-			},
-			expected:	"",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			res := parseBonus(test.input)
-			if	res != test.expected {
-				t.Errorf("parseBonus = %v, want %v", res, test.expected)
 			}
 		})
 	}
@@ -1400,6 +1323,222 @@ func TestExtractEdition(t *testing.T) {
 			edition := extractEdition(test.input)
 			if edition != test.expected {
 				t.Errorf("extractEdition() = %v, want %v", edition, test.expected)
+			}
+		})
+	}
+}
+
+func TestExtractBTS(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "valid bts",
+			input: []string{
+				"MY",
+				"MOVIE",
+				"2025",
+				"BEHIND",
+				"THE",
+				"SCENES",
+			},
+			expected: "Behind.The.Scenes",
+		},
+		{
+			name: "invalid bts",
+			input: []string{
+				"MY",
+				"MOVIE",
+				"2025",
+				"XBEHIND",
+				"XTHE",
+				"XSCENES",
+			},
+			expected: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			bts := extractBTS(test.input)
+			if bts != test.expected {
+				t.Errorf("extractBTS = %v, want %v", bts, test.expected)
+			}
+		})
+	}
+}
+
+func TestParseBTS(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "valid bts",
+			input: []string{
+				"BEHIND",
+				"THE",
+				"SCENES",
+			},
+			expected: "Behind.The.Scenes",
+		},
+		{
+			name: "invalid bts",
+			input: []string{
+				"XBEHIND",
+				"XTHE",
+				"XSCENES",
+			},
+			expected: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := parseBTS(test.input)
+			if res != test.expected {
+				t.Errorf("parseBTS = %v, want %v", res, test.expected)
+			}
+		})
+	}
+}
+
+func TestExtractDS(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "valid ds",
+			input: []string{
+				"MY",
+				"MOVIE",
+				"2025",
+				"DELETED",
+				"SCENES",
+			},
+			expected: "Deleted.Scenes",
+		},
+		{
+			name: "invalid ds",
+			input: []string{
+				"MY",
+				"MOVIE",
+				"2025",
+				"XDELETED",
+				"XSCENES",
+			},
+			expected: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ds := extractDS(test.input)
+			if ds != test.expected {
+				t.Errorf("extractDS = %v, want %v", ds, test.expected)
+			}
+		})
+	}
+}
+
+func TestParseDS(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "valid ds",
+			input: []string{
+				"DELETED",
+				"SCENES",
+			},
+			expected: "Deleted.Scenes",
+		},
+		{
+			name: "invalid ds",
+			input: []string{
+				"XDELETED",
+				"XSCENES",
+			},
+			expected: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := parseDS(test.input)
+			if res != test.expected {
+				t.Errorf("parseDS = %v, want %v", res, test.expected)
+			}
+		})
+	}
+}
+
+func TestExtractBonus(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "valid bonus",
+			input: []string{
+				"MY",
+				"MOVIE",
+				"2025",
+				"FEATURETTE",
+			},
+			expected: "Featurette",
+		},
+		{
+			name: "invalid bonus",
+			input: []string{
+				"MY",
+				"MOVIE",
+				"2025",
+				"XFEATURETTE",
+			},
+			expected: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			bonus := extractBonus(test.input)
+			if bonus != test.expected {
+				t.Errorf("extractBonus = %v, want %v", bonus, test.expected)
+			}
+		})
+	}
+}
+
+func TestParseBonus(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "valid bonus",
+			input: []string{
+				"FEATURETTE",
+			},
+			expected: "Featurette",
+		},
+		{
+			name: "invalid bonus",
+			input: []string{
+				"XFEATURETTE",
+			},
+			expected: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			res := parseBonus(test.input)
+			if res != test.expected {
+				t.Errorf("parseBonus = %v, want %v", res, test.expected)
 			}
 		})
 	}
