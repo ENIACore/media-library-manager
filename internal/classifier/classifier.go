@@ -60,10 +60,6 @@ func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) bool {
 // Returns true if successful classification, false otherwise.
 func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifyBonusDir")
-	if !entry.PathInfo.IsDir || entry.Height() > 2 {
-		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
-		return false
-	}
 
 	hasBonus := false
 	for _, child := range entry.Children {
@@ -207,9 +203,17 @@ func classifySubtitleFile(entry *metadata.Entry) bool {
 // classifyBonusFile determines if entry is [metadata.BonusFile].
 // Assigns role if successful.
 func classifyBonusFile(entry *metadata.Entry) bool {
-	if entry.PathInfo.Type == metadata.Video && (entry.MediaInfo.BTS != "" || entry.MediaInfo.DS != "" || entry.MediaInfo.Bonus != "") {
-		entry.Role = metadata.BonusFile
-		return true
+	if entry.PathInfo.Type == metadata.Video {
+		// If file has bonus information
+		if entry.MediaInfo.BTS != "" || entry.MediaInfo.DS != "" || entry.MediaInfo.Bonus != "" {
+			entry.Role = metadata.BonusFile
+			return true
+		}
+		// If parent has bonus information
+		if entry.Parent != nil && (entry.Parent.MediaInfo.BTS != "" || entry.Parent.MediaInfo.DS != "" || entry.Parent.MediaInfo.Bonus != "") {
+			entry.Role = metadata.BonusFile
+			return true
+		}
 	}
 	return false
 }
@@ -218,7 +222,13 @@ func classifyBonusFile(entry *metadata.Entry) bool {
 // Assigns role if successful.
 func classifyEpisodeFile(entry *metadata.Entry) bool {
 	if entry.PathInfo.Type == metadata.Video && entry.MediaInfo.Bonus == "" {
-		if entry.MediaInfo.Episode != nil || entry.MediaInfo.Season != nil || (entry.Parent != nil && entry.Parent.MediaInfo.Season != nil) {
+		// If file has season information
+		if entry.MediaInfo.Episode != nil || entry.MediaInfo.Season != nil {
+			entry.Role = metadata.EpisodeFile
+			return true
+		}
+		// If parent has season information
+		if entry.Parent != nil && entry.Parent.MediaInfo.Season != nil {
 			entry.Role = metadata.EpisodeFile
 			return true
 		}
