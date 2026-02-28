@@ -85,7 +85,7 @@ func main() {
 		}
 
 		
-		fmt.Println("\n===== Original to New =====\n")
+		fmt.Println("\n===== Original to New =====")
 		output := tree(root.PathInfo.Source)
 		fmt.Println(output)
 		fmt.Println("")
