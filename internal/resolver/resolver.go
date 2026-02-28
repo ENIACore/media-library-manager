@@ -399,6 +399,9 @@ func buildFilename(entry *metadata.Entry) string {
 	if entry.MediaInfo.Bonus != "" {
 		filename += "." + entry.MediaInfo.Bonus
 	}
+	if entry.MediaInfo.Edition != "" {
+		filename += "." + entry.MediaInfo.Edition
+	}
 
 	return filename + "." + strings.ToLower(entry.PathInfo.Ext)
 }
