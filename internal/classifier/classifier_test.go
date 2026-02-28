@@ -50,6 +50,60 @@ func TestClassify(t *testing.T) {
 			expectError:  false,
 		},
 		{
+			name: "DS file at root",
+			entry: func() *metadata.Entry {
+				return &metadata.Entry{
+					Parent: nil,
+					Children: nil,
+					MediaInfo: metadata.MediaInfo{
+						Title:      []string{"TEST", "TITLE"},
+						Year:       testutil.IntPtr(2025),
+						Resolution: "1080p",
+						Codec:      "x264",
+						Source:     "Remux",
+						Audio:      "Atmos",
+						Language:   "English",
+						DS:         "Deleted.Scenes",
+					},
+					PathInfo: metadata.PathInfo{
+						Source: "test.title.2025.deleted.scenes.1080p.x264.remux.mp4",
+						Ext:    "MP4",
+						Type:   metadata.Video,
+						IsDir:  false,
+					},
+				}
+			},
+			expectedRole: metadata.BonusFile,
+			expectError:  false,
+		},
+		{
+			name: "BTS file at root",
+			entry: func() *metadata.Entry {
+				return &metadata.Entry{
+					Parent: nil,
+					Children: nil,
+					MediaInfo: metadata.MediaInfo{
+						Title:      []string{"TEST", "TITLE"},
+						Year:       testutil.IntPtr(2025),
+						Resolution: "1080p",
+						Codec:      "x264",
+						Source:     "Remux",
+						Audio:      "Atmos",
+						Language:   "English",
+						BTS:        "Behind.The.Scenes",
+					},
+					PathInfo: metadata.PathInfo{
+						Source: "test.title.2025.behind.the.scenes.1080p.x264.remux.mp4",
+						Ext:    "MP4",
+						Type:   metadata.Video,
+						IsDir:  false,
+					},
+				}
+			},
+			expectedRole: metadata.BonusFile,
+			expectError:  false,
+		},
+		{
 			name: "movie directory",
 			entry: func() *metadata.Entry {
 				movieFile := testutil.CreateTestMovieFile(nil)
@@ -199,6 +253,222 @@ func TestClassifySubtitleFile(t *testing.T) {
 			}
 			if result && entry.Role != metadata.SubtitleFile {
 				t.Errorf("Role = %v, want %v", entry.Role, metadata.SubtitleFile)
+			}
+		})
+	}
+}
+
+func TestClassifyDSFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid DS file with DS metadata",
+			entry: func() *metadata.Entry {
+				return &metadata.Entry{
+					Parent: nil,
+					Children: nil,
+					MediaInfo: metadata.MediaInfo{
+						Title:      []string{"TEST", "TITLE"},
+						Year:       testutil.IntPtr(2025),
+						Episode:    nil,
+						Season:     nil,
+						Resolution: "1080p",
+						Codec:      "x264",
+						Source:     "Remux",
+						Audio:      "Atmos",
+						Language:   "English",
+						DS:         "Deleted.Scenes",
+						BTS:        "",
+						Bonus:      "",
+					},
+					PathInfo: metadata.PathInfo{
+						Dest:   "",
+						Source: "test.title.2025.deleted.scenes.1080p.x264.remux.atmos.english.mp4",
+						Ext:    "MP4",
+						Type:   metadata.Video,
+						IsDir:  false,
+					},
+					Role: metadata.UnknownRole,
+				}
+			},
+			expected: true,
+		},
+		{
+			name: "DS file with parent DS metadata",
+			entry: func() *metadata.Entry {
+				parent := &metadata.Entry{
+					MediaInfo: metadata.MediaInfo{
+						DS: "Deleted.Scenes",
+					},
+				}
+				return &metadata.Entry{
+					Parent: parent,
+					Children: nil,
+					MediaInfo: metadata.MediaInfo{
+						Title:      []string{"TEST", "TITLE"},
+						Year:       testutil.IntPtr(2025),
+						Episode:    nil,
+						Season:     nil,
+						Resolution: "1080p",
+						Codec:      "x264",
+						Source:     "Remux",
+						Audio:      "Atmos",
+						Language:   "English",
+						DS:         "",
+						BTS:        "",
+						Bonus:      "",
+					},
+					PathInfo: metadata.PathInfo{
+						Dest:   "",
+						Source: "test.title.2025.1080p.x264.remux.atmos.english.mp4",
+						Ext:    "MP4",
+						Type:   metadata.Video,
+						IsDir:  false,
+					},
+					Role: metadata.UnknownRole,
+				}
+			},
+			expected: true,
+		},
+		{
+			name: "movie file without DS metadata",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "subtitle file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubFile(nil)
+			},
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifyDSFile(entry)
+
+			if result != test.expected {
+				t.Errorf("classifyDSFile = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.BonusFile {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.BonusFile)
+			}
+		})
+	}
+}
+
+func TestClassifyBTSFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    func() *metadata.Entry
+		expected bool
+	}{
+		{
+			name: "valid BTS file with BTS metadata",
+			entry: func() *metadata.Entry {
+				return &metadata.Entry{
+					Parent: nil,
+					Children: nil,
+					MediaInfo: metadata.MediaInfo{
+						Title:      []string{"TEST", "TITLE"},
+						Year:       testutil.IntPtr(2025),
+						Episode:    nil,
+						Season:     nil,
+						Resolution: "1080p",
+						Codec:      "x264",
+						Source:     "Remux",
+						Audio:      "Atmos",
+						Language:   "English",
+						DS:         "",
+						BTS:        "Behind.The.Scenes",
+						Bonus:      "",
+					},
+					PathInfo: metadata.PathInfo{
+						Dest:   "",
+						Source: "test.title.2025.behind.the.scenes.1080p.x264.remux.atmos.english.mp4",
+						Ext:    "MP4",
+						Type:   metadata.Video,
+						IsDir:  false,
+					},
+					Role: metadata.UnknownRole,
+				}
+			},
+			expected: true,
+		},
+		{
+			name: "BTS file with parent BTS metadata",
+			entry: func() *metadata.Entry {
+				parent := &metadata.Entry{
+					MediaInfo: metadata.MediaInfo{
+						BTS: "Behind.The.Scenes",
+					},
+				}
+				return &metadata.Entry{
+					Parent: parent,
+					Children: nil,
+					MediaInfo: metadata.MediaInfo{
+						Title:      []string{"TEST", "TITLE"},
+						Year:       testutil.IntPtr(2025),
+						Episode:    nil,
+						Season:     nil,
+						Resolution: "1080p",
+						Codec:      "x264",
+						Source:     "Remux",
+						Audio:      "Atmos",
+						Language:   "English",
+						DS:         "",
+						BTS:        "",
+						Bonus:      "",
+					},
+					PathInfo: metadata.PathInfo{
+						Dest:   "",
+						Source: "test.title.2025.1080p.x264.remux.atmos.english.mp4",
+						Ext:    "MP4",
+						Type:   metadata.Video,
+						IsDir:  false,
+					},
+					Role: metadata.UnknownRole,
+				}
+			},
+			expected: true,
+		},
+		{
+			name: "movie file without BTS metadata",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestMovieFile(nil)
+			},
+			expected: false,
+		},
+		{
+			name: "subtitle file",
+			entry: func() *metadata.Entry {
+				return testutil.CreateTestSubFile(nil)
+			},
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			entry := test.entry()
+			resetEntryRoles(entry)
+
+			result := classifyBTSFile(entry)
+
+			if result != test.expected {
+				t.Errorf("classifyBTSFile = %v, want %v", result, test.expected)
+			}
+			if result && entry.Role != metadata.BonusFile {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.BonusFile)
 			}
 		})
 	}
@@ -438,7 +708,7 @@ func TestClassifySubtitleDir(t *testing.T) {
 	}
 }
 
-func TestClassifyBonusDir(t *testing.T) {
+func TestClassifyExtrasDir(t *testing.T) {
 	tests := []struct {
 		name     string
 		entry    func() *metadata.Entry
@@ -469,7 +739,7 @@ func TestClassifyBonusDir(t *testing.T) {
 				sub2 := testutil.CreateTestSubFile(nil)
 				return testutil.CreateTestBonusDir(nil, sub1, sub2)
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "directory with movie file",
@@ -478,7 +748,7 @@ func TestClassifyBonusDir(t *testing.T) {
 				movie := testutil.CreateTestMovieFile(nil)
 				return testutil.CreateTestBonusDir(nil, bonus, movie)
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "file instead of directory",
@@ -494,10 +764,10 @@ func TestClassifyBonusDir(t *testing.T) {
 			entry := test.entry()
 			resetEntryRoles(entry)
 
-			result := classifyBonusDir(entry, logger)
+			result := classifyExtrasDir(entry, logger)
 
 			if result != test.expected {
-				t.Errorf("classifyBonusDir = %v, want %v", result, test.expected)
+				t.Errorf("classifyExtrasDir = %v, want %v", result, test.expected)
 			}
 			if result && entry.Role != metadata.BonusDir {
 				t.Errorf("Role = %v, want %v", entry.Role, metadata.BonusDir)

@@ -6,11 +6,15 @@ type EntryRole int8
 const (
 	UnknownRole  EntryRole = iota
 	SubtitleFile
+	DSFile
+	BTSFile
 	BonusFile
 	EpisodeFile
 	MovieFile
 
 	SubtitleDir
+	DSDir
+	BTSDir
 	BonusDir
 	SeasonDir
 	SeriesDir
@@ -24,6 +28,10 @@ func (r EntryRole) String() string {
 		return "UNKNOWN"
 	case SubtitleFile:
 		return "SUBTITLE_FILE"
+	case DSFile:
+		return "DS_FILE"
+	case BTSFile:
+		return "BTS_FILE"
 	case BonusFile:
 		return "BONUS_FILE"
 	case EpisodeFile:
@@ -32,6 +40,10 @@ func (r EntryRole) String() string {
 		return "MOVIE_FILE"
 	case SubtitleDir:
 		return "SUBTITLE_DIR"
+	case DSDir:
+		return "DS_DIR"
+	case BTSDir:
+		return "BTS_DIR"
 	case BonusDir:
 		return "BONUS_DIR"
 	case SeasonDir:

@@ -38,8 +38,8 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	mediaInfo.Source = extractSource(sanitizedName)
 	mediaInfo.Audio = extractAudio(sanitizedName)
 	mediaInfo.Language = extractLanguage(sanitizedName)
-	mediaInfo.BTS = extractBTS(sanitizedName)
 	mediaInfo.DS = extractDS(sanitizedName)
+	mediaInfo.BTS = extractBTS(sanitizedName)
 	mediaInfo.Bonus = extractBonus(sanitizedName)
 	mediaInfo.Edition = extractEdition(sanitizedName)
 	log.Debug("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
@@ -69,8 +69,8 @@ func isTerminator(segments []string) bool {
 		parseSubtitleExt(segments) != "" ||
 		parseMisc(segments) != "" ||
 		parseAudioExt(segments) != "" ||
-		parseBTS(segments) != "" ||
 		parseDS(segments) != "" ||
+		parseBTS(segments) != "" ||
 		parseBonus(segments) != "" ||
 		parseEdition(segments) != "" ||
 		parseLanguage(segments) != "" {

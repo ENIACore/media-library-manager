@@ -14,12 +14,12 @@ func Classify(root *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "Classify")
 
 	if root.PathInfo.IsDir {
-		if classifySubtitleDir(root, logger) || classifyBonusDir(root, logger) || classifySeasonDir(root, logger) || classifySeriesDir(root, logger) || classifyMovieDir(root, logger) {
+		if classifySubtitleDir(root, logger) || classifyExtrasDir(root, logger) || classifySeasonDir(root, logger) || classifySeriesDir(root, logger) || classifyMovieDir(root, logger) {
 			lg.Info("Root entry classification determined", "entry", root.PathInfo.Source, "role", root.Role)
 			return nil
 		}
 	} else {
-		if classifySubtitleFile(root) || classifyBonusFile(root) || classifyEpisodeFile(root) || classifyMovieFile(root) {
+		if classifySubtitleFile(root) || classifyDSFile(root) || classifyBTSFile(root) || classifyBonusFile(root) || classifyEpisodeFile(root) || classifyMovieFile(root) {
 			lg.Info("Root entry classification determined", "entry", root.PathInfo.Source, "role", root.Role)
 			return nil
 		}
@@ -55,30 +55,51 @@ func classifySubtitleDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	return hasSubtitle
 }
 
-// classifyBonusDir recursively determines if entry is [metadata.BonusDir].
-// It assigns Role field for entry and all children; whether successful or not.
-// Returns true if successful classification, false otherwise.
-func classifyBonusDir(entry *metadata.Entry, logger *slog.Logger) bool {
+// Handles DS/BTS/Bonus directories and files
+func classifyExtrasDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	lg := logger.With("func", "classifyBonusDir")
+	if !entry.PathInfo.IsDir || entry.Height() > 10 {
+		lg.Debug("Invalid height or dir status", "IsDir", entry.PathInfo.IsDir, "height", entry.Height())
+		return false
+	}
 
-	hasBonus := false
+	var childRole metadata.EntryRole
+
+	// DS/BTS/Bonus directories HAVE to have the indicator in directory name OR
+	// DS/BTS/Bonus directories can be a season directory WITH a parent DS/BTS/Bonus directory
+	if entry.MediaInfo.DS != "" || (entry.MediaInfo.Season != nil && entry.Parent != nil && entry.Parent.MediaInfo.DS != "") {
+		entry.Role = metadata.DSDir
+		childRole = metadata.DSFile
+	} else if entry.MediaInfo.BTS != "" || (entry.MediaInfo.Season != nil && entry.Parent != nil && entry.Parent.MediaInfo.BTS != "") {
+		entry.Role = metadata.BTSDir
+		childRole = metadata.BTSFile
+	} else if entry.MediaInfo.Bonus != "" || (entry.MediaInfo.Season != nil && entry.Parent != nil && entry.Parent.MediaInfo.Bonus != "") {
+		entry.Role = metadata.BonusDir
+		childRole = metadata.BonusFile
+	} else {
+		lg.Debug("Directory and parent directory have no extra pattern", "source", entry.PathInfo.Source)
+		return false
+	}
+
 	for _, child := range entry.Children {
 		if classifySubtitleFile(child) {
 			continue
+		} else if classifySubtitleDir(child, logger) {
+			continue
 		}
 
-		if classifyBonusFile(child) {
-			hasBonus = true
-		}  else if classifyBonusDir(child, logger) { // Allows for intermediary directory, multiple interm=ediaries prevented with Height() limit
-			hasBonus = true
+		if child.PathInfo.IsDir {
+			if classifyExtrasDir(child, logger) {
+				continue
+			} else {
+				return false
+			}
 		} else {
-			return false
+			child.Role = childRole
 		}
 	}
 
-	entry.Role = metadata.BonusDir	
-	lg.Debug("Classification determined", "value", hasBonus) 
-	return hasBonus
+	return true
 }
 
 // classifySeasonDir recursively determines if entry is [metadata.SeasonDir].
@@ -125,7 +146,7 @@ func classifySeriesDir(entry *metadata.Entry, logger *slog.Logger) bool {
 
 	hasSeason := false
 	for _, child := range entry.Children {
-		if classifyBonusDir(child, logger) {
+		if classifyExtrasDir(child, logger) {
 			continue
 		}
 		if classifySubtitleDir(child, logger) {
@@ -167,10 +188,16 @@ func classifyMovieDir(entry *metadata.Entry, logger *slog.Logger) bool {
 		if classifySubtitleDir(child, logger) {
 			continue
 		} 
+		if classifyDSFile(child) {
+			continue
+		} 
+		if classifyBTSFile(child) {
+			continue
+		} 
 		if classifyBonusFile(child) {
 			continue
 		} 
-		if classifyBonusDir(child, logger) {
+		if classifyExtrasDir(child, logger) {
 			continue
 		}
 
@@ -200,17 +227,48 @@ func classifySubtitleFile(entry *metadata.Entry) bool {
 	return false
 }
 
-// classifyBonusFile determines if entry is [metadata.BonusFile].
-// Assigns role if successful.
-func classifyBonusFile(entry *metadata.Entry) bool {
+func classifyDSFile(entry *metadata.Entry) bool {
 	if entry.PathInfo.Type == metadata.Video {
 		// If file has bonus information
-		if entry.MediaInfo.BTS != "" || entry.MediaInfo.DS != "" || entry.MediaInfo.Bonus != "" {
+		if entry.MediaInfo.DS != "" {
 			entry.Role = metadata.BonusFile
 			return true
 		}
 		// If parent has bonus information
-		if entry.Parent != nil && (entry.Parent.MediaInfo.BTS != "" || entry.Parent.MediaInfo.DS != "" || entry.Parent.MediaInfo.Bonus != "") {
+		if entry.Parent != nil && entry.Parent.MediaInfo.DS != "" {
+			entry.Role = metadata.BonusFile
+			return true
+		}
+	}
+	return false
+}
+
+func classifyBTSFile(entry *metadata.Entry) bool {
+	if entry.PathInfo.Type == metadata.Video {
+		// If file has bonus information
+		if entry.MediaInfo.BTS != "" {
+			entry.Role = metadata.BonusFile
+			return true
+		}
+		// If parent has bonus information
+		if entry.Parent != nil && entry.Parent.MediaInfo.BTS != "" {
+			entry.Role = metadata.BonusFile
+			return true
+		}
+	}
+	return false
+
+}
+
+func classifyBonusFile(entry *metadata.Entry) bool {
+	if entry.PathInfo.Type == metadata.Video {
+		// If file has bonus information
+		if entry.MediaInfo.Bonus != "" {
+			entry.Role = metadata.BonusFile
+			return true
+		}
+		// If parent has bonus information
+		if entry.Parent != nil && entry.Parent.MediaInfo.Bonus != "" {
 			entry.Role = metadata.BonusFile
 			return true
 		}
