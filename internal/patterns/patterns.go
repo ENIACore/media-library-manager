@@ -168,25 +168,38 @@ var LanguagePatternGroups = []PatternGroup{
 	{Key: `Galician`, Patterns: []Pattern{`GALICIAN`, `GLG`, `GL`, `GALEGO`}},
 }
 
-var BonusPatternGroups = []PatternGroup{
+var BehindTheScenesPatternGroups = []PatternGroup{
 	{Key: `Behind.The.Scenes`, Patterns: []Pattern{
 		`BEHIND\.THE\.SCENE[S]?`,
+		`BTS`,
 		`MAKING\.OF`,
+		`MAKING`,
 		`THE\.MAKING\.OF`,
 	}},
+}
+
+var DeletedScenesPatternGroups = []PatternGroup{
 	{Key: `Deleted.Scenes`, Patterns: []Pattern{
 		`DELETED\.SCENE[S]?`,
+		`DELETED`,
 		`EXTENDED\.SCENE[S]?`,
 		`ALTERNATE\.SCENE[S]?`,
 		`ADDITIONAL\.SCENE[S]?`,
 	}},
+}
+
+var BonusPatternGroups = []PatternGroup{
 	{Key: `Featurette`, Patterns: []Pattern{
 		`FEATURETTE[S]?`,
+		`FEATURE[S]?`,
+		`SHORT[S]?`,
 		`MINI\.FEATURE[S]?`,
 	}},
 	{Key: `Interview`, Patterns: []Pattern{
 		`INTERVIEW[S]?`,
 		`CAST\.INTERVIEW[S]?`,
+		`Q\.?AND\.?A`,
+		`QA`,
 	}},
 	{Key: `Blooper`, Patterns: []Pattern{
 		`BLOOPER[S]?`,
@@ -196,6 +209,7 @@ var BonusPatternGroups = []PatternGroup{
 	{Key: `Trailer`, Patterns: []Pattern{
 		`TRAILER[S]?`,
 		`TEASER[S]?`,
+		`PROMO[S]?`,
 		`TV\.SPOT[S]?`,
 		`TVSPOT[S]?`,
 	}},
@@ -207,8 +221,11 @@ var BonusPatternGroups = []PatternGroup{
 	{Key: `Documentary`, Patterns: []Pattern{
 		`DOCUMENTARY`,
 		`DOCUMENTARIES`,
+		`DOC[S]?`,
 	}},
 	{Key: `Extra`, Patterns: []Pattern{
+		`EXTRA[S]?`,
+		`BONUS`,
 		`BONUS\.CONTENT`,
 		`BONUS\.MATERIAL[S]?`,
 		`SPECIAL\.FEATURE[S]?`,
@@ -239,9 +256,15 @@ var (
 	GetLanguagePatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
 		return compilePatternGroups(LanguagePatternGroups)
 	})
-	GetBonusPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
-		return compilePatternGroups(BonusPatternGroups)
-	})
+	GetBehindTheScenesPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
+        return compilePatternGroups(BehindTheScenesPatternGroups)
+    })
+    GetDeletedScenesPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
+        return compilePatternGroups(DeletedScenesPatternGroups)
+    })
+    GetBonusPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
+        return compilePatternGroups(BonusPatternGroups)
+    })
 	GetEditionPatterns = sync.OnceValue(func() []CompiledPatternGroup {
 		return compilePatternGroups(EditionPatternGroups)
 	})

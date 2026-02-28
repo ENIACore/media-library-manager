@@ -12,7 +12,9 @@ type MediaInfo struct {
 	Source     string
 	Audio      string
 	Language   string
-	Bonus      string
+	DS         string // Deleted scenes
+	BTS	       string // Behind the scenes
+	Bonus      string // Less specific bonus (i.e featurettes, extras ect)
 	Edition	   string
 }
 

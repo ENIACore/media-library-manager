@@ -14,7 +14,7 @@ import (
 )
 
 // ExtractMedia extracts media metadata from a file or directory path.
-// Season, Episode, Resolution, Codec, Source, Audio, Language, and Bonus are all deterministic patterns (i.e 'terminators')
+// Season, Episode, Resolution, Codec, Source, Audio, Language, BTS, DS, and Bonus are all deterministic patterns (i.e 'terminators')
 // Title and Year are undeterministic patterns and matched first from left most segment until the first terminator is encountered
 func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	log := logger.With("func", "ExtractMedia")
@@ -25,7 +25,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	sanitizedName = sanitizePrefix(sanitizedName)
 
 	mediaInfo := metadata.MediaInfo{}
-	
+
 	title := extractTitle(sanitizedName)
 	sanitizedName = sanitizedName[len(title):]
 
@@ -38,6 +38,8 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	mediaInfo.Source = extractSource(sanitizedName)
 	mediaInfo.Audio = extractAudio(sanitizedName)
 	mediaInfo.Language = extractLanguage(sanitizedName)
+	mediaInfo.BTS = extractBTS(sanitizedName)
+	mediaInfo.DS = extractDS(sanitizedName)
 	mediaInfo.Bonus = extractBonus(sanitizedName)
 	mediaInfo.Edition = extractEdition(sanitizedName)
 	log.Debug("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
@@ -67,9 +69,11 @@ func isTerminator(segments []string) bool {
 		parseSubtitleExt(segments) != "" ||
 		parseMisc(segments) != "" ||
 		parseAudioExt(segments) != "" ||
+		parseBTS(segments) != "" ||
+		parseDS(segments) != "" ||
 		parseBonus(segments) != "" ||
 		parseEdition(segments) != "" ||
-		parseLanguage(segments) != "" {  // Fix: check return value
+		parseLanguage(segments) != "" {
 		return true
 	}
 	return false
@@ -196,6 +200,30 @@ func extractLanguage(segments []string) string {
 	return ""
 }
 
+// extractBTS returns the behind-the-scenes pattern from segments by iterating through each segment.
+// Returns empty string if no pattern is found.
+func extractBTS(segments []string) string {
+	for i := range segments {
+		candidates := segments[i:]
+		if bts := parseBTS(candidates); bts != "" {
+			return bts
+		}
+	}
+	return ""
+}
+
+// extractDS returns the deleted scenes pattern from segments by iterating through each segment.
+// Returns empty string if no pattern is found.
+func extractDS(segments []string) string {
+	for i := range segments {
+		candidates := segments[i:]
+		if ds := parseDS(candidates); ds != "" {
+			return ds
+		}
+	}
+	return ""
+}
+
 // extractBonus returns the bonus pattern from segments by iterating through each segment.
 // Returns empty string if bonus is not found.
 func extractBonus(segments []string) string {
@@ -274,7 +302,7 @@ func parseAudio(segments []string) string {
 	return ""
 }
 
-// parseAudio returns the year if the input string is a valid year.
+// parseYear returns the year if the input string is a valid year.
 // A valid year is a 4 digit number between current year and 1930.
 // Used as helper function for extractor.
 func parseYear(s string) *int {
@@ -293,11 +321,6 @@ func parseYear(s string) *int {
 
 	return &year
 }
-
-// parseSeason returns the season number from segments by iterating through each segment.
-// Returns nil if no pattern, 0 if pattern without number, >0 for season number.
-
-
 
 // parseSeason returns the season number if the left most segment(s) are a pattern match.
 // Returns nil if no pattern, 0 if pattern without number, >0 for season number.
@@ -322,10 +345,10 @@ func parseSeason(segments []string) *int {
 	return nil
 }
 
-// Add to your extractor
+// isRomanNumeral returns true if the string is a Roman numeral I through XX.
 func isRomanNumeral(s string) bool {
-    romanPattern := regexp.MustCompile(`^(?i)(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX)$`)
-    return romanPattern.MatchString(s)
+	romanPattern := regexp.MustCompile(`^(?i)(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX)$`)
+	return romanPattern.MatchString(s)
 }
 
 // parseEpisode returns the episode number if the left most segment(s) are a pattern match.
@@ -362,8 +385,7 @@ func parseEpisode(segments []string) *int {
 func parseLanguage(segments []string) string {
 	for _, group := range patterns.GetLanguagePatternGroups() {
 		for _, re := range group.Patterns {
-			match := matchSegments(segments, (*regexp.Regexp)(re))
-			if match != nil {
+			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
 				return group.Key
 			}
 		}
@@ -383,14 +405,41 @@ func parseMisc(segments []string) string {
 	return ""
 }
 
-// parseBonus returns the bonus pattern if the left most segment(s) are a pattern match.
+// parseBTS returns the behind-the-scenes pattern key if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
+func parseBTS(segments []string) string {
+	for _, group := range patterns.GetBehindTheScenesPatternGroups() {
+		for _, re := range group.Patterns {
+			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
+				return group.Key
+			}
+		}
+	}
+	return ""
+}
+
+// parseDS returns the deleted scenes pattern key if the left most segment(s) are a pattern match.
+// Returns empty string if pattern not found.
+// Used as helper function for extractor.
+func parseDS(segments []string) string {
+	for _, group := range patterns.GetDeletedScenesPatternGroups() {
+		for _, re := range group.Patterns {
+			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
+				return group.Key
+			}
+		}
+	}
+	return ""
+}
+
+// parseBonus returns the bonus pattern key if the left most segment(s) are a pattern match.
 // Returns empty string if pattern not found.
 // Used as helper function for extractor.
 func parseBonus(segments []string) string {
 	for _, group := range patterns.GetBonusPatternGroups() {
 		for _, re := range group.Patterns {
-			match := matchSegments(segments, (*regexp.Regexp)(re))
-			if match != nil {
+			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
 				return group.Key
 			}
 		}
@@ -401,8 +450,7 @@ func parseBonus(segments []string) string {
 func parseEdition(segments []string) string {
 	for _, group := range patterns.GetEditionPatterns() {
 		for _, re := range group.Patterns {
-			match := matchSegments(segments, (*regexp.Regexp)(re))
-			if match != nil {
+			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
 				return group.Key
 			}
 		}
@@ -410,13 +458,12 @@ func parseEdition(segments []string) string {
 	return ""
 }
 
-// parseWebsites returns the website pattern if the left most segment(s) are a pattern match.
+// parseWebsite returns the website pattern if the left most segment(s) are a pattern match.
 // Returns empty string if pattern not found.
-// Used as helper function for sanitizePrefix..
+// Used as helper function for sanitizePrefix.
 func parseWebsite(segments []string) string {
 	for _, re := range patterns.GetWebsitePatterns() {
-		match := matchSegments(segments, (*regexp.Regexp)(re))
-		if match != nil {
+		if match := matchSegments(segments, (*regexp.Regexp)(re)); match != nil {
 			return match[0]
 		}
 	}
