@@ -207,7 +207,7 @@ func classifySubtitleFile(entry *metadata.Entry) bool {
 // classifyBonusFile determines if entry is [metadata.BonusFile].
 // Assigns role if successful.
 func classifyBonusFile(entry *metadata.Entry) bool {
-	if entry.PathInfo.Type == metadata.Video && entry.MediaInfo.Bonus != "" {
+	if entry.PathInfo.Type == metadata.Video && (entry.MediaInfo.BTS != "" || entry.MediaInfo.DS != "" || entry.MediaInfo.Bonus != "") {
 		entry.Role = metadata.BonusFile
 		return true
 	}
