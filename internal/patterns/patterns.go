@@ -35,7 +35,7 @@ var SamplePatterns = []Pattern{
 	`PREVIEW[S]?`,
 }
 
-// Un-useful metadata of file pertaining to typical patterns found in torrent files
+// MiscPatterns are noise tokens in torrent names with no useful metadata value.
 var MiscPatterns = []Pattern{
 	// === UNUSED QUALITY INDICATORS ===
 	// HDR variants
@@ -45,26 +45,11 @@ var MiscPatterns = []Pattern{
 	// Color
 	`SDR`,
 
-	// === EDITION / VERSION ===
-	`REMASTERED`, `REMASTER`,
-	`EXTENDED`, `EXTENDED\.CUT`, `EXTENDED\.EDITION`,
-	`UNRATED`,
-	`UNCUT`,
-	`DIRECTORS\.CUT`, `DC`,
-	`THEATRICAL`, `THEATRICAL\.CUT`,
-	`CRITERION`, `CC`,
-	`SPECIAL\.EDITION`, `SE`,
-	`ANNIVERSARY`, `ANNIVERSARY\.EDITION`,
-	`COLLECTORS`, `COLLECTORS\.EDITION`, `CE`,
-	`LIMITED`, `LIMITED\.EDITION`,
+	// === RELEASE FIX FLAGS ===
 	`PROPER`,
 	`REPACK`, `RERIP`,
 	`REAL`,
 	`RETAIL`,
-	`FINAL\.CUT`,
-	`IMAX`,
-	`OPEN\.MATTE`, `OPENMATTE`,
-	`3D`, `HSBS`, `HOU`, `HALF\.SBS`, `FULL\.SBS`,
 
 	// === RELEASE INFO ===
 	`INTERNAL`, `INT`,
@@ -73,7 +58,6 @@ var MiscPatterns = []Pattern{
 	`PROOF`,
 	`READNFO`, `READ\.NFO`,
 	`DIRFIX`,
-	`NFOFIX`,
 	`SYNCFIX`,
 	`SAMPLEFIX`,
 	`SUBBED`, `SUBS`, `SUB`,
@@ -123,9 +107,8 @@ var MiscPatterns = []Pattern{
 	`CRAV`,
 	`SHO`,
 	`STAN`,
-	`CRITERION`,
 
-	// === SCENE / P2P RELEASE GROUP WEBSITES
+	// === SCENE / P2P RELEASE GROUP WEBSITES ===
 	`YTS\.MX`,
 
 	// === TV SPECIFIC ===
@@ -234,6 +217,23 @@ var BonusPatternGroups = []PatternGroup{
 	}},
 }
 
+var EditionPatternGroups = []PatternGroup{
+	{Key: `Remastered`, Patterns: []Pattern{`REMASTERED`, `REMASTER`}},
+	{Key: `Extended`, Patterns: []Pattern{`EXTENDED`, `EXTENDED\.CUT`, `EXTENDED\.EDITION`}},
+	{Key: `Unrated`, Patterns: []Pattern{`UNRATED`}},
+	{Key: `Uncut`, Patterns: []Pattern{`UNCUT`}},
+	{Key: `DirectorsCut`, Patterns: []Pattern{`DIRECTORS\.CUT`}},
+	{Key: `Theatrical`, Patterns: []Pattern{`THEATRICAL`, `THEATRICAL\.CUT`}},
+	{Key: `Criterion`, Patterns: []Pattern{`CRITERION`}},
+	{Key: `SpecialEdition`, Patterns: []Pattern{`SPECIAL\.EDITION`}},
+	{Key: `Anniversary`, Patterns: []Pattern{`ANNIVERSARY`, `ANNIVERSARY\.EDITION`}},
+	{Key: `Collectors`, Patterns: []Pattern{`COLLECTORS`, `COLLECTORS\.EDITION`}},
+	{Key: `Limited`, Patterns: []Pattern{`LIMITED`, `LIMITED\.EDITION`}},
+	{Key: `FinalCut`, Patterns: []Pattern{`FINAL\.CUT`}},
+	{Key: `IMAX`, Patterns: []Pattern{`IMAX`}},
+	{Key: `OpenMatte`, Patterns: []Pattern{`OPEN\.MATTE`, `OPENMATTE`}},
+	{Key: `3D`, Patterns: []Pattern{`3D`, `HSBS`, `HOU`, `HALF\.SBS`, `FULL\.SBS`}},
+}
 
 var (
 	GetLanguagePatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
@@ -241,6 +241,9 @@ var (
 	})
 	GetBonusPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
 		return compilePatternGroups(BonusPatternGroups)
+	})
+	GetEditionPatterns = sync.OnceValue(func() []CompiledPatternGroup {
+		return compilePatternGroups(EditionPatternGroups)
 	})
 	GetSamplePatterns = sync.OnceValue(func() []*CompiledPattern {
 		return compilePatterns(SamplePatterns)

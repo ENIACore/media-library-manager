@@ -13,6 +13,7 @@ type MediaInfo struct {
 	Audio      string
 	Language   string
 	Bonus      string
+	Edition	   string
 }
 
 // PathInfo describes the file or directory related information.

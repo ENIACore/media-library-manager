@@ -39,6 +39,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	mediaInfo.Audio = extractAudio(sanitizedName)
 	mediaInfo.Language = extractLanguage(sanitizedName)
 	mediaInfo.Bonus = extractBonus(sanitizedName)
+	mediaInfo.Edition = extractEdition(sanitizedName)
 	log.Debug("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
 
 	return mediaInfo
@@ -67,6 +68,7 @@ func isTerminator(segments []string) bool {
 		parseMisc(segments) != "" ||
 		parseAudioExt(segments) != "" ||
 		parseBonus(segments) != "" ||
+		parseEdition(segments) != "" ||
 		parseLanguage(segments) != "" {  // Fix: check return value
 		return true
 	}
@@ -201,6 +203,16 @@ func extractBonus(segments []string) string {
 		candidates := segments[i:]
 		if bonus := parseBonus(candidates); bonus != "" {
 			return bonus
+		}
+	}
+	return ""
+}
+
+func extractEdition(segments []string) string {
+	for i := range segments {
+		candidates := segments[i:]
+		if edition := parseEdition(candidates); edition != "" {
+			return edition
 		}
 	}
 	return ""
@@ -376,6 +388,18 @@ func parseMisc(segments []string) string {
 // Used as helper function for extractor.
 func parseBonus(segments []string) string {
 	for _, group := range patterns.GetBonusPatternGroups() {
+		for _, re := range group.Patterns {
+			match := matchSegments(segments, (*regexp.Regexp)(re))
+			if match != nil {
+				return group.Key
+			}
+		}
+	}
+	return ""
+}
+
+func parseEdition(segments []string) string {
+	for _, group := range patterns.GetEditionPatterns() {
 		for _, re := range group.Patterns {
 			match := matchSegments(segments, (*regexp.Regexp)(re))
 			if match != nil {

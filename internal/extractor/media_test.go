@@ -1214,3 +1214,193 @@ func TestParseWebsite(t *testing.T) {
 		})
 	}
 }
+
+func TestParseEdition(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "remastered edition",
+			input: []string{
+				"REMASTERED",
+				"1080P",
+			},
+			expected: "Remastered",
+		},
+		{
+			name: "extended cut",
+			input: []string{
+				"EXTENDED",
+				"CUT",
+				"1080P",
+			},
+			expected: "Extended",
+		},
+		{
+			name: "unrated edition",
+			input: []string{
+				"UNRATED",
+				"1080P",
+			},
+			expected: "Unrated",
+		},
+		{
+			name: "directors cut",
+			input: []string{
+				"DIRECTORS",
+				"CUT",
+				"1080P",
+			},
+			expected: "DirectorsCut",
+		},
+		{
+			name: "theatrical edition",
+			input: []string{
+				"THEATRICAL",
+				"1080P",
+			},
+			expected: "Theatrical",
+		},
+		{
+			name: "imax edition",
+			input: []string{
+				"IMAX",
+				"1080P",
+			},
+			expected: "IMAX",
+		},
+		{
+			name: "3d edition",
+			input: []string{
+				"3D",
+				"1080P",
+			},
+			expected: "3D",
+		},
+		{
+			name: "criterion edition",
+			input: []string{
+				"CRITERION",
+				"1080P",
+			},
+			expected: "Criterion",
+		},
+		{
+			name: "final cut",
+			input: []string{
+				"FINAL",
+				"CUT",
+				"1080P",
+			},
+			expected: "FinalCut",
+		},
+		{
+			name: "no edition",
+			input: []string{
+				"1080P",
+				"X265",
+			},
+			expected: "",
+		},
+		{
+			name: "invalid edition - not at leftmost",
+			input: []string{
+				"INCORRECT",
+				"REMASTERED",
+				"1080P",
+			},
+			expected: "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := parseEdition(test.input)
+			if result != test.expected {
+				t.Errorf("parseEdition() = %v, want %v", result, test.expected)
+			}
+		})
+	}
+}
+
+func TestExtractEdition(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name: "edition in middle",
+			input: []string{
+				"MOVIE",
+				"TITLE",
+				"2020",
+				"REMASTERED",
+				"1080P",
+				"MP4",
+			},
+			expected: "Remastered",
+		},
+		{
+			name: "extended cut with separators",
+			input: []string{
+				"MY",
+				"MOVIE",
+				"EXTENDED",
+				"CUT",
+				"1080P",
+			},
+			expected: "Extended",
+		},
+		{
+			name: "directors cut",
+			input: []string{
+				"MOVIE",
+				"TITLE",
+				"DIRECTORS",
+				"CUT",
+				"BLURAY",
+			},
+			expected: "DirectorsCut",
+		},
+		{
+			name: "imax edition",
+			input: []string{
+				"MOVIE",
+				"IMAX",
+				"1080P",
+			},
+			expected: "IMAX",
+		},
+		{
+			name: "uncut edition",
+			input: []string{
+				"MOVIE",
+				"UNCUT",
+				"1080P",
+			},
+			expected: "Uncut",
+		},
+		{
+			name: "no edition",
+			input: []string{
+				"MY",
+				"MOVIE",
+				"1080P",
+				"MP4",
+			},
+			expected: "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			edition := extractEdition(test.input)
+			if edition != test.expected {
+				t.Errorf("extractEdition() = %v, want %v", edition, test.expected)
+			}
+		})
+	}
+}
