@@ -176,8 +176,8 @@ func enrichEpisodeFiles(entry *metadata.Entry, ctx *metadata.MediaInfo) {
 }
 
 // Passes title and year to movie file
-// Title: Uses title of root dir (movie dir, series dir, or season dir) IF movie file doesn't have title
-// Year: Uses year of root dir (movie dir, series dir, or season dir) IF movie file doesn't have year
+// Title: Uses title of root dir (movie dir, series dir, or season dir)
+// Year: Uses year of root dir (movie dir, series dir, or season dir)
 func enrichMovieFile(entry *metadata.Entry, ctx *metadata.MediaInfo) {
 	if ctx == nil {
 		ctx = &metadata.MediaInfo{}
@@ -185,12 +185,6 @@ func enrichMovieFile(entry *metadata.Entry, ctx *metadata.MediaInfo) {
 
 	switch entry.Role {
 		case metadata.MovieFile:
-			if len(entry.MediaInfo.Title) > 0 {
-				ctx.Title = nil
-			}
-			if entry.MediaInfo.Year != nil {
-				ctx.Year = nil
-			}
 			deepCopy(&entry.MediaInfo, ctx)		
 			return
 		case metadata.SeriesDir, metadata.SeasonDir:
