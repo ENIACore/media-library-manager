@@ -42,10 +42,19 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	mediaInfo.BTS = extractBTS(sanitizedName)
 	mediaInfo.Bonus = extractBonus(sanitizedName)
 	mediaInfo.Edition = extractEdition(sanitizedName)
+
+
+	// Conduct second language pass on entire subtitle file name
+	ext := getExt(path)
+	if extractType(ext) == metadata.Subtitle {
+		sanitizedName = strings.Split(sanitizeName(filename), ".")
+		mediaInfo.Language = extractLanguage(sanitizedName)
+	}
 	log.Info("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
 
 	return mediaInfo
 }
+
 
 // sanitizePrefix finds common unwanted patterns at the beginning of file names (i.e websites) and removes them from the slice
 func sanitizePrefix(segments []string) []string {

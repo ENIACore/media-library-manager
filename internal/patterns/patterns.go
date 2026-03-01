@@ -253,7 +253,6 @@ var BehindTheScenesPatternGroups = []PatternGroup{
 		`BEHIND\.THE\.SCENE[S]?`,
 		`BTS`,
 		`MAKING\.OF`,
-		`MAKING`,
 		`THE\.MAKING\.OF`,
 	}},
 }

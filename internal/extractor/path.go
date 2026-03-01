@@ -21,13 +21,8 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	pathInfo := metadata.PathInfo{}
 	pathInfo.Source = path
 	
-	// Extract extension without the leading dot and uppercase it
-	ext := filepath.Ext(path)
-	if ext != "" {
-		ext = strings.ToUpper(ext[1:]) // Remove leading dot and uppercase
-	}
-	pathInfo.Ext = ext
-	pathInfo.Type = extractType(ext)
+	pathInfo.Ext = getExt(path)
+	pathInfo.Type = extractType(pathInfo.Ext)
 
 	if info, err := os.Stat(path); err == nil {
 		pathInfo.IsDir = info.IsDir()
@@ -95,4 +90,13 @@ func parseAudioExt(segments []string) string {
 		}
 	}
 	return ""
+}
+
+func getExt(path string) string {
+	// Extract extension without the leading dot and uppercase it
+	ext := filepath.Ext(path)
+	if ext != "" {
+		ext = strings.ToUpper(ext[1:]) // Remove leading dot and uppercase
+	}
+	return ext
 }
