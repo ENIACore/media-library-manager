@@ -114,24 +114,29 @@ func createTempDir() string {
 }
 
 func printRes(root *metadata.Entry) {
-	fmt.Println("============= Printing result for processed root")
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("============= Printing result for processed root =============")
+
 
 	// Print classifications
-	printClassifications(root)
+	//fmt.Println("")
+	//fmt.Println("------------- Classifications")
+	//printClassifications(root)
 
 	// Print resulting file structures
 	if root.PathInfo.Source != "" && root.PathInfo.Dest != "" {
 		output := tree(root.PathInfo.Source)
+		fmt.Println("")
+		fmt.Println("------------- Old Structure")
 		fmt.Println(output)
-		fmt.Println("")
-		fmt.Println("---------------------------")
-		fmt.Println("")
+
 		output = tree(root.PathInfo.Dest)
+		fmt.Println("")
+		fmt.Println("------------- New Structure")
 		fmt.Println(output)
 	}
-
-
-	fmt.Println("============= ")
 }
 
 func printClassifications(entry *metadata.Entry) {
