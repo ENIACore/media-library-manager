@@ -6,17 +6,11 @@ package enricher
 import (
 	"fmt"
 	"log/slog"
-	"slices"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
 // Enrich uses helper functions to propogate necessary information throughout tree. 
-// Propogated information:
-//	- Titles
-//	- Year
-//	- Season and episode numbers
-// Returns error if invalid Role found at root.
 func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Enrich")
 
@@ -24,170 +18,211 @@ func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		return fmt.Errorf("Cannot enrich nil root entry")
 	}
 
-	lg.Debug("Enriching root entry", "entry", root.PathInfo.Source)
-	switch root.Role {
-	case metadata.SubtitleFile, metadata.BonusFile, metadata.SubtitleDir, metadata.BonusDir, metadata.UnknownRole:
-		return fmt.Errorf("Entry %v cannot be enriched at root level", root.PathInfo.Source)
+
+	if !root.PathInfo.IsDir {
+		lg.Debug("Cannot enrich file at root level", "source", root.PathInfo.Source)
+		return nil
 	}
 
+	switch root.Role {
+		case metadata.SubtitleDir, metadata.DSDir, metadata.BTSDir, metadata.BonusDir, metadata.UnknownRole:
+			return fmt.Errorf("Unexpected entry %v at root level", root.PathInfo.Source)
+	}
 
-	enrichEpisodeFiles(root)
-	enrichEntries(root)
-	enrichIntermediaryEntries(root)
+	enrichMovieFile(root, nil)
+	enrichEpisodeFiles(root, nil)
+	enrichSubtitleFiles(root, nil)
+	enrichExtrasFiles(root, nil)
+	
 	return nil
 }
 
-// enrichEpisodeFiles recursively passes season information to all children of season directory
-func enrichEpisodeFiles(root *metadata.Entry) {
-	if root.Role == metadata.SeriesDir {
-		for _, child := range root.Children {
-			enrichEpisodeFiles(child)
-		}
+// Passes season, episode, title and year to subtitle files
+// Season: Uses season of closest parent with non-nil season IF extras file doesn't have a season
+// Episode: Uses episode of closest parent with non-nil episode IF extras file doesn't have a season
+// Title: Uses title of root dir (movie dir, series dir, or season dir)
+// Year: Uses year of root dir (movie dir, series dir, or season dir)
+func enrichSubtitleFiles(entry *metadata.Entry, ctx *metadata.MediaInfo) {
+	if ctx == nil {
+		ctx = &metadata.MediaInfo{}
 	}
-	if root.Role == metadata.SeasonDir && root.MediaInfo.Season != nil {
-		for _, child := range root.Children {
-			if child.Role == metadata.EpisodeFile && child.MediaInfo.Season != nil {
-				seasonCopy := *root.MediaInfo.Season
-				child.MediaInfo.Season = &seasonCopy
-			}
-		}
-	}
-}
 
-// enrichIntermediaryEntries recursively passes season and episode information from intermediary entries to children
-// An intermediary entry is a subtitle directory inside a bonus or subtitle directory, or a bonus directory inside a bonus directory
-// Intermediary entries typically are used to encapsulate subtitle and/or bonus files of specific episodes
-func enrichIntermediaryEntries(entry *metadata.Entry) {
 	switch entry.Role {
-	case metadata.SubtitleDir, metadata.BonusDir:
-		if entry.Height() == 2 {
-			for _, child := range entry.Children {
-				mediaInfo := metadata.MediaInfo{
-					Season:  child.MediaInfo.Season,
-					Episode: child.MediaInfo.Episode,
-				}
-				propogateDown(child, &mediaInfo, []metadata.EntryRole{metadata.BonusFile, metadata.SubtitleFile})
+		case metadata.SubtitleFile:
+			if entry.MediaInfo.Episode != nil {
+				ctx.Episode = nil
 			}
-		} else {
-			for _, child := range entry.Children {
-				enrichIntermediaryEntries(child)
+			if entry.MediaInfo.Season != nil {
+				ctx.Season = nil
 			}
-		}
-	default:
-		for _, child := range entry.Children {
-			enrichIntermediaryEntries(child)
-		}
-	}
-}
-
-// enrichEntries passes title and year from root node to children nodes of specified type
-func enrichEntries(root *metadata.Entry) {
-	var roles []metadata.EntryRole
-	switch root.Role {
-	case metadata.MovieFile, metadata.MovieDir:
-		roles = []metadata.EntryRole{
-			metadata.MovieDir,
-			metadata.MovieFile,
-			metadata.BonusFile,
-			metadata.SubtitleFile,
-		}
-	case metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
-		roles = []metadata.EntryRole{
-			metadata.SeriesDir,
-			metadata.SeasonDir,
-			metadata.EpisodeFile,
-			metadata.BonusFile,
-			metadata.SubtitleFile,
-		}
-	}
-
-	title := getTitle(root, roles)
-	year := getYear(root, roles)
-
-	mediaInfo := metadata.MediaInfo{}
-	if title != nil {
-		mediaInfo.Title = title
-	}
-	if year != nil {
-		mediaInfo.Year = year
-	}
-
-	propogateDown(root, &mediaInfo, roles)
-}
-
-// getTitle is a recursive function that returns the first valid title, from a identified Role 
-// This enables series and movie titles to be passed to all children
-func getTitle(root *metadata.Entry, roles []metadata.EntryRole) []string {
-	if root == nil {
-		return nil
-	}
-
-	queue := []*metadata.Entry{root}
-
-	for len(queue) > 0 {
-		entry := queue[0]
-		queue = queue[1:]
-
-		for _, role := range roles {
-			if entry.Role == role && len(entry.MediaInfo.Title) > 0 {
-				return entry.MediaInfo.Title
+			deepCopy(&entry.MediaInfo, ctx)		
+			return
+		case metadata.MovieDir, metadata.SeriesDir, metadata.SeasonDir:
+			if len(entry.MediaInfo.Title) > 0 {
+				ctx.Title = entry.MediaInfo.Title
 			}
-		}
-
-		queue = append(queue, entry.Children...)
-	}
-
-	return nil
-}
-
-// getYear is a recursive function that returns the first valid year, from a identified Role 
-// This enables the inception year of a movie or series to be passed to all children
-func getYear(root *metadata.Entry, roles []metadata.EntryRole) *int {
-	if root == nil {
-		return nil
-	}
-
-	queue := []*metadata.Entry{root}
-
-	for len(queue) > 0 {
-		entry := queue[0]
-		queue = queue[1:]
-
-		for _, role := range roles {
-			if entry.Role == role && entry.MediaInfo.Year != nil {
-				return entry.MediaInfo.Year
+			if entry.MediaInfo.Year != nil {
+				ctx.Year = entry.MediaInfo.Year
 			}
-		}
-
-		queue = append(queue, entry.Children...)
+		default:
+			if entry.MediaInfo.Season != nil {
+				ctx.Season = entry.MediaInfo.Season
+			}
+			if entry.MediaInfo.Episode != nil {
+				ctx.Episode = entry.MediaInfo.Episode
+			}
 	}
 
-	return nil
-}
-
-
-// propogateDown is a recursive helper function to perform deep copy from non-empty src fields to entry objects.
-func propogateDown(entry *metadata.Entry,  src *metadata.MediaInfo, roles []metadata.EntryRole) {
-	if slices.Contains(roles, entry.Role) || roles == nil {
-		if src.Title != nil {
-			entry.MediaInfo.Title = append([]string(nil), src.Title...)
-		}
-		if src.Year != nil {
-			yearCopy := *src.Year
-			entry.MediaInfo.Year = &yearCopy
-		}
-		if src.Season != nil {
-			seasonCopy := *src.Season
-			entry.MediaInfo.Season = &seasonCopy
-		}
-		if src.Episode != nil {
-			episodeCopy := *src.Episode
-			entry.MediaInfo.Episode = &episodeCopy
-		}
+	if len(entry.Children) == 0 {
+		return
 	}
 
 	for _, child := range entry.Children {
-		propogateDown(child, src, roles)
+		enrichSubtitleFiles(child, ctx)
 	}
 }
 
+// Passes season, episode and year to extras files
+// Season: Uses season of closest parent with non-nil season IF extras file doesn't have a season
+// Episode: Uses episode of closest parent with non-nil episode IF extras file doesn't have a episode
+func enrichExtrasFiles(entry *metadata.Entry, ctx *metadata.MediaInfo) {
+	if ctx == nil {
+		ctx = &metadata.MediaInfo{}
+	}
+
+	switch entry.Role {
+		case metadata.DSFile, metadata.BTSFile, metadata.BonusFile:
+			if entry.MediaInfo.Episode != nil {
+				ctx.Episode = nil
+			}
+			if entry.MediaInfo.Season != nil {
+				ctx.Season = nil
+			}
+			deepCopy(&entry.MediaInfo, ctx)		
+			return
+		case metadata.MovieDir, metadata.SeriesDir, metadata.SeasonDir:
+			// Do nothing, title and year will come from extra file itself, due to unique naming nature of extras files
+		default:
+			if entry.MediaInfo.Season != nil {
+				ctx.Season = entry.MediaInfo.Season
+			}
+			if entry.MediaInfo.Episode != nil {
+				ctx.Episode = entry.MediaInfo.Episode
+			}
+	}
+
+	if len(entry.Children) == 0 {
+		return
+	}
+
+	for _, child := range entry.Children {
+		enrichExtrasFiles(child, ctx)
+	}
+}
+
+// Passes season, episode, title and year to subtitle files
+// Season: Uses season of closest parent with non-nil season IF episode file doesn't have season
+// Episode: Uses episode of closest parent with non-nil episode IF episode file doesn't have episode
+// Title: Uses title of root dir (movie dir, series dir, or season dir)
+// Year: Uses year of root dir (movie dir, series dir, or season dir)
+func enrichEpisodeFiles(entry *metadata.Entry, ctx *metadata.MediaInfo) {
+	if ctx == nil {
+		ctx = &metadata.MediaInfo{}
+	}
+
+	switch entry.Role {
+		case metadata.EpisodeFile:
+			if entry.MediaInfo.Episode != nil {
+				ctx.Episode = nil
+			}
+			if entry.MediaInfo.Season != nil {
+				ctx.Season = nil
+			}
+			deepCopy(&entry.MediaInfo, ctx)		
+			return
+		case metadata.MovieDir:
+			// Return early if movie directory
+			return
+		case metadata.SeriesDir, metadata.SeasonDir:
+			if len(entry.MediaInfo.Title) > 0 {
+				ctx.Title = entry.MediaInfo.Title
+			}
+			if entry.MediaInfo.Year != nil {
+				ctx.Year = entry.MediaInfo.Year
+			}
+		default:
+			if entry.MediaInfo.Season != nil {
+				ctx.Season = entry.MediaInfo.Season
+			}
+			if entry.MediaInfo.Episode != nil {
+				ctx.Episode = entry.MediaInfo.Episode
+			}
+	}
+
+	if len(entry.Children) == 0 {
+		return
+	}
+
+	for _, child := range entry.Children {
+		enrichEpisodeFiles(child, ctx)
+	}
+}
+
+// Passes title and year to movie file
+// Title: Uses title of root dir (movie dir, series dir, or season dir) IF movie file doesn't have title
+// Year: Uses year of root dir (movie dir, series dir, or season dir) IF movie file doesn't have year
+func enrichMovieFile(entry *metadata.Entry, ctx *metadata.MediaInfo) {
+	if ctx == nil {
+		ctx = &metadata.MediaInfo{}
+	}
+
+	switch entry.Role {
+		case metadata.MovieFile:
+			if len(entry.MediaInfo.Title) > 0 {
+				ctx.Title = nil
+			}
+			if entry.MediaInfo.Year != nil {
+				ctx.Year = nil
+			}
+			deepCopy(&entry.MediaInfo, ctx)		
+			return
+		case metadata.SeriesDir, metadata.SeasonDir:
+			// Return early if series or season dir
+			return
+		case metadata.MovieDir:
+			if len(entry.MediaInfo.Title) > 0 {
+				ctx.Title = entry.MediaInfo.Title
+			}
+			if entry.MediaInfo.Year != nil {
+				ctx.Year = entry.MediaInfo.Year
+			}
+		default:
+			// Do nothing for entries that are not movie dir or file
+	}
+
+	if len(entry.Children) == 0 {
+		return
+	}
+
+	for _, child := range entry.Children {
+		enrichMovieFile(child, ctx)
+	}
+}
+
+func deepCopy(dest *metadata.MediaInfo, src *metadata.MediaInfo) {
+	if src.Title != nil {
+		dest.Title = append([]string(nil), src.Title...)
+	}
+	if src.Season != nil {
+		season := *src.Season
+		dest.Season = &season
+	}
+	if src.Episode != nil {
+		episode := *src.Episode
+		dest.Episode = &episode
+	}
+	if src.Year != nil {
+		year := *src.Year
+		dest.Year = &year
+	}
+}
