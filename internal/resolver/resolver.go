@@ -190,6 +190,9 @@ func resolveEpisodeFile(basePath string, entry *metadata.Entry, cfg *config.Conf
 	}
 
 	if basePath == "" {
+		// Main series path should not include year, to ensure seasons are more likely to fall under same directory
+		entry.MediaInfo.Year = nil
+
 		titlePath := buildTitlePath(entry)
 		basePath = filepath.Join(cfg.ShowPath, titlePath)
 	}
@@ -219,6 +222,9 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config
 
 	// Build title-only basePath for children - episodes will add their own season
 	if basePath == "" {
+		// Main series path should not include year, to ensure seasons are more likely to fall under same directory
+		entry.MediaInfo.Year = nil
+
 		titlePath := buildTitlePath(entry)
 		basePath = filepath.Join(cfg.ShowPath, titlePath)
 	}
@@ -259,6 +265,9 @@ func resolveSeriesDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Lo
 		lg.Debug("Expected SeriesDir role", "path", entry.PathInfo.Source, "role", entry.Role)
 		return fmt.Errorf("Expected SeriesDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
 	}
+
+	// Main series path should not include year, to ensure seasons are more likely to fall under same directory
+	entry.MediaInfo.Year = nil
 
 	titlePath := buildTitlePath(entry)
 	basePath := filepath.Join(cfg.ShowPath, titlePath)
