@@ -19,12 +19,11 @@ import (
 func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	log := logger.With("func", "ExtractMedia")
 	log.Debug("extracting media info from path", "path", path)
-	filename := filepath.Base(path)
 
-	sanitizedName := strings.Split(sanitizeName(filename), ".")
-	sanitizedName = sanitizePrefix(sanitizedName)
 
 	mediaInfo := metadata.MediaInfo{}
+
+	sanitizedName := SanitizedName(path)
 
 	title := extractTitle(sanitizedName)
 	sanitizedName = sanitizedName[len(title):]
@@ -45,7 +44,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 
 
 	// Second passes for unique cases
-	sanitizedName = strings.Split(sanitizeName(filename), ".")
+	sanitizedName = SanitizedName(path)
 
 	// pass for language again if subtitle file, ensure language isn't recognized as title
 	ext := getExt(path)
@@ -67,6 +66,14 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	log.Info("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
 
 	return mediaInfo
+}
+
+func SanitizedName(path string) []string {
+	filename := filepath.Base(path)
+
+	sanitizedName := strings.Split(sanitizeName(filename), ".")
+	sanitizedName = sanitizePrefix(sanitizedName)
+	return sanitizedName
 }
 
 

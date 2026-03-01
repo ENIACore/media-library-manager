@@ -5,14 +5,16 @@ package resolver
 import (
 	"fmt"
 	"log/slog"
-	"strings"
-	"strconv"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
 
 	"unicode"
-	"github.com/ENIACore/media_library_manager/internal/metadata"
+
 	"github.com/ENIACore/media_library_manager/internal/config"
+	"github.com/ENIACore/media_library_manager/internal/extractor"
+	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
 // Resolve determines destination paths for all entries in tree based on classified roles.
@@ -35,7 +37,6 @@ func Resolve(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) erro
 		return fmt.Errorf("Entry %v has unknown role", root.PathInfo.Source)
 	}
 }
-
 /*
 	Resolvers
 */
@@ -135,6 +136,8 @@ func resolveExtrasFile(basePath string, entry *metadata.Entry, logger *slog.Logg
 	extrasPath := buildExtrasPath(entry)
 	basePath = filepath.Join(basePath, extrasPath)
 
+	// Use original name due to unique difficulties parsing extras files
+	entry.MediaInfo.Title = extractor.SanitizedName(entry.PathInfo.Source)
 	filename := buildFilename(entry)
 
 	entry.PathInfo.Dest = filepath.Join(basePath, filename)
@@ -472,3 +475,5 @@ func isRomanNumeral(s string) bool {
     matched, _ := regexp.MatchString(`(?i)^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$`, s)
     return matched && s != ""
 }
+
+
