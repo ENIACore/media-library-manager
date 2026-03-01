@@ -102,25 +102,54 @@ The tool handles complex scenarios including:
 
 ### Installation
 
+#### Quick Install (Recommended)
+
+Run this command to download and install the latest `mlm` binary:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ENIACore/media-library-manager/main/install.py -o /tmp/mlm-install.py && sudo python3 /tmp/mlm-install.py; rm -f /tmp/mlm-install.py
+```
+
+The script will automatically:
+- Detect your platform (Linux/macOS, amd64/arm64)
+- Download the latest release binary
+- Install to `/usr/local/bin/mlm`
+- Make it executable
+
+After installation, you can run `mlm` from anywhere in your terminal.
+
+#### Manual Installation
+
+If you prefer to build from source:
+
 1. Clone the repo
    ```sh
    git clone https://github.com/ENIACore/media_library_manager.git
-   ```
-
-2. Navigate to the project directory
-   ```sh
    cd media_library_manager
    ```
 
-3. Build the application
+2. Build and install using Make
    ```sh
-   go build -o media_library_manager cmd/media_library_manager/main.go
+   make install
    ```
 
-4. (Optional) Use the configuration script
+   Or build manually:
    ```sh
-   ./configure_media_manager.sh
+   go build -o mlm cmd/media_library_manager/main.go
+   sudo cp mlm /usr/local/bin/
    ```
+
+#### Build Commands
+
+The project includes a Makefile for convenient builds:
+
+```sh
+make build      # Build for current platform
+make install    # Build and install to /usr/local/bin
+make release    # Build for all platforms (Linux, macOS, Windows)
+make test       # Run all tests
+make clean      # Remove build artifacts
+```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -143,7 +172,7 @@ export ENIACORE_DRY_RUN="false"
 #### Command-Line Flags
 
 ```sh
-./media_library_manager \
+mlm \
   -torrent-path="/opt/qbit/downloads" \
   -incomplete-path="/opt/qbit/downloads/temp" \
   -movie-path="/opt/jellyfin/media/movies" \
@@ -174,21 +203,26 @@ export ENIACORE_DRY_RUN="false"
 
 Run with default configuration (dry run enabled):
 ```sh
-./media_library_manager
+mlm
+```
+
+Or if running from source:
+```sh
+go run cmd/media_library_manager/main.go
 ```
 
 ### Production Usage
 
 Disable dry run to actually move files:
 ```sh
-./media_library_manager -dry-run=false
+mlm -dry-run=false
 ```
 
 ### Custom Paths
 
 Specify custom paths for your setup:
 ```sh
-./media_library_manager \
+mlm \
   -torrent-path="/mnt/downloads" \
   -movie-path="/mnt/media/movies" \
   -show-path="/mnt/media/shows" \

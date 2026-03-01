@@ -1,1 +1,15 @@
+# macOS
 **/.DS_Store
+
+# Build artifacts
+build/
+dist/
+mlm
+media_library_manager
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
