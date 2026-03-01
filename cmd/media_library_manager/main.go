@@ -41,7 +41,6 @@ func main() {
 		fmt.Println("")
 		fmt.Println("")
 		fmt.Println("============= Printing result for processed root =============")
-		fmt.Println("processing entry", entry)
 
 		logger.Info("")
 		logger.Info("")
@@ -59,9 +58,6 @@ func main() {
 			continue
 		}
 
-		//sourcePath := getTreePath(root.PathInfo.Source, root.PathInfo.IsDir)
-
-		fmt.Println("Calling tree on path ", root.PathInfo.Source)
 		output := tree(root.PathInfo.Source)
 		fmt.Println("")
 		fmt.Println("------------- Old Structure")
@@ -79,8 +75,9 @@ func main() {
 			continue
 		}
 
-		//destPath := getTreePath(root.PathInfo.Dest, root.PathInfo.IsDir)
-		fmt.Println("Calling tree on path ", root.PathInfo.Dest)
+		if !root.PathInfo.IsDir {
+      		root.PathInfo.Dest = filepath.Dir(root.PathInfo.Dest)
+  		}
 		output = tree(root.PathInfo.Dest)
 		fmt.Println("")
 		fmt.Println("------------- New Structure")
