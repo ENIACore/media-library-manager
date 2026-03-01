@@ -35,6 +35,7 @@ func main() {
 	numSuccess := 0
 	numFailure := 0
 	for _, entry := range entries {
+
 		fmt.Println("")
 		fmt.Println("")
 		fmt.Println("")
@@ -42,11 +43,10 @@ func main() {
 
 		root, err := process(entry, cfg, logger)
 
-		output := tree(root.PathInfo.Source)
-		fmt.Println("")
-		fmt.Println("------------- Old Structure")
-		fmt.Println(output)
-		
+		logger.Info("")
+		logger.Info("")
+		logger.Info("")
+		logger.Info("==================================================")
 		if err != nil {
 			numFailure += 1
 			transfer.Error(root, cfg, logger)
@@ -55,6 +55,12 @@ func main() {
 		if root == nil {
 			continue
 		}
+
+		sourcePath := getTreePath(root.PathInfo.Source, root.PathInfo.IsDir)
+		output := tree(sourcePath)
+		fmt.Println("")
+		fmt.Println("------------- Old Structure")
+		fmt.Println(output)
 
 		if cfg.DryRun {
 			err = transfer.TestTransfer(root, tempDir, logger)
@@ -68,7 +74,8 @@ func main() {
 			continue
 		}
 
-		output = tree(root.PathInfo.Dest)
+		destPath := getTreePath(root.PathInfo.Dest, root.PathInfo.IsDir)
+		output = tree(destPath)
 		fmt.Println("")
 		fmt.Println("------------- New Structure")
 		fmt.Println(output)
@@ -123,6 +130,13 @@ func createTempDir() string {
 	}
 	defer os.RemoveAll(tempDir)
 	return tempDir
+}
+
+func getTreePath(path string, isDir bool) string {
+	if isDir {
+		return path
+	}
+	return filepath.Dir(path)
 }
 
 func tree(path string) string {

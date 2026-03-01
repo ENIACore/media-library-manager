@@ -247,8 +247,9 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config
 		}
 	}
 
-	// SeasonDir dest is informational only - actual structure determined by children
-	entry.PathInfo.Dest = basePath
+	// SeasonDir dest should include season path to show actual directory structure
+	seasonPath := buildSeasonPath(entry)
+	entry.PathInfo.Dest = filepath.Join(basePath, seasonPath)
 	lg.Debug("Resolved season dir destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
 
 	return nil
