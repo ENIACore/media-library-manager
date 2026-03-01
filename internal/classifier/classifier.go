@@ -73,13 +73,13 @@ func classifyExtrasDir(entry *metadata.Entry, inheritedRole metadata.EntryRole, 
 
 	var childRole metadata.EntryRole
 	if entry.Role == metadata.DSDir {
-		childRole = metadata.DSFile	
+		childRole = metadata.DSFile
 	}
 	if entry.Role == metadata.BTSDir {
 		childRole = metadata.BTSFile
 	}
 	if entry.Role == metadata.BonusDir {
-		childRole = metadata.BonusFile	
+		childRole = metadata.BonusFile
 	}
 
 	for _, child := range entry.Children {

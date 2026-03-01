@@ -73,7 +73,7 @@ func TestClassify(t *testing.T) {
 					},
 				}
 			},
-			expectedRole: metadata.BonusFile,
+			expectedRole: metadata.DSFile,
 			expectError:  false,
 		},
 		{
@@ -100,7 +100,7 @@ func TestClassify(t *testing.T) {
 					},
 				}
 			},
-			expectedRole: metadata.BonusFile,
+			expectedRole: metadata.BTSFile,
 			expectError:  false,
 		},
 		{
@@ -359,8 +359,8 @@ func TestClassifyDSFile(t *testing.T) {
 			if result != test.expected {
 				t.Errorf("classifyDSFile = %v, want %v", result, test.expected)
 			}
-			if result && entry.Role != metadata.BonusFile {
-				t.Errorf("Role = %v, want %v", entry.Role, metadata.BonusFile)
+			if result && entry.Role != metadata.DSFile {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.DSFile)
 			}
 		})
 	}
@@ -467,8 +467,8 @@ func TestClassifyBTSFile(t *testing.T) {
 			if result != test.expected {
 				t.Errorf("classifyBTSFile = %v, want %v", result, test.expected)
 			}
-			if result && entry.Role != metadata.BonusFile {
-				t.Errorf("Role = %v, want %v", entry.Role, metadata.BonusFile)
+			if result && entry.Role != metadata.BTSFile {
+				t.Errorf("Role = %v, want %v", entry.Role, metadata.BTSFile)
 			}
 		})
 	}
