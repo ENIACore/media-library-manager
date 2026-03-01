@@ -114,18 +114,16 @@ func resolveSubtitleDir(basePath string, entry *metadata.Entry, logger *slog.Log
 	return nil
 }
 
-// resolveBonusFile sets destination path for bonus file under "Extras" subdirectory.
-// Groups by season if applicable.
-func resolveBonusFile(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
-	lg := logger.With("func", "resolveBonusFile")
+func resolveExtrasFile(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveExtrasFile")
 
-	if entry.Role != metadata.BonusFile {
-		lg.Debug("Expected BonusFile role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("Expected BonusFile role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	if entry.Role != metadata.DSFile && entry.Role != metadata.BTSFile && entry.Role != metadata.BonusFile {
+		lg.Debug("Expected DSFile or BTSFile or BonusFile role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected DSFile or BTSFile or BonusFile role, received %v for node %v", entry.Role, entry.PathInfo.Source)
 	}
 	if basePath == "" {
-		lg.Debug("Expected base path for BonusFile role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("Expected base path for BonusFile role, for node %v", entry.PathInfo.Source)
+		lg.Debug("Expected base path for extras file role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected base path for extras file role, for node %v", entry.PathInfo.Source)
 	}
 
 	// Bonus files will group themselves under the same bonus folder, seperated by season if necessary
@@ -133,7 +131,8 @@ func resolveBonusFile(basePath string, entry *metadata.Entry, logger *slog.Logge
 		seasonPath := buildSeasonPath(entry)	
 		basePath = filepath.Join(basePath, seasonPath) 
 	}
-	basePath = filepath.Join(basePath, "Extras")
+	extrasPath := buildExtrasPath(entry)
+	basePath = filepath.Join(basePath, extrasPath)
 
 	filename := buildFilename(entry)
 
@@ -143,32 +142,30 @@ func resolveBonusFile(basePath string, entry *metadata.Entry, logger *slog.Logge
 	return nil
 }
 
-// resolveBonusDir recursively sets destination path for bonus directory and its children.
-// Allows for intermediary bonus directories, flattening directory structure.
-func resolveBonusDir(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
-	lg := logger.With("func", "resolveBonusDir")
+func resolveExtrasDir(basePath string, entry *metadata.Entry, logger *slog.Logger) error {
+	lg := logger.With("func", "resolveExtrasDir")
 
-	if entry.Role != metadata.BonusDir {
-		lg.Debug("Expected BonusDir role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("Expected BonusDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
+	if entry.Role != metadata.DSDir && entry.Role != metadata.BTSDir && entry.Role != metadata.BonusDir {
+		lg.Debug("Expected DSDir or BTSDir or BonusDir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected DSDir or BTSDir or BonusDir role, received %v for node %v", entry.Role, entry.PathInfo.Source)
 	}
 	if basePath == "" {
-		lg.Debug("Expected base path for BonusDir role", "path", entry.PathInfo.Source, "role", entry.Role)
-		return fmt.Errorf("Expected base path for BonusDir role, for node %v", entry.PathInfo.Source)
+		lg.Debug("Expected base path for extras dir role", "path", entry.PathInfo.Source, "role", entry.Role)
+		return fmt.Errorf("Expected base path for extras dir role, for node %v", entry.PathInfo.Source)
 	}
 
 	for _, child := range entry.Children {
 		var err error
 		switch child.Role {
 		case metadata.BonusFile:
-			err = resolveBonusFile(basePath, child, logger)
+			err = resolveExtrasFile(basePath, child, logger)
 		case metadata.SubtitleFile:
 			err = resolveSubtitleFile(basePath, child, logger)
-		case metadata.BonusDir:
+		case metadata.DSDir, metadata.BTSDir, metadata.BonusDir:
 			// Allows for intermediary bonus dirs, flattens dir structure
-			err = resolveBonusDir(basePath, child, logger)
+			err = resolveExtrasDir(basePath, child, logger)
 		default:
-			err = fmt.Errorf("Unexpected child role for BonusDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
+			err = fmt.Errorf("Unexpected child role for extras dir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
 		if err != nil {
 			return err
@@ -270,8 +267,8 @@ func resolveSeriesDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Lo
 		switch child.Role {
 		case metadata.SeasonDir:
 			err = resolveSeasonDir(basePath, child, cfg, logger)
-		case metadata.BonusDir:
-			err = resolveBonusDir(basePath, child, logger)
+		case metadata.DSDir, metadata.BTSDir, metadata.BonusDir:
+			err = resolveExtrasDir(basePath, child, logger)
 		case metadata.SubtitleDir:
 			err = resolveSubtitleDir(basePath, child, logger)
 		default:
@@ -334,12 +331,12 @@ func resolveMovieDir(entry *metadata.Entry, cfg *config.Config, logger *slog.Log
 			err = resolveMovieFile(basePath, child, cfg, logger)
 		case metadata.SubtitleFile:
 			err = resolveSubtitleFile(basePath, child, logger)
-		case metadata.BonusFile:
-			err = resolveBonusFile(basePath, child, logger)
+		case metadata.DSFile, metadata.BTSFile, metadata.BonusFile:
+			err = resolveExtrasFile(basePath, child, logger)
 		case metadata.SubtitleDir:
 			err = resolveSubtitleDir(basePath, child, logger)
-		case metadata.BonusDir:
-			err = resolveBonusDir(basePath, child, logger)
+		case metadata.DSDir, metadata.BTSDir, metadata.BonusDir:
+			err = resolveExtrasDir(basePath, child, logger)
 		default:
 			return fmt.Errorf("Unexpected child role for MovieDir, received role %v for node %v", entry.Role, entry.PathInfo.Source)
 		}
