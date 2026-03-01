@@ -40,6 +40,7 @@ func main() {
 		if err != nil {
 			numFailure += 1
 			transfer.Error(root, cfg, logger)
+			printRes(root)
 			continue
 		} 
 		if root == nil {
@@ -52,12 +53,14 @@ func main() {
 			err = transfer.Transfer(root, cfg, logger)
 		}
 		if err != nil {
+			numFailure += 1
 			logger.Error("Transfer failed", "error", err)
 			transfer.Error(root, cfg, logger)
+			printRes(root)
 			continue
 		}
 
-		printSuccess(root)
+		printRes(root)
 		numSuccess += 1
 	}
 	logger.Info("==================================================")
@@ -110,15 +113,38 @@ func createTempDir() string {
 	return tempDir
 }
 
-func printSuccess(root *metadata.Entry) {
-	fmt.Println("\n===== Original to New =====")
-	output := tree(root.PathInfo.Source)
-	fmt.Println(output)
-	fmt.Println("")
-	fmt.Println("---------------------------")
-	fmt.Println("")
-	output = tree(root.PathInfo.Dest)
-	fmt.Println(output)
+func printRes(root *metadata.Entry) {
+	fmt.Println("============= Printing result for processed root")
+
+	// Print classifications
+	printClassifications(root)
+
+	// Print resulting file structures
+	if root.PathInfo.Source != "" && root.PathInfo.Dest != "" {
+		output := tree(root.PathInfo.Source)
+		fmt.Println(output)
+		fmt.Println("")
+		fmt.Println("---------------------------")
+		fmt.Println("")
+		output = tree(root.PathInfo.Dest)
+		fmt.Println(output)
+	}
+
+
+	fmt.Println("============= ")
+}
+
+func printClassifications(entry *metadata.Entry) {
+	if entry == nil {
+		return
+	}
+	fmt.Println(entry.PathInfo.Source, ": ", entry.Role.String())
+	if len(entry.Children) == 0 {
+		return
+	}
+	for _, child := range entry.Children {
+		printClassifications(child)
+	}
 }
 
 func tree(path string) string {
