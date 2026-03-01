@@ -53,14 +53,15 @@ func resolveSubtitleFile(basePath string, entry *metadata.Entry, logger *slog.Lo
 		return fmt.Errorf("Expected base path for SubtitlFile role, for node %v", entry.PathInfo.Source)
 	}
 	
-	// Subtitle files will group themselves under the same Subtitle folder, seperated by season if necessary
+	// If subtitle is a part of season, it will be placed in season dir
 	if entry.MediaInfo.Season != nil {
 		seasonPath := buildSeasonPath(entry)	
 		basePath = filepath.Join(basePath, seasonPath) 
 	}
-	// If parent is bonus dir, group subtitles under resulting bonus dir
-	if entry.Parent != nil && entry.Parent.Role == metadata.BonusDir {
-		basePath = filepath.Join(basePath, "Extras")
+	// If subtitle is a part of extras, it will be placed in extras dir (also in season dir if applicable)
+	if entry.MediaInfo.DS != "" || entry.MediaInfo.BTS != "" || entry.MediaInfo.Bonus != "" {
+		extrasPath := buildExtrasPath(entry)	
+		basePath = filepath.Join(basePath, extrasPath)
 	}
 	basePath = filepath.Join(basePath, "Subtitles")
 
@@ -428,6 +429,19 @@ func buildSeasonPath(entry *metadata.Entry) string {
 		return fmt.Sprintf("S%02d", *entry.MediaInfo.Season)
 	}
 	return "S01"
+}
+
+func buildExtrasPath(entry *metadata.Entry) string {
+	if entry.MediaInfo.DS != "" {
+		return "Deleted.Scenes"
+	}
+	if entry.MediaInfo.BTS != "" {
+		return "Behind.The.Scenes"
+	}
+	if entry.MediaInfo.Bonus != "" {
+		return "Extras"
+	}
+	return "Extras"
 }
 
 // capitalize returns string with first rune uppercase and all others lowercase.
