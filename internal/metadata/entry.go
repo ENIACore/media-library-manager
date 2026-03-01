@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"path/filepath"
-	"strings"
 	"strconv"
 )
 
@@ -26,14 +25,10 @@ func (entry *Entry) Source() string {
 }
 
 func (entry *Entry) Episode() string {
-	if entry == nil || len(entry.MediaInfo.Episode) == 0 {
+	if entry == nil || entry.MediaInfo.Episode == nil {
 		return "not set"
 	}
-	episodes := make([]string, len(entry.MediaInfo.Episode))
-	for i, ep := range entry.MediaInfo.Episode {
-    	episodes[i] = strconv.Itoa(ep)
-	}
-	return strings.Join(episodes, ", ")
+	return strconv.Itoa(*entry.MediaInfo.Episode)
 }
 
 func (entry *Entry) Season() string {

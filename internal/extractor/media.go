@@ -143,17 +143,16 @@ func extractSeason(segments []string) *int {
 	return nil
 }
 
-// extractEpisode returns all episode numbers from segments by iterating through each segment.
-// Returns empty slice if no episodes found, or slice with 0 if pattern found without numbers.
-func extractEpisode(segments []string) []int {
-	episodes := []int{}
+// extractEpisode returns the episode number from segments by iterating through each segment.
+// Returns nil if no pattern, 0 if pattern without number, >0 for episode number.
+func extractEpisode(segments []string) *int {
 	for i := range segments {
 		candidates := segments[i:]
 		if ep := parseEpisode(candidates); ep != nil {
-			episodes = append(episodes, *ep)
+			return ep
 		}
 	}
-	return episodes
+	return nil
 }
 
 // extractResolution returns the resolution pattern from segments by iterating through each segment.

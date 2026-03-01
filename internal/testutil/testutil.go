@@ -124,7 +124,7 @@ func CreateTestEpFile(parent *metadata.Entry) *metadata.Entry {
 				"TITLE",
 			},
 			Year:		IntPtr(2025),
-			Episode:	[]int{1},
+			Episode:	IntPtr(1),
 			Season:		IntPtr(1),
 			Resolution:	"1080p",
 			Codec:		"x264",

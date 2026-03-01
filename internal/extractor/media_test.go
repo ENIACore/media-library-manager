@@ -29,7 +29,7 @@ func TestExtractMedia(t *testing.T) {
 				},
 				Year: intPtr(2025),
 				Season: intPtr(1),
-				Episode: []int{1},
+				Episode: intPtr(1),
 				Resolution: "1080p",
 				Codec: "x265",
 				Source: "BDRip",
@@ -341,7 +341,7 @@ func TestExtractEpisode(t *testing.T) {
 	tests := []struct{
 		name		string
 		input		[]string
-		expected	[]int
+		expected	*int
 	}{
 		{
 			name:		"ep without number",
@@ -354,7 +354,7 @@ func TestExtractEpisode(t *testing.T) {
 				"1080P",
 				"MP4",
 			},
-			expected: 	[]int{0},
+			expected: 	intPtr(0),
 		},
 		{
 			name:		"ep with number",
@@ -367,7 +367,7 @@ func TestExtractEpisode(t *testing.T) {
 				"1080P",
 				"MP4",
 			},
-			expected: 	[]int{1},
+			expected: 	intPtr(1),
 		},
 		{
 			name:		"no ep",
@@ -379,7 +379,7 @@ func TestExtractEpisode(t *testing.T) {
 				"1080P",
 				"MP4",
 			},
-			expected: 	[]int{},
+			expected: 	nil,
 		},
 	}
 
