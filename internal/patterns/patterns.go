@@ -240,7 +240,7 @@ var EditionPatternGroups = []PatternGroup{
 	{Key: `Remastered`, Patterns: []Pattern{`REMASTERED`, `REMASTER`}},
 	{Key: `Extended`, Patterns: []Pattern{`EXTENDED`, `EXTENDED\.CUT`, `EXTENDED\.EDITION`}},
 	{Key: `Unrated`, Patterns: []Pattern{`UNRATED`}},
-	{Key: `Uncut`, Patterns: []Pattern{`UNCUT`}},
+	//{Key: `Uncut`, Patterns: []Pattern{`UNCUT`}},
 	{Key: `DirectorsCut`, Patterns: []Pattern{`DIRECTORS\.CUT`}},
 	{Key: `Theatrical`, Patterns: []Pattern{`THEATRICAL`, `THEATRICAL\.CUT`}},
 	{Key: `Criterion`, Patterns: []Pattern{`CRITERION`}},
