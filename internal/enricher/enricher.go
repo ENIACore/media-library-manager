@@ -37,9 +37,10 @@ func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	return nil
 }
 
-// Passes season, episode, title and year to subtitle files
+// Passes season, episode, extras, title and year to subtitle files
 // Season: Uses season of closest parent with non-nil season IF extras file doesn't have a season
 // Episode: Uses episode of closest parent with non-nil episode IF extras file doesn't have a season
+// Extras (DS, BTS, Bonus): If extras dir is encountered, that means subtitle file is inside it therefore subtitle file will receive the pattern
 // Title: Uses title of root dir (movie dir, series dir, or season dir)
 // Year: Uses year of root dir (movie dir, series dir, or season dir)
 func enrichSubtitleFiles(entry *metadata.Entry, ctx *metadata.MediaInfo) {
@@ -57,6 +58,12 @@ func enrichSubtitleFiles(entry *metadata.Entry, ctx *metadata.MediaInfo) {
 			}
 			deepCopy(&entry.MediaInfo, ctx)		
 			return
+		case metadata.DSDir:
+			ctx.DS = entry.MediaInfo.DS
+		case metadata.BTSDir:
+			ctx.BTS = entry.MediaInfo.BTS
+		case metadata.BonusDir:
+			ctx.Bonus = entry.MediaInfo.Bonus
 		case metadata.MovieDir, metadata.SeriesDir, metadata.SeasonDir:
 			if len(entry.MediaInfo.Title) > 0 {
 				ctx.Title = entry.MediaInfo.Title
