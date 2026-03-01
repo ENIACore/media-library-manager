@@ -5,7 +5,7 @@ package metadata
 type MediaInfo struct {
 	Title      []string
 	Year       *int
-	Episode    *int   // 0 = pattern found w/o number, >0 = episode number
+	Episode    []int  // List of episode numbers (e.g., [1,2,3] for episodes 1-3)
 	Season     *int   // 0 = pattern found w/o number, >0 = season number
 	Resolution string
 	Codec      string

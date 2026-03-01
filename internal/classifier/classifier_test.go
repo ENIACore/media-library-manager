@@ -991,7 +991,7 @@ func TestClassifyMovieDir(t *testing.T) {
 			entry: func() *metadata.Entry {
 				movie := testutil.CreateTestMovieFile(nil)
 				dir := testutil.CreateTestMovieDir(nil, movie)
-				dir.MediaInfo.Episode = testutil.IntPtr(1)
+				dir.MediaInfo.Episode = []int{1}
 				return dir
 			},
 			expected: false,

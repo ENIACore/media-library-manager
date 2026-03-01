@@ -176,9 +176,9 @@ func deepCopy(dest *metadata.MediaInfo, src metadata.MediaInfo) {
 		season := *src.Season
 		dest.Season = &season
 	}
-	if src.Episode != nil && dest.Episode == nil {
-		episode := *src.Episode
-		dest.Episode = &episode
+	if len(src.Episode) > 0 && len(dest.Episode) == 0 {
+		dest.Episode = make([]int, len(src.Episode))
+		copy(dest.Episode, src.Episode)
 	}
 	if src.Year != nil && dest.Year == nil {
 		year := *src.Year

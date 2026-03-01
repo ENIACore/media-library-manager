@@ -388,13 +388,15 @@ func buildFilename(entry *metadata.Entry) string {
     if entry.MediaInfo.Year != nil {
         filename += "." + strconv.Itoa(*entry.MediaInfo.Year)
     }
-	if entry.MediaInfo.Season != nil || entry.MediaInfo.Episode != nil {
+	if entry.MediaInfo.Season != nil || len(entry.MediaInfo.Episode) > 0 {
 		filename += "."
 		if entry.MediaInfo.Season != nil {
 			filename += fmt.Sprintf("S%02d", *entry.MediaInfo.Season)
 		}
-		if entry.MediaInfo.Episode != nil {
-			filename += fmt.Sprintf("E%02d", *entry.MediaInfo.Episode)
+		if len(entry.MediaInfo.Episode) > 0 {
+			for _, ep := range entry.MediaInfo.Episode {
+				filename += fmt.Sprintf("E%02d", ep)
+			}
 		}
 	}
 	if entry.MediaInfo.Resolution != "" {

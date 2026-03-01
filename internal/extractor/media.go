@@ -18,7 +18,6 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	log := logger.With("func", "ExtractMedia")
 	log.Debug("extracting media info from path", "path", path)
 
-
 	mediaInfo := metadata.MediaInfo{}
 
 	sanitizedName := SanitizeName(path)
@@ -144,16 +143,17 @@ func extractSeason(segments []string) *int {
 	return nil
 }
 
-// extractEpisode returns the episode number from segments by iterating through each segment.
-// Returns nil if no pattern, 0 if pattern without number, >0 for episode number.
-func extractEpisode(segments []string) *int {
+// extractEpisode returns all episode numbers from segments by iterating through each segment.
+// Returns empty slice if no episodes found, or slice with 0 if pattern found without numbers.
+func extractEpisode(segments []string) []int {
+	episodes := []int{}
 	for i := range segments {
 		candidates := segments[i:]
 		if ep := parseEpisode(candidates); ep != nil {
-			return ep
+			episodes = append(episodes, *ep)
 		}
 	}
-	return nil
+	return episodes
 }
 
 // extractResolution returns the resolution pattern from segments by iterating through each segment.
