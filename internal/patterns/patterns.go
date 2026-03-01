@@ -110,6 +110,7 @@ var MiscPatterns = []Pattern{
 
 	// === SCENE / P2P RELEASE GROUP WEBSITES ===
 	`YTS\.MX`,
+	`TORRENTCOUNTER\.TO`,
 
 	// === TV SPECIFIC ===
 	`COMPLETE`, `COMPLETE\.SERIES`,
