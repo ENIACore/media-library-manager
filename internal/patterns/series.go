@@ -45,7 +45,7 @@ var EpisodePatterns = []Pattern{
 	// Matches <1-2 digits>X<1-3 digits>
 	`\d{1,2}X(\d{1,3})`,
 	// Matches <1-2 digits>.X.<1-3 digits> (e.g., 1.X.01, 2.X.15)
-	`\d{1,2}\.X\.(\d{1,3})`,
+	//`\d{1,2}\.X\.(\d{1,3})`,
 }
 
 var (
