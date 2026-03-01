@@ -278,7 +278,7 @@ var BonusPatternGroups = []PatternGroup{
 		`INTERVIEW[S]?`,
 		`CAST\.INTERVIEW[S]?`,
 		`Q\.?AND\.?A`,
-		`QA`,
+		//`QA`,
 	}},
 	{Key: `Blooper`, Patterns: []Pattern{
 		`BLOOPER[S]?`,
@@ -300,7 +300,7 @@ var BonusPatternGroups = []PatternGroup{
 	{Key: `Documentary`, Patterns: []Pattern{
 		`DOCUMENTARY`,
 		`DOCUMENTARIES`,
-		`DOC[S]?`,
+		//`DOC[S]?`,
 	}},
 	{Key: `Extra`, Patterns: []Pattern{
 		`EXTRA[S]?`,

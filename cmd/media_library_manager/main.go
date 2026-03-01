@@ -126,7 +126,7 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 	err = classifier.Classify(root, logger)
 	if err != nil {
 		logger.Error("Classify returned error", "error", err)
-		return nil, err
+		return root, err
 	}
 
 	logger.Info("")
@@ -138,7 +138,7 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 	err = enricher.Enrich(root, cfg, logger)
 	if err != nil {
 		logger.Error("Enrich returned error", "error", err)
-		return nil, err
+		return root, err
 	}
 
 	logger.Info("")
@@ -150,7 +150,7 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 	err = resolver.Resolve(root, cfg, logger)
 	if err != nil {
 		logger.Error("Resolve returned error", "error", err)
-		return nil, err
+		return root, err
 	}
 
 	logger.Info("")

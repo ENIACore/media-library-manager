@@ -158,7 +158,7 @@ func resolveExtrasDir(basePath string, entry *metadata.Entry, logger *slog.Logge
 	for _, child := range entry.Children {
 		var err error
 		switch child.Role {
-		case metadata.BonusFile:
+		case metadata.DSFile, metadata.BTSFile, metadata.BonusFile:
 			err = resolveExtrasFile(basePath, child, logger)
 		case metadata.SubtitleFile:
 			err = resolveSubtitleFile(basePath, child, logger)
