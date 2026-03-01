@@ -37,8 +37,7 @@ func Filter(path string, logger *slog.Logger) bool {
 	}
 
 
-	filename := filepath.Base(path)
-	sanitizedName := strings.Split(sanitizeName(filename), ".")
+	sanitizedName := SanitizeName(path)
 	
 	// Considered sample if sample is at front of name
 	if isSample(sanitizedName) {

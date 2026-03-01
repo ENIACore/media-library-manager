@@ -81,6 +81,7 @@ func main() {
 		output = tree(root.PathInfo.Dest)
 		fmt.Println("")
 		fmt.Println("------------- New Structure")
+		fmt.Println("------------- New Structure")
 		fmt.Println(output)
 
 		numSuccess += 1

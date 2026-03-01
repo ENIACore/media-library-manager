@@ -136,9 +136,9 @@ func resolveExtrasFile(basePath string, entry *metadata.Entry, logger *slog.Logg
 	extrasPath := buildExtrasPath(entry)
 	basePath = filepath.Join(basePath, extrasPath)
 
-	// Use original name due to unique difficulties parsing extras files
-	entry.MediaInfo.Title = extractor.SanitizedName(entry.PathInfo.Source)
-	filename := buildFilename(entry)
+	title := extractor.SanitizeName(entry.PathInfo.Source)
+	entry.MediaInfo.Title = title[:len(title)-1]
+	filename := buildReadableFilename(entry)
 
 	entry.PathInfo.Dest = filepath.Join(basePath, filename)
 	lg.Debug("Resolved bonus file destination", "source", entry.PathInfo.Source, "destination", entry.PathInfo.Dest)
@@ -242,6 +242,10 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config
 			err = resolveSubtitleFile(basePath, child, logger)
 		case metadata.SubtitleDir:
 			err = resolveSubtitleDir(basePath, child, logger)
+		case metadata.DSDir, metadata.BTSDir, metadata.BonusDir:
+			err = resolveExtrasDir(basePath, child, logger)
+		case metadata.DSFile, metadata.BTSFile, metadata.BonusFile:
+			err = resolveExtrasFile(basePath, child, logger)
 		default:
 			err = fmt.Errorf("Unexpected child role for SeasonDir, received role %v for node %v", child.Role, child.PathInfo.Source)
 		}
@@ -418,6 +422,19 @@ func buildFilename(entry *metadata.Entry) string {
 	return filename + "." + strings.ToLower(entry.PathInfo.Ext)
 }
 
+func buildReadableFilename(entry *metadata.Entry) string {
+    capitalized := make([]string, len(entry.MediaInfo.Title))
+    for i, part := range entry.MediaInfo.Title {
+        capitalized[i] = capitalize(part)
+    }
+    filename := strings.Join(capitalized, " ")
+
+	filename += "." + strings.ToLower(entry.PathInfo.Ext) 
+    
+    return filename
+
+}
+
 // buildTitlePath constructs directory path from title and year metadata.
 // Capitalizes each title component and joins with dots.
 func buildTitlePath(entry *metadata.Entry) string {
@@ -444,15 +461,15 @@ func buildSeasonPath(entry *metadata.Entry) string {
 
 func buildExtrasPath(entry *metadata.Entry) string {
 	if entry.MediaInfo.DS != "" {
-		return "Deleted.Scenes"
+		return "deleted scenes"
 	}
 	if entry.MediaInfo.BTS != "" {
-		return "Behind.The.Scenes"
+		return "behind the scenes"
 	}
 	if entry.MediaInfo.Bonus != "" {
-		return "Extras"
+		return "extras"
 	}
-	return "Extras"
+	return "extras"
 }
 
 // capitalize returns string with first rune uppercase and all others lowercase.

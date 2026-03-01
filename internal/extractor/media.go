@@ -3,10 +3,8 @@ package extractor
 import (
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ENIACore/media_library_manager/internal/metadata"
@@ -23,7 +21,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 
 	mediaInfo := metadata.MediaInfo{}
 
-	sanitizedName := SanitizedName(path)
+	sanitizedName := SanitizeName(path)
 
 	title := extractTitle(sanitizedName)
 	sanitizedName = sanitizedName[len(title):]
@@ -44,7 +42,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 
 
 	// Second passes for unique cases
-	sanitizedName = SanitizedName(path)
+	sanitizedName = SanitizeName(path)
 
 	// pass for language again if subtitle file, ensure language isn't recognized as title
 	ext := getExt(path)
@@ -67,25 +65,6 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 
 	return mediaInfo
 }
-
-func SanitizedName(path string) []string {
-	filename := filepath.Base(path)
-
-	sanitizedName := strings.Split(sanitizeName(filename), ".")
-	sanitizedName = sanitizePrefix(sanitizedName)
-	return sanitizedName
-}
-
-
-// sanitizePrefix finds common unwanted patterns at the beginning of file names (i.e websites) and removes them from the slice
-func sanitizePrefix(segments []string) []string {
-	if match := parseWebsite(segments); match != "" {
-		numParts := len(strings.Split(match, "."))
-		return segments[numParts:]
-	}
-	return segments
-}
-
 
 // isStrictTerminator returns true for patterns that are unambiguously NOT title words.
 // Used before a year has been found in extractTitle.

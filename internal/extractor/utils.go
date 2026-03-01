@@ -3,14 +3,22 @@ package extractor
 import (
 	"regexp"
 	"strings"
+
+	"path/filepath"
 )
 
-// sanitizeName normalizes a filename for pattern matching.
-//	- Converts to uppercase
-//	- Replaces all non-alphanumeric characters with '.'
-//	- Trims leading and trailing '.'
-// Result of transformations are alphanumeric words seperated by exactly one '.' rune.
-func sanitizeName(name string) string {
+// sanitizePrefix finds common unwanted patterns at the beginning of file names (i.e websites) and removes them from the slice
+func sanitizePrefix(segments []string) []string {
+	if match := parseWebsite(segments); match != "" {
+		numParts := len(strings.Split(match, "."))
+		return segments[numParts:]
+	}
+	return segments
+}
+
+func SanitizeName(path string) []string {
+	name := filepath.Base(path)
+
 	name = strings.ToUpper(name)
 	name = strings.ReplaceAll(name, "'", "")
 	name = strings.ReplaceAll(name, "\"", "")
@@ -19,7 +27,10 @@ func sanitizeName(name string) string {
 	name = string(re.ReplaceAll([]byte(name), []byte(".")))
 
 	name = strings.Trim(name, " .")
-	return name
+
+	sanitizedName := strings.Split(name, ".")
+	sanitizedName = sanitizePrefix(sanitizedName)
+	return sanitizedName
 }
 
 // matchSegments matches regex pattern across multiple strings
