@@ -8,6 +8,7 @@ import (
 	"strings"
 	"strconv"
 	"path/filepath"
+	"regexp"
 
 	"unicode"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
@@ -442,12 +443,22 @@ func buildExtrasPath(entry *metadata.Entry) string {
 }
 
 // capitalize returns string with first rune uppercase and all others lowercase.
+// If the string is a Roman numeral, all letters are capitalized.
 func capitalize(s string) string {
     if s == "" {
         return ""
+    }
+    if isRomanNumeral(s) {
+        return strings.ToUpper(s)
     }
     s = strings.ToLower(s)
     r := []rune(s)
     r[0] = unicode.ToUpper(r[0])
     return string(r)
+}
+
+// isRomanNumeral returns true if s is a valid Roman numeral.
+func isRomanNumeral(s string) bool {
+    matched, _ := regexp.MatchString(`(?i)^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$`, s)
+    return matched && s != ""
 }
