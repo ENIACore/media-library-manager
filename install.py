@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#/usr/bin/env python3
 """
 Media Library Manager Installation Script
 
@@ -16,6 +16,8 @@ import urllib.request
 import json
 import stat
 import shutil
+import urllib.request
+import urllib.error  # Add this
 from pathlib import Path
 
 
