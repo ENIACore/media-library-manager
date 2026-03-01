@@ -16,7 +16,7 @@ import (
 // Uses golang 'os' and 'filepath' library to accurately determine file or directory information.
 func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 	log := logger.With("func", "ExtractPath")
-	log.Info("extracting path info from path", "path", path)
+	log.Debug("extracting path info from path", "path", path)
 
 	pathInfo := metadata.PathInfo{}
 	pathInfo.Source = path
@@ -35,7 +35,7 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 		pathInfo.IsDir = pathInfo.Ext == "" && pathInfo.Type == metadata.UnknownType
 	}
 
-	log.Debug("successfully extracted path info", "path-info", fmt.Sprintf("%+v", pathInfo))
+	log.Info("successfully extracted path info", "path-info", fmt.Sprintf("%+v", pathInfo))
 	return pathInfo
 }
 

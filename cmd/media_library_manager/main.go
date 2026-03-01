@@ -97,16 +97,34 @@ func main() {
 
 func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metadata.Entry, error) {
 
+	logger.Info("")
+	logger.Info("")
+	logger.Info("-----------------")
+	logger.Info("")
+	logger.Info("")
+
 	entryPath := filepath.Join(cfg.TorrentPath, entry.Name())
 	if entry.IsDir() && entry.Name() == filepath.Base(cfg.IncompletePath) {
 		logger.Debug("Skipping temp directory", "name", entry.Name())
 		return nil, nil
 	}
 
+	logger.Info("")
+	logger.Info("")
+	logger.Info("-----------------")
+	logger.Info("")
+	logger.Info("")
+
 	root, err := parser.Parse(entryPath, logger)
 	if err != nil {
 		logger.Error("Parse returned error", "error", err)
 		return nil, err }
+
+	logger.Info("")
+	logger.Info("")
+	logger.Info("-----------------")
+	logger.Info("")
+	logger.Info("")
 
 	err = classifier.Classify(root, logger)
 	if err != nil {
@@ -114,17 +132,35 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 		return nil, err
 	}
 
+	logger.Info("")
+	logger.Info("")
+	logger.Info("-----------------")
+	logger.Info("")
+	logger.Info("")
+
 	err = enricher.Enrich(root, cfg, logger)
 	if err != nil {
 		logger.Error("Enrich returned error", "error", err)
 		return nil, err
 	}
 
+	logger.Info("")
+	logger.Info("")
+	logger.Info("-----------------")
+	logger.Info("")
+	logger.Info("")
+
 	err = resolver.Resolve(root, cfg, logger)
 	if err != nil {
 		logger.Error("Resolve returned error", "error", err)
 		return nil, err
 	}
+
+	logger.Info("")
+	logger.Info("")
+	logger.Info("-----------------")
+	logger.Info("")
+	logger.Info("")
 
 	return root, nil
 }

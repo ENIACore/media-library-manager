@@ -18,7 +18,7 @@ import (
 // Title and Year are undeterministic patterns and matched first from left most segment until the first terminator is encountered
 func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	log := logger.With("func", "ExtractMedia")
-	log.Info("extracting media info from path", "path", path)
+	log.Debug("extracting media info from path", "path", path)
 	filename := filepath.Base(path)
 
 	sanitizedName := strings.Split(sanitizeName(filename), ".")
@@ -42,7 +42,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	mediaInfo.BTS = extractBTS(sanitizedName)
 	mediaInfo.Bonus = extractBonus(sanitizedName)
 	mediaInfo.Edition = extractEdition(sanitizedName)
-	log.Debug("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
+	log.Info("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
 
 	return mediaInfo
 }

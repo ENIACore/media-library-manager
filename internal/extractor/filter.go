@@ -17,7 +17,7 @@ import (
 // Returns true if path should be filtered and false otherwise.
 func Filter(path string, logger *slog.Logger) bool {
 	lg := logger.With("func", "Filter")
-	lg.Info("Determining if path should be filtered", "path", path)
+	lg.Debug("Determining if path should be filtered", "path", path)
 
 	ext := filepath.Ext(path)
 	if ext != "" {
@@ -32,7 +32,7 @@ func Filter(path string, logger *slog.Logger) bool {
 
 	pathType := extractType(ext)
 	if pathType == metadata.UnknownType && !info.IsDir() {
-		lg.Debug("Path is a unknown file type, filtering path", "path", path)
+		lg.Info("Path is a unknown file type, filtering path", "path", path)
 		return true
 	}
 
@@ -42,7 +42,7 @@ func Filter(path string, logger *slog.Logger) bool {
 	
 	// Considered sample if sample is at front of name
 	if isSample(sanitizedName) {
-		lg.Debug("Path is sample, filtering path", "path", path)
+		lg.Info("Path is sample, filtering path", "path", path)
 		return true
 	}
 
