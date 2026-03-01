@@ -409,8 +409,8 @@ func buildFilename(entry *metadata.Entry) string {
 	if entry.MediaInfo.Audio != "" {
 		filename += "." + entry.MediaInfo.Audio
 	}
-	if entry.MediaInfo.Language != "" {
-		filename += "." + entry.MediaInfo.Language
+	if len(entry.MediaInfo.Language) > 0 {
+		filename += "." + strings.Join(entry.MediaInfo.Language, ".")
 	}
 	if entry.MediaInfo.Bonus != "" {
 		filename += "." + entry.MediaInfo.Bonus

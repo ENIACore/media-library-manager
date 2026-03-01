@@ -34,7 +34,7 @@ func TestExtractMedia(t *testing.T) {
 				Codec: "x265",
 				Source: "BDRip",
 				Audio: "Atmos",
-				Language: "English",
+				Language: []string{"English"},
 			},
 		},
 	}
@@ -548,37 +548,37 @@ func TestExtractLanguage(t *testing.T) {
 	tests := []struct{
 		name		string
 		input		[]string
-		expected	string
+		expected	[]string
 	}{
 		{
 			name:		"valid language",
 			input:		[]string{
-				"MOVIE",	
-				"TITLE",	
-				"2020",	
-				"1080P",	
-				"ENG",	
-				"SRT",	
+				"MOVIE",
+				"TITLE",
+				"2020",
+				"1080P",
+				"ENG",
+				"SRT",
 			},
-			expected:	"English",
+			expected:	[]string{"English"},
 		},
 		{
 			name:		"missing language",
 			input:		[]string{
-				"MOVIE",	
-				"TITLE",	
-				"2020",	
-				"1080P",	
-				"SRT",	
+				"MOVIE",
+				"TITLE",
+				"2020",
+				"1080P",
+				"SRT",
 			},
-			expected:	"",
+			expected:	[]string{},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			language := extractLanguage(test.input)
-			if language != test.expected {
+			if !reflect.DeepEqual(language, test.expected) {
 				t.Errorf("extractLanguage = %v, want %v", language, test.expected)
 			}
 		})
