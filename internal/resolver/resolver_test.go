@@ -433,19 +433,19 @@ func TestResolveSubtitleDir(t *testing.T) {
 	})
 }
 
-func TestResolveBonusFile(t *testing.T) {
+func TestResolveExtrasFile(t *testing.T) {
 	t.Run("valid bonus file", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestBonusFile(nil)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveBonusFile(basePath, entry, logger)
+		err := resolveExtrasFile(basePath, entry, logger)
 
 		if err != nil {
-			t.Errorf("resolveBonusFile unexpected error: %v", err)
+			t.Errorf("resolveExtrasFile unexpected error: %v", err)
 		}
-		// resolveBonusFile now adds "Extras" to the path
+		// resolveExtrasFile adds "Extras" directory for BonusFile role
 		expected := filepath.Join(basePath, "Extras", "Test.Title.2025.1080p.x264.Remux.Atmos.English.Behind.The.Scenes.mp4")
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dest = %v, want %v", entry.PathInfo.Dest, expected)
@@ -458,26 +458,26 @@ func TestResolveBonusFile(t *testing.T) {
 		entry := testutil.CreateTestMovieFile(nil)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Extras")
 
-		err := resolveBonusFile(basePath, entry, logger)
+		err := resolveExtrasFile(basePath, entry, logger)
 
 		if err == nil {
-			t.Errorf("resolveBonusFile expected error for movie file")
+			t.Errorf("resolveExtrasFile expected error for movie file")
 		}
 	})
 
 	t.Run("missing base path", func(t *testing.T) {
 		entry := testutil.CreateTestBonusFile(nil)
 
-		err := resolveBonusFile("", entry, logger)
+		err := resolveExtrasFile("", entry, logger)
 
 		if err == nil {
-			t.Errorf("resolveBonusFile expected error for missing base path")
+			t.Errorf("resolveExtrasFile expected error for missing base path")
 		}
 	})
 }
 
-func TestResolveBonusDir(t *testing.T) {
-	t.Run("valid bonus dir", func(t *testing.T) {
+func TestResolveExtrasDir(t *testing.T) {
+	t.Run("valid extras dir", func(t *testing.T) {
 		testDir := testutil.CreateTestDir(t)
 		cfg := testutil.CreateTestCfg(testDir)
 		bonus := testutil.CreateTestBonusFile(nil)
@@ -485,13 +485,13 @@ func TestResolveBonusDir(t *testing.T) {
 		entry := testutil.CreateTestBonusDir(nil, bonus, sub)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveBonusDir(basePath, entry, logger)
+		err := resolveExtrasDir(basePath, entry, logger)
 
 		if err != nil {
-			t.Errorf("resolveBonusDir unexpected error: %v", err)
+			t.Errorf("resolveExtrasDir unexpected error: %v", err)
 		}
 
-		// resolveBonusDir now sets dest to basePath (children add "Extras")
+		// resolveExtrasDir now sets dest to basePath (children add "Extras")
 		expected := basePath
 		if entry.PathInfo.Dest != expected {
 			t.Errorf("Dir Dest = %v, want %v", entry.PathInfo.Dest, expected)
@@ -505,10 +505,10 @@ func TestResolveBonusDir(t *testing.T) {
 		entry := testutil.CreateTestMovieDir(nil, movie)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveBonusDir(basePath, entry, logger)
+		err := resolveExtrasDir(basePath, entry, logger)
 
 		if err == nil {
-			t.Errorf("resolveBonusDir expected error for movie dir")
+			t.Errorf("resolveExtrasDir expected error for movie dir")
 		}
 	})
 
@@ -516,10 +516,10 @@ func TestResolveBonusDir(t *testing.T) {
 		bonus := testutil.CreateTestBonusFile(nil)
 		entry := testutil.CreateTestBonusDir(nil, bonus)
 
-		err := resolveBonusDir("", entry, logger)
+		err := resolveExtrasDir("", entry, logger)
 
 		if err == nil {
-			t.Errorf("resolveBonusDir expected error for missing base path")
+			t.Errorf("resolveExtrasDir expected error for missing base path")
 		}
 	})
 }
