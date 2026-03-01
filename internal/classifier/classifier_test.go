@@ -764,7 +764,7 @@ func TestClassifyExtrasDir(t *testing.T) {
 			entry := test.entry()
 			resetEntryRoles(entry)
 
-			result := classifyExtrasDir(entry, logger)
+			result := classifyExtrasDir(entry, metadata.UnknownRole, logger)
 
 			if result != test.expected {
 				t.Errorf("classifyExtrasDir = %v, want %v", result, test.expected)

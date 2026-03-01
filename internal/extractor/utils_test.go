@@ -9,21 +9,28 @@ func TestSanitizeName(t *testing.T) {
 	tests := []struct{
 		name		string
 		input		string
-		expected	string
+		expected	[]string
 	}{
 		{
 			// Tests removing all special characters, removing spaces, removing quotations, capitalization, removing trailing and preceding ".", combining names by a single "."
 			name:		"remove all specicial characters",
 			input:		"!@#$%^&*()-_+=\"'. mOvIe .!@#$%^&*()-_+=\"' tItLe !@#$%^&*()-_+=\"'.",
-			expected:	"MOVIE.TITLE",
+			expected:	[]string{"MOVIE", "TITLE"},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			sanitizedName := sanitizeName(test.input)
-			if sanitizedName != test.expected {
+			sanitizedName := SanitizeName(test.input)
+			if len(sanitizedName) != len(test.expected) {
 				t.Errorf("sanitizeName() = %v, want %v", sanitizedName, test.expected)
+				return
+			}
+			for i := range sanitizedName {
+				if sanitizedName[i] != test.expected[i] {
+					t.Errorf("sanitizeName() = %v, want %v", sanitizedName, test.expected)
+					return
+				}
 			}
 		})
 	}

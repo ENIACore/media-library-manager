@@ -32,7 +32,7 @@ func TestExtractMedia(t *testing.T) {
 				Episode: intPtr(1),
 				Resolution: "1080p",
 				Codec: "x265",
-				Source: "BluRay",
+				Source: "BDRip",
 				Audio: "Atmos",
 				Language: "English",
 			},
@@ -483,7 +483,7 @@ func TestExtractSource(t *testing.T) {
 				"RIP",
 				"MP4",
 			},
-			expected:	"BluRay",
+			expected:	"BDRip",
 		},
 		{
 			name:		"no source",
@@ -685,7 +685,7 @@ func TestParseSource(t *testing.T) {
 				"BD",
 				"RIP",
 			},
-			expected:	"BluRay",
+			expected:	"BDRip",
 		},
 		{
 			name:		"invalid source with seperators",

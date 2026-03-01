@@ -168,7 +168,7 @@ func TestEnrichMovieFile(t *testing.T) {
 		movieDir.MediaInfo.Title = []string{"MOVIE", "TITLE"}
 		movieDir.MediaInfo.Year = testutil.IntPtr(2024)
 
-		enrichMovieFile(movieDir, nil)
+		enrichMovieFile(movieDir, metadata.MediaInfo{})
 
 		if len(movieFile.MediaInfo.Title) != 2 || movieFile.MediaInfo.Title[0] != "MOVIE" || movieFile.MediaInfo.Title[1] != "TITLE" {
 			t.Errorf("MovieFile Title = %v, want [MOVIE TITLE]", movieFile.MediaInfo.Title)
@@ -187,7 +187,7 @@ func TestEnrichMovieFile(t *testing.T) {
 		movieDir.MediaInfo.Title = []string{"DIR", "TITLE"}
 		movieDir.MediaInfo.Year = testutil.IntPtr(2024)
 
-		enrichMovieFile(movieDir, nil)
+		enrichMovieFile(movieDir, metadata.MediaInfo{})
 
 		if len(movieFile.MediaInfo.Title) != 2 || movieFile.MediaInfo.Title[0] != "FILE" || movieFile.MediaInfo.Title[1] != "TITLE" {
 			t.Errorf("MovieFile Title = %v, want [FILE TITLE]", movieFile.MediaInfo.Title)
@@ -203,7 +203,7 @@ func TestEnrichMovieFile(t *testing.T) {
 		seriesDir := testutil.CreateTestSeriesDir(nil, seasonDir)
 		seriesDir.MediaInfo.Title = []string{"SERIES", "TITLE"}
 
-		enrichMovieFile(seriesDir, nil)
+		enrichMovieFile(seriesDir, metadata.MediaInfo{})
 
 		if len(seriesDir.MediaInfo.Title) != 2 || seriesDir.MediaInfo.Title[0] != "SERIES" {
 			t.Errorf("SeriesDir Title = %v, want [SERIES TITLE]", seriesDir.MediaInfo.Title)
@@ -239,7 +239,7 @@ func TestEnrichEpisodeFiles(t *testing.T) {
 
 		seriesDir := testutil.CreateTestSeriesDir(nil, seasonDir)
 
-		enrichEpisodeFiles(seriesDir, nil)
+		enrichEpisodeFiles(seriesDir, metadata.MediaInfo{})
 
 		if ep.MediaInfo.Season == nil || *ep.MediaInfo.Season != 2 {
 			t.Errorf("Episode Season = %v, want 2", ep.MediaInfo.Season)
@@ -264,7 +264,7 @@ func TestEnrichEpisodeFiles(t *testing.T) {
 		seasonDir.MediaInfo.Season = testutil.IntPtr(2)
 		seasonDir.MediaInfo.Episode = testutil.IntPtr(5)
 
-		enrichEpisodeFiles(seasonDir, nil)
+		enrichEpisodeFiles(seasonDir, metadata.MediaInfo{})
 
 		if ep.MediaInfo.Season == nil || *ep.MediaInfo.Season != 1 {
 			t.Errorf("Episode Season = %v, want 1", ep.MediaInfo.Season)
@@ -278,7 +278,7 @@ func TestEnrichEpisodeFiles(t *testing.T) {
 		movieFile := testutil.CreateTestMovieFile(nil)
 		movieDir := testutil.CreateTestMovieDir(nil, movieFile)
 
-		enrichEpisodeFiles(movieDir, nil)
+		enrichEpisodeFiles(movieDir, metadata.MediaInfo{})
 
 		if len(movieDir.MediaInfo.Title) != 2 || movieDir.MediaInfo.Title[0] != "TEST" {
 			t.Errorf("MovieDir Title = %v, want [TEST TITLE]", movieDir.MediaInfo.Title)
@@ -312,7 +312,7 @@ func TestEnrichSubtitleFiles(t *testing.T) {
 		seasonDir.MediaInfo.Title = []string{"SERIES", "TITLE"}
 		seasonDir.MediaInfo.Year = testutil.IntPtr(2022)
 
-		enrichSubtitleFiles(seasonDir, nil)
+		enrichSubtitleFiles(seasonDir, metadata.MediaInfo{})
 
 		if subFile.MediaInfo.Season == nil || *subFile.MediaInfo.Season != 3 {
 			t.Errorf("Subtitle Season = %v, want 3", subFile.MediaInfo.Season)
@@ -337,7 +337,7 @@ func TestEnrichSubtitleFiles(t *testing.T) {
 		seasonDir.MediaInfo.Season = testutil.IntPtr(5)
 		seasonDir.MediaInfo.Episode = testutil.IntPtr(10)
 
-		enrichSubtitleFiles(seasonDir, nil)
+		enrichSubtitleFiles(seasonDir, metadata.MediaInfo{})
 
 		if subFile.MediaInfo.Season == nil || *subFile.MediaInfo.Season != 1 {
 			t.Errorf("Subtitle Season = %v, want 1", subFile.MediaInfo.Season)
@@ -370,7 +370,7 @@ func TestEnrichExtrasFiles(t *testing.T) {
 
 		seasonDir := testutil.CreateTestSeasonDir(nil, intermediateDir)
 
-		enrichExtrasFiles(seasonDir, nil)
+		enrichExtrasFiles(seasonDir, metadata.MediaInfo{})
 
 		if bonusFile.MediaInfo.Season == nil || *bonusFile.MediaInfo.Season != 4 {
 			t.Errorf("Bonus Season = %v, want 4", bonusFile.MediaInfo.Season)
@@ -389,7 +389,7 @@ func TestEnrichExtrasFiles(t *testing.T) {
 		seasonDir.MediaInfo.Season = testutil.IntPtr(5)
 		seasonDir.MediaInfo.Episode = testutil.IntPtr(10)
 
-		enrichExtrasFiles(seasonDir, nil)
+		enrichExtrasFiles(seasonDir, metadata.MediaInfo{})
 
 		if bonusFile.MediaInfo.Season == nil || *bonusFile.MediaInfo.Season != 1 {
 			t.Errorf("Bonus Season = %v, want 1", bonusFile.MediaInfo.Season)
@@ -406,7 +406,7 @@ func TestEnrichExtrasFiles(t *testing.T) {
 		movieDir := testutil.CreateTestMovieDir(nil, bonusFile)
 		movieDir.MediaInfo.Title = []string{"MOVIE", "TITLE"}
 
-		enrichExtrasFiles(movieDir, nil)
+		enrichExtrasFiles(movieDir, metadata.MediaInfo{})
 
 		if len(bonusFile.MediaInfo.Title) != 2 || bonusFile.MediaInfo.Title[0] != "BONUS" {
 			t.Errorf("Bonus Title = %v, want [BONUS TITLE]", bonusFile.MediaInfo.Title)

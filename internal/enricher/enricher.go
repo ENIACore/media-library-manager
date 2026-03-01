@@ -169,18 +169,18 @@ func enrichMovieFile(entry *metadata.Entry, ctx metadata.MediaInfo) {
 }
 
 func deepCopy(dest *metadata.MediaInfo, src metadata.MediaInfo) {
-	if src.Title != nil {
+	if src.Title != nil && len(dest.Title) == 0 {
 		dest.Title = append([]string(nil), src.Title...)
 	}
-	if src.Season != nil {
+	if src.Season != nil && dest.Season == nil {
 		season := *src.Season
 		dest.Season = &season
 	}
-	if src.Episode != nil {
+	if src.Episode != nil && dest.Episode == nil {
 		episode := *src.Episode
 		dest.Episode = &episode
 	}
-	if src.Year != nil {
+	if src.Year != nil && dest.Year == nil {
 		year := *src.Year
 		dest.Year = &year
 	}
