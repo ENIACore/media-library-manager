@@ -174,15 +174,6 @@ func createTempDir() string {
 	return tempDir
 }
 
-/*
-func getTreePath(path string, isDir bool) string {
-	if isDir {
-		return path
-	}
-	return filepath.Dir(path)
-}
-*/
-
 func tree(path string) string {
 	cmd := exec.Command("tree", "--noreport", "-C", path)
 	output, err := cmd.Output()

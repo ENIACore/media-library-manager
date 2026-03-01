@@ -56,27 +56,31 @@ func sanitizePrefix(segments []string) []string {
 	return segments
 }
 
-// isTerminator determines if the leftmost portion of a []string is a terminator
-// A terminator is a pattern whose meaning can be deterministically determined
+
+// isStrictTerminator returns true for patterns that are unambiguously NOT title words.
+// Used before a year has been found in extractTitle.
+func isStrictTerminator(segments []string) bool {
+    return parseResolution(segments) != "" ||
+        parseCodec(segments) != "" ||
+        parseSource(segments) != "" ||
+        parseAudio(segments) != "" ||
+        parseSeason(segments) != nil ||
+        parseEpisode(segments) != nil ||
+        parseVideoExt(segments) != "" ||
+        parseSubtitleExt(segments) != "" ||
+        parseAudioExt(segments) != ""
+}
+
+// isTerminator returns true for any known metadata pattern.
+// Used after a year has been found, where ambiguous words are safe to treat as terminators.
 func isTerminator(segments []string) bool {
-	if parseResolution(segments) != "" ||
-		parseCodec(segments) != "" ||
-		parseSource(segments) != "" ||
-		parseAudio(segments) != "" ||
-		parseSeason(segments) != nil ||
-		parseEpisode(segments) != nil ||
-		parseVideoExt(segments) != "" ||
-		parseSubtitleExt(segments) != "" ||
-		parseMisc(segments) != "" ||
-		parseAudioExt(segments) != "" ||
-		parseDS(segments) != "" ||
-		parseBTS(segments) != "" ||
-		parseBonus(segments) != "" ||
-		parseEdition(segments) != "" ||
-		parseLanguage(segments) != "" {
-		return true
-	}
-	return false
+    return isStrictTerminator(segments) ||
+        parseMisc(segments) != "" ||
+        parseDS(segments) != "" ||
+        parseBTS(segments) != "" ||
+        parseBonus(segments) != "" ||
+        parseEdition(segments) != "" ||
+        parseLanguage(segments) != ""
 }
 
 // extractTitle returns the title starting from the leftmost segment.
@@ -87,9 +91,15 @@ func extractTitle(segments []string) []string {
 	var year *int
 	for i, segment := range segments {
 		candidates := segments[i:]
-		if isTerminator(candidates) {
-			break
-		}
+		
+		// If year found, use unstrict terminator
+		if year != nil && isTerminator(candidates) {
+            break
+        }
+		// If year not found, use strict terminator without english words	
+        if year == nil && isStrictTerminator(candidates) {
+            break
+        }
 
 		if year != nil {
 			title = append(title, strconv.Itoa(*year))

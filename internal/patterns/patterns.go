@@ -19,15 +19,98 @@ type CompiledPatternGroup struct {
 	Patterns []*CompiledPattern
 }
 
+var ReleaseWebsites = []Pattern{
+		// YTS variants
+	`YTS\.MX`,
+	`YTS\.AM`,
+	`YTS\.LT`,
+	`YTS\.AG`,
+	// PAHE variants
+	`PAHE\.IN`,
+	`PAHE\.PH`,
+	// 1337x
+	`1337X\.TO`,
+	`WWW\.1337X\.TO`,
+	// RARBG
+	`RARBG\.TO`,
+	`RARBG\.IS`,
+	// The Pirate Bay
+	`THEPIRATEBAY\.ORG`,
+	`TPB\.AM`,
+	// Nyaa
+	`NYAA\.SI`,
+	`NYAA\.NET`,
+	// TorrentGalaxy
+	`TORRENTGALAXY\.TO`,
+	`TGX\.RS`,
+	// Kickass Torrents
+	`KICKASSTORRENTS\.TO`,
+	`KAT\.AM`,
+	`KATCR\.CO`,
+	// EZTV
+	`EZTV\.RE`,
+	`EZTV\.AG`,
+	`EZTV\.IO`,
+	// Torrentz
+	`TORRENTZ2\.EU`,
+	`TORRENTZ\.EU`,
+	// LimeTorrents
+	`LIMETORRENTS\.INFO`,
+	`LIMETORRENTS\.CO`,
+	// Zooqle
+	`ZOOQLE\.COM`,
+	// Torlock
+	`TORLOCK\.COM`,
+	// TorrentDownloads
+	`TORRENTDOWNLOADS\.ME`,
+	// Torrenting
+	`WWW\.TORRENTING\.COM`,
+	`TORRENTING\.COM`,
+	// TorrentCounter
+	`TORRENTCOUNTER\.TO`,
+	`TORRENTCOUNTER\.BE`,
+	// ExtraTorrent
+	`EXTRATORRENTS\.CC`,
+	`EXTRATORRENT\.AG`,
+	// IsoHunt
+	`ISOHUNT\.TO`,
+	// Monova
+	`MONOVA\.ORG`,
+	// Seedpeer
+	`SEEDPEER\.EU`,
+	// TorrentFunk
+	`TORRENTFUNK\.COM`,
+	// GloTorrents
+	`GLOTORRENTS\.COM`,
+	// BitSnoop
+	`BITSNOOP\.COM`,
+	// SkyTorrents
+	`SKYTORRENTS\.IN`,
+	// Idope
+	`IDOPE\.SE`,
+	// AniDex
+	`ANIDEX\.INFO`,
+	// AniRena
+	`ANIRENA\.COM`,
+	// Rutor
+	`RUTOR\.INFO`,
+	`RUTOR\.ORG`,
+	// Rutracker
+	`RUTRACKER\.ORG`,
+	// Nnm-Club
+	`NNM-CLUB\.ME`,
+	`NNM-CLUB\.RU`,
+}
+
 // Website/domain patterns commonly found at start of torrent names
-var WebsitePatterns = []Pattern{
+var WebsitePatterns = append([]Pattern{
 	// Include all TLDs for patterns with explicit prefixes
 	`WWW\.[A-Z0-9]+\.(COM|NET|ORG|IO|CO|TV|ME|INFO|BIZ|US|UK|CA|DE|FR|JP|CN|RU|BR|AU|IN|IT|NL|ES|PL|SE|NO|FI|DK|BE|CH|AT|CZ|PT|GR|HU|RO|SK|BG|HR|SI|LT|LV|EE|IE|LU|MT|CY)`,
 	`HTTP\.[A-Z0-9]+\.(COM|NET|ORG|IO|CO|TV|ME|INFO|BIZ|US|UK|CA|DE|FR|JP|CN|RU|BR|AU|IN|IT|NL|ES|PL|SE|NO|FI|DK|BE|CH|AT|CZ|PT|GR|HU|RO|SK|BG|HR|SI|LT|LV|EE|IE|LU|MT|CY)`,
 	`HTTPS\.[A-Z0-9]+\.(COM|NET|ORG|IO|CO|TV|ME|INFO|BIZ|US|UK|CA|DE|FR|JP|CN|RU|BR|AU|IN|IT|NL|ES|PL|SE|NO|FI|DK|BE|CH|AT|CZ|PT|GR|HU|RO|SK|BG|HR|SI|LT|LV|EE|IE|LU|MT|CY)`,
 	// Use only safe TLDs for patterns without explicit prefix
 	`[A-Z0-9]+\.(COM|NET|ORG|IO|INFO|BIZ)`,
-}
+}, ReleaseWebsites...)
 
 // Patterns that indicate directory or file is a sample and should be ignored
 var SamplePatterns = []Pattern{
@@ -36,7 +119,7 @@ var SamplePatterns = []Pattern{
 }
 
 // MiscPatterns are noise tokens in torrent names with no useful metadata value.
-var MiscPatterns = []Pattern{
+var MiscPatterns = append([]Pattern{
 	// === UNUSED QUALITY INDICATORS ===
 	// HDR variants
 	`HDR`, `HDR10`, `HDR10PLUS`, `HDR10\+`, `DOLBY\.VISION`, `DOLBYVISION`, `DV`, `HLG`,
@@ -108,11 +191,6 @@ var MiscPatterns = []Pattern{
 	`SHO`,
 	`STAN`,
 
-	// === SCENE / P2P RELEASE GROUP WEBSITES ===
-	`YTS\.MX`,
-	`TORRENTCOUNTER\.TO`,
-	`WWW.TORRENTING\.COM`,
-
 	// === TV SPECIFIC ===
 	`COMPLETE`, `COMPLETE\.SERIES`,
 	`MINISERIES`, `MINI\.SERIES`,
@@ -127,7 +205,7 @@ var MiscPatterns = []Pattern{
 	`COLORIZED`,
 	`RESTORED`,
 	`AI\.UPSCALE`, `UPSCALED`, `AI\.ENHANCED`,
-}
+}, ReleaseWebsites...)
 
 var LanguagePatternGroups = []PatternGroup{
 	{Key: `English`, Patterns: []Pattern{`ENGLISH`, `ENG`, `EN`}},
@@ -240,7 +318,7 @@ var EditionPatternGroups = []PatternGroup{
 	{Key: `Remastered`, Patterns: []Pattern{`REMASTERED`, `REMASTER`}},
 	{Key: `Extended`, Patterns: []Pattern{`EXTENDED`, `EXTENDED\.CUT`, `EXTENDED\.EDITION`}},
 	{Key: `Unrated`, Patterns: []Pattern{`UNRATED`}},
-	//{Key: `Uncut`, Patterns: []Pattern{`UNCUT`}},
+	{Key: `Uncut`, Patterns: []Pattern{`UNCUT`}},
 	{Key: `DirectorsCut`, Patterns: []Pattern{`DIRECTORS\.CUT`}},
 	{Key: `Theatrical`, Patterns: []Pattern{`THEATRICAL`, `THEATRICAL\.CUT`}},
 	{Key: `Criterion`, Patterns: []Pattern{`CRITERION`}},
