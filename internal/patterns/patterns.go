@@ -100,6 +100,8 @@ var ReleaseWebsites = []Pattern{
 	// Nnm-Club
 	`NNM-CLUB\.ME`,
 	`NNM-CLUB\.RU`,
+
+	`TORRENT911.CC`,
 }
 
 // Website/domain patterns commonly found at start of torrent names
