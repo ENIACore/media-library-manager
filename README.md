@@ -372,3 +372,79 @@ Project Link: [https://github.com/ENIACore/media_library_manager](https://github
 [linkedin-url]: https://linkedin.com/in/linkedin_username
 [Go-badge]: https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white
 [Go-url]: https://golang.org/
+
+# Releasing a New Version
+
+## Prerequisites
+- [ ] `gh` CLI installed and authenticated (`gh auth status`)
+- [ ] All changes committed and pushed
+- [ ] On `main` branch (`git branch --show-current`)
+
+## Steps
+
+### 1. Build the release binaries
+```bash
+make release VERSION=v0.9.9
+```
+
+### 2. Verify binaries exist
+```bash
+ls -lh dist/
+```
+
+Expected output:
+```
+dist/mlm-darwin-amd64
+dist/mlm-darwin-arm64
+dist/mlm-linux-amd64
+dist/mlm-linux-arm64
+dist/mlm-windows-amd64.exe
+```
+
+### 3. Test your local platform binary
+```bash
+# macOS arm64
+./dist/mlm-darwin-arm64 -help
+
+# macOS amd64
+./dist/mlm-darwin-amd64 -help
+
+# Linux amd64
+./dist/mlm-linux-amd64 -help
+```
+
+### 4. Tag the commit
+```bash
+git tag v0.9.9
+git push origin v0.9.9
+```
+
+### 5. Create the GitHub release
+```bash
+./release.sh
+```
+
+### 6. Verify the release
+```bash
+curl -s https://api.github.com/repos/ENIACore/media-library-manager/releases/latest \
+  | python3 -c "
+import sys, json
+r = json.load(sys.stdin)
+print('Version:', r['tag_name'])
+print('Assets:')
+[print(' -', a['name']) for a in r['assets']]
+"
+```
+
+### 7. Test the install script
+```bash
+curl -fsSL https://raw.githubusercontent.com/ENIACore/media-library-manager/main/install.py \
+  -o /tmp/mlm-install.py && sudo python3 /tmp/mlm-install.py; rm -f /tmp/mlm-install.py
+```
+
+## Releasing a Subsequent Version
+
+Repeat the steps above, updating the version in `release.sh`:
+```bash
+VERSION="v1.0.0"
+```
