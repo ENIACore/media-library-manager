@@ -1,7 +1,6 @@
 package resolver
 
 import (
-	"log/slog"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -9,8 +8,6 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/testutil"
 )
-
-var logger = slog.Default()
 
 func TestResolve(t *testing.T) {
 	/*
@@ -54,7 +51,7 @@ func TestResolve(t *testing.T) {
 				cfg := testutil.CreateTestCfg(testDir)
 				entry := test.entry()
 
-				err := Resolve(entry, &cfg, logger)
+				err := Resolve(entry, &cfg)
 
 				if err == nil {
 					t.Errorf("Resolve expected error for %v, got nil", test.name)
@@ -71,7 +68,7 @@ func TestResolve(t *testing.T) {
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestMovieFile(nil)
 
-		err := Resolve(entry, &cfg, logger)
+		err := Resolve(entry, &cfg)
 
 		if err != nil {
 			t.Errorf("Resolve unexpected error: %v", err)
@@ -90,7 +87,7 @@ func TestResolve(t *testing.T) {
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestEpFile(nil)
 
-		err := Resolve(entry, &cfg, logger)
+		err := Resolve(entry, &cfg)
 
 		if err != nil {
 			t.Errorf("Resolve unexpected error: %v", err)
@@ -112,7 +109,7 @@ func TestResolve(t *testing.T) {
 		subFile := testutil.CreateTestSubFile(nil)
 		entry := testutil.CreateTestMovieDir(nil, movieFile, bonusFile, subFile)
 
-		err := Resolve(entry, &cfg, logger)
+		err := Resolve(entry, &cfg)
 
 		if err != nil {
 			t.Errorf("Resolve unexpected error: %v", err)
@@ -138,7 +135,7 @@ func TestResolve(t *testing.T) {
 		entry.MediaInfo.Title = ep1.MediaInfo.Title
 		entry.MediaInfo.Year = ep1.MediaInfo.Year
 
-		err := Resolve(entry, &cfg, logger)
+		err := Resolve(entry, &cfg)
 
 		if err != nil {
 			t.Errorf("Resolve unexpected error: %v", err)
@@ -171,7 +168,7 @@ func TestResolve(t *testing.T) {
 		subDir := testutil.CreateTestSubDir(nil, sub)
 		entry := testutil.CreateTestSeriesDir(nil, seasonDir, bonusDir, subDir)
 
-		err := Resolve(entry, &cfg, logger)
+		err := Resolve(entry, &cfg)
 
 		if err != nil {
 			t.Errorf("Resolve unexpected error: %v", err)
@@ -213,7 +210,7 @@ func TestResolve(t *testing.T) {
 			},
 		}
 
-		err := Resolve(entry, &cfg, logger)
+		err := Resolve(entry, &cfg)
 
 		if err == nil {
 			t.Errorf("Resolve expected error for unknown role, got nil")
@@ -228,7 +225,7 @@ func TestResolveMovieFile(t *testing.T) {
 		entry := testutil.CreateTestMovieFile(nil)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveMovieFile(basePath, entry, &cfg, logger)
+		err := resolveMovieFile(basePath, entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveMovieFile unexpected error: %v", err)
@@ -244,7 +241,7 @@ func TestResolveMovieFile(t *testing.T) {
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestMovieFile(nil)
 
-		err := resolveMovieFile("", entry, &cfg, logger)
+		err := resolveMovieFile("", entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveMovieFile unexpected error: %v", err)
@@ -261,7 +258,7 @@ func TestResolveMovieFile(t *testing.T) {
 		entry := testutil.CreateTestSubFile(nil)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveMovieFile(basePath, entry, &cfg, logger)
+		err := resolveMovieFile(basePath, entry, &cfg)
 
 		if err == nil {
 			t.Errorf("resolveMovieFile expected error for subtitle file")
@@ -276,7 +273,7 @@ func TestResolveEpisodeFile(t *testing.T) {
 		entry := testutil.CreateTestEpFile(nil)
 		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 
-		err := resolveEpisodeFile(basePath, entry, &cfg, logger)
+		err := resolveEpisodeFile(basePath, entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveEpisodeFile unexpected error: %v", err)
@@ -293,7 +290,7 @@ func TestResolveEpisodeFile(t *testing.T) {
 		cfg := testutil.CreateTestCfg(testDir)
 		entry := testutil.CreateTestEpFile(nil)
 
-		err := resolveEpisodeFile("", entry, &cfg, logger)
+		err := resolveEpisodeFile("", entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveEpisodeFile unexpected error: %v", err)
@@ -316,8 +313,8 @@ func TestResolveEpisodeFile(t *testing.T) {
 
 		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 
-		_ = resolveEpisodeFile(basePath, ep1, &cfg, logger)
-		_ = resolveEpisodeFile(basePath, ep2, &cfg, logger)
+		_ = resolveEpisodeFile(basePath, ep1, &cfg)
+		_ = resolveEpisodeFile(basePath, ep2, &cfg)
 
 		if !strings.Contains(ep1.PathInfo.Dest, "/S01/") {
 			t.Errorf("ep1 should be in S01, got %v", ep1.PathInfo.Dest)
@@ -333,7 +330,7 @@ func TestResolveEpisodeFile(t *testing.T) {
 		entry := testutil.CreateTestMovieFile(nil)
 		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 
-		err := resolveEpisodeFile(basePath, entry, &cfg, logger)
+		err := resolveEpisodeFile(basePath, entry, &cfg)
 
 		if err == nil {
 			t.Errorf("resolveEpisodeFile expected error for movie file")
@@ -348,7 +345,7 @@ func TestResolveSubtitleFile(t *testing.T) {
 		entry := testutil.CreateTestSubFile(nil)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveSubtitleFile(basePath, entry, logger)
+		err := resolveSubtitleFile(basePath, entry)
 
 		if err != nil {
 			t.Errorf("resolveSubtitleFile unexpected error: %v", err)
@@ -367,7 +364,7 @@ func TestResolveSubtitleFile(t *testing.T) {
 		entry := testutil.CreateTestMovieFile(nil)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveSubtitleFile(basePath, entry, logger)
+		err := resolveSubtitleFile(basePath, entry)
 
 		if err == nil {
 			t.Errorf("resolveSubtitleFile expected error for movie file")
@@ -377,7 +374,7 @@ func TestResolveSubtitleFile(t *testing.T) {
 	t.Run("missing base path", func(t *testing.T) {
 		entry := testutil.CreateTestSubFile(nil)
 
-		err := resolveSubtitleFile("", entry, logger)
+		err := resolveSubtitleFile("", entry)
 
 		if err == nil {
 			t.Errorf("resolveSubtitleFile expected error for missing base path")
@@ -394,7 +391,7 @@ func TestResolveSubtitleDir(t *testing.T) {
 		entry := testutil.CreateTestSubDir(nil, sub1, sub2)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveSubtitleDir(basePath, entry, logger)
+		err := resolveSubtitleDir(basePath, entry)
 
 		if err != nil {
 			t.Errorf("resolveSubtitleDir unexpected error: %v", err)
@@ -414,7 +411,7 @@ func TestResolveSubtitleDir(t *testing.T) {
 		entry := testutil.CreateTestMovieDir(nil, movie)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveSubtitleDir(basePath, entry, logger)
+		err := resolveSubtitleDir(basePath, entry)
 
 		if err == nil {
 			t.Errorf("resolveSubtitleDir expected error for movie dir")
@@ -425,7 +422,7 @@ func TestResolveSubtitleDir(t *testing.T) {
 		sub := testutil.CreateTestSubFile(nil)
 		entry := testutil.CreateTestSubDir(nil, sub)
 
-		err := resolveSubtitleDir("", entry, logger)
+		err := resolveSubtitleDir("", entry)
 
 		if err == nil {
 			t.Errorf("resolveSubtitleDir expected error for missing base path")
@@ -440,7 +437,7 @@ func TestResolveExtrasFile(t *testing.T) {
 		entry := testutil.CreateTestBonusFile(nil)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveExtrasFile(basePath, entry, logger)
+		err := resolveExtrasFile(basePath, entry)
 
 		if err != nil {
 			t.Errorf("resolveExtrasFile unexpected error: %v", err)
@@ -458,7 +455,7 @@ func TestResolveExtrasFile(t *testing.T) {
 		entry := testutil.CreateTestMovieFile(nil)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025", "Extras")
 
-		err := resolveExtrasFile(basePath, entry, logger)
+		err := resolveExtrasFile(basePath, entry)
 
 		if err == nil {
 			t.Errorf("resolveExtrasFile expected error for movie file")
@@ -468,7 +465,7 @@ func TestResolveExtrasFile(t *testing.T) {
 	t.Run("missing base path", func(t *testing.T) {
 		entry := testutil.CreateTestBonusFile(nil)
 
-		err := resolveExtrasFile("", entry, logger)
+		err := resolveExtrasFile("", entry)
 
 		if err == nil {
 			t.Errorf("resolveExtrasFile expected error for missing base path")
@@ -485,7 +482,7 @@ func TestResolveExtrasDir(t *testing.T) {
 		entry := testutil.CreateTestBonusDir(nil, bonus, sub)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveExtrasDir(basePath, entry, logger)
+		err := resolveExtrasDir(basePath, entry)
 
 		if err != nil {
 			t.Errorf("resolveExtrasDir unexpected error: %v", err)
@@ -505,7 +502,7 @@ func TestResolveExtrasDir(t *testing.T) {
 		entry := testutil.CreateTestMovieDir(nil, movie)
 		basePath := filepath.Join(cfg.MoviePath, "Test.Title.2025")
 
-		err := resolveExtrasDir(basePath, entry, logger)
+		err := resolveExtrasDir(basePath, entry)
 
 		if err == nil {
 			t.Errorf("resolveExtrasDir expected error for movie dir")
@@ -516,7 +513,7 @@ func TestResolveExtrasDir(t *testing.T) {
 		bonus := testutil.CreateTestBonusFile(nil)
 		entry := testutil.CreateTestBonusDir(nil, bonus)
 
-		err := resolveExtrasDir("", entry, logger)
+		err := resolveExtrasDir("", entry)
 
 		if err == nil {
 			t.Errorf("resolveExtrasDir expected error for missing base path")
@@ -532,7 +529,7 @@ func TestResolveSeasonDir(t *testing.T) {
 		entry := testutil.CreateTestSeasonDir(nil, ep)
 		basePath := filepath.Join(cfg.ShowPath, "Test.Title.2025")
 
-		err := resolveSeasonDir(basePath, entry, &cfg, logger)
+		err := resolveSeasonDir(basePath, entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
@@ -560,7 +557,7 @@ func TestResolveSeasonDir(t *testing.T) {
 		entry.MediaInfo.Title = ep.MediaInfo.Title
 		entry.MediaInfo.Year = ep.MediaInfo.Year
 
-		err := resolveSeasonDir("", entry, &cfg, logger)
+		err := resolveSeasonDir("", entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
@@ -584,7 +581,7 @@ func TestResolveSeasonDir(t *testing.T) {
 		entry.MediaInfo.Title = ep.MediaInfo.Title
 		entry.MediaInfo.Year = ep.MediaInfo.Year
 
-		err := resolveSeasonDir("", entry, &cfg, logger)
+		err := resolveSeasonDir("", entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
@@ -612,7 +609,7 @@ func TestResolveSeasonDir(t *testing.T) {
 		entry.MediaInfo.Title = ep1.MediaInfo.Title
 		entry.MediaInfo.Year = ep1.MediaInfo.Year
 
-		err := resolveSeasonDir("", entry, &cfg, logger)
+		err := resolveSeasonDir("", entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveSeasonDir unexpected error: %v", err)
@@ -633,7 +630,7 @@ func TestResolveSeasonDir(t *testing.T) {
 		movie := testutil.CreateTestMovieFile(nil)
 		entry := testutil.CreateTestMovieDir(nil, movie)
 
-		err := resolveSeasonDir("", entry, &cfg, logger)
+		err := resolveSeasonDir("", entry, &cfg)
 
 		if err == nil {
 			t.Errorf("resolveSeasonDir expected error for movie dir")
@@ -653,7 +650,7 @@ func TestResolveSeriesDir(t *testing.T) {
 		subDir := testutil.CreateTestSubDir(nil, sub)
 		entry := testutil.CreateTestSeriesDir(nil, seasonDir, bonusDir, subDir)
 
-		err := resolveSeriesDir(entry, &cfg, logger)
+		err := resolveSeriesDir(entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveSeriesDir unexpected error: %v", err)
@@ -683,7 +680,7 @@ func TestResolveSeriesDir(t *testing.T) {
 		movie := testutil.CreateTestMovieFile(nil)
 		entry := testutil.CreateTestMovieDir(nil, movie)
 
-		err := resolveSeriesDir(entry, &cfg, logger)
+		err := resolveSeriesDir(entry, &cfg)
 
 		if err == nil {
 			t.Errorf("resolveSeriesDir expected error for movie dir")
@@ -700,7 +697,7 @@ func TestResolveMovieDir(t *testing.T) {
 		sub := testutil.CreateTestSubFile(nil)
 		entry := testutil.CreateTestMovieDir(nil, movie, bonus, sub)
 
-		err := resolveMovieDir(entry, &cfg, logger)
+		err := resolveMovieDir(entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveMovieDir unexpected error: %v", err)
@@ -722,7 +719,7 @@ func TestResolveMovieDir(t *testing.T) {
 		subDir := testutil.CreateTestSubDir(nil, sub)
 		entry := testutil.CreateTestMovieDir(nil, movie, bonusDir, subDir)
 
-		err := resolveMovieDir(entry, &cfg, logger)
+		err := resolveMovieDir(entry, &cfg)
 
 		if err != nil {
 			t.Errorf("resolveMovieDir unexpected error: %v", err)
@@ -746,7 +743,7 @@ func TestResolveMovieDir(t *testing.T) {
 		ep := testutil.CreateTestEpFile(nil)
 		entry := testutil.CreateTestSeasonDir(nil, ep)
 
-		err := resolveMovieDir(entry, &cfg, logger)
+		err := resolveMovieDir(entry, &cfg)
 
 		if err == nil {
 			t.Errorf("resolveMovieDir expected error for season dir")
