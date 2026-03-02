@@ -20,8 +20,7 @@
     <a href="https://github.com/ENIACore/media_library_manager"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/ENIACore/media_library_manager/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
-    &middot;
+    <a href="https://github.com/ENIACore/media_library_manager/issues/new?labels=bug&template=bug-report---.md">Report Bug</a> &middot;
     <a href="https://github.com/ENIACore/media_library_manager/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
@@ -306,27 +305,27 @@ The Media Library Manager uses a five-stage processing pipeline:
 - [x] Subtitle and bonus content handling
 - [x] Pattern-based metadata extraction
 - [x] Error handling and quarantine
-- [ ] Readable dry run output
+- [x] Readable dry run output
+- [ ] Pattern configuration identical to [Jellyfin Standards](https://jellyfin.org/docs/general/server/media/shows)
 - [ ] API integration (TMDB, TVDB) for metadata enrichment
-- [ ] Custom pattern configuration
-- [ ] Advanced duplicate detection
-- [ ] Advanced collision avoidance
-- [ ] Advanced aggregator
+- [ ] Relase V1.0.0 (yay, almost there!)
 - [ ] Advanced language detection (subtitles)
 
 See the [open issues](https://github.com/ENIACore/media_library_manager/issues) for a full list of proposed features and known issues.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
 ## TODO
-- Add better dry run output
+- Update resolver.go to ```naming-conventions.md``` file
+- TMDB integration to ensure movie title correctness and to correct series directory year to release year
+- Add movie directory title precedence of move file title
+- Release V1.0.0
+- Improve language detection and handling for subtitles
+- Add additional functionality to parse and rename all subtitle file languages according to actual contents
+
+## TODO Test Batches
 - Fix Test batch 4 (1) failing test
 - Fix Test batch 1, "Walk The Line" Line is being recognized as an Audio value
-- Add advanced aggregator (e.g If year missing from one show, combine under the show with the year ect...)
-- Detect duplicates
-- TMDB integration to ensure movie title correctness
-- Language detection for subtitles to correct file names
 
 <!-- CONTRIBUTING -->
 ## Contributing
