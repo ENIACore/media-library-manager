@@ -18,10 +18,17 @@ type Entry struct {
 }
 
 func (entry *Entry) Source() string {
-	if entry == nil || entry.MediaInfo.Source == "" {
+	if entry == nil || entry.PathInfo.Source == "" {
 		return "no source"
 	}
-	return filepath.Base(entry.MediaInfo.Source)
+	return filepath.Base(entry.PathInfo.Source)
+}
+
+func (entry *Entry) Dest() string {
+	if entry == nil || entry.PathInfo.Dest == "" {
+		return "no destination"
+	}
+	return filepath.Base(entry.PathInfo.Dest)
 }
 
 func (entry *Entry) Episode() string {

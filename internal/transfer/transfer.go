@@ -25,7 +25,6 @@ func TestTransfer(entry * metadata.Entry, tempDir string, logger *slog.Logger) e
 
 	if entry.PathInfo.IsDir {
 		entry.PathInfo.Dest = filepath.Join(tempDir, entry.PathInfo.Dest)
-    	lg.Debug("Skipping directory", "source", entry.PathInfo.Source)
 		return nil
 	}
 
@@ -42,7 +41,7 @@ func TestTransfer(entry * metadata.Entry, tempDir string, logger *slog.Logger) e
 		return err
 	}
 
-    lg.Info("Creating dummy entry", "source", entry.PathInfo.Source, "dest", entry.PathInfo.Dest)
+    lg.Debug("Creating dummy entry", "source", entry.Source(), "dest", entry.Dest())
 	f, err := os.Create(entry.PathInfo.Dest)
 	if err != nil {
     	return err
@@ -55,8 +54,8 @@ func TestTransfer(entry * metadata.Entry, tempDir string, logger *slog.Logger) e
 // Uses [resolveConflict] to handle duplicate filenames. Returns error if move fails.
 func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Transfer")
+
 	if cfg.DryRun {
-		lg.Info("Dry run true, returning")
 		return nil
 	}
 
@@ -67,7 +66,6 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 	}
 
 	if entry.PathInfo.IsDir {
-    	lg.Debug("Removing empty source directory", "source", entry.PathInfo.Source)
     	return os.RemoveAll(entry.PathInfo.Source)
 	}
 
@@ -82,7 +80,7 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 		return err
 	}
 
-    lg.Info("Moving entry", "source", entry.PathInfo.Source, "dest", entry.PathInfo.Dest)
+    lg.Info("Moving entry", "source", entry.Source(), "dest", entry.Dest())
 	return os.Rename(entry.PathInfo.Source, entry.PathInfo.Dest)
 }
 
@@ -90,8 +88,8 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) er
 // Skips incomplete directory specified in [config.Config.IncompletePath].
 func Cleanup(cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Cleanup")
+
 	if cfg.DryRun {
-		lg.Info("Dry run true, returning")
 		return
 	}
 
@@ -103,7 +101,6 @@ func Cleanup(cfg *config.Config, logger *slog.Logger) {
 
 	for _, entry := range entries {
 		if entry.IsDir() && entry.Name() == filepath.Base(cfg.IncompletePath) {
-        	lg.Debug("Skipping temp directory", "name", entry.Name())
         	continue
     	}
 		if err := os.RemoveAll(filepath.Join(cfg.TorrentPath, entry.Name())); err != nil {
@@ -117,13 +114,10 @@ func Cleanup(cfg *config.Config, logger *slog.Logger) {
 // Uses [resolveConflict] to handle duplicate names. Panics if unable to create or move to error directory.
 func Error(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Error")
-	lg.Info("Moving entries to error dir")
 	if root == nil {
-		lg.Info("Root is nil, ignoring root entry error handling")
 		return
 	}
 	if cfg.DryRun {
-		lg.Info("Dry run true, returning")
 		return
 	}
 
@@ -141,7 +135,7 @@ func Error(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 		panic("Unable to resolve conflicting paths in error dir")
     }
 
-    lg.Info("Moving to error dir", "source", root.PathInfo.Source, "dest", destPath)
+    lg.Info("Moving to error dir", "source", root.Source(), "dest", destPath)
     err = os.Rename(root.PathInfo.Source, destPath)
 	if err != nil {
 		lg.Error("Unable to move entry to error dir")
@@ -177,5 +171,3 @@ func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
-
-
