@@ -148,7 +148,7 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 	logger.Info("")
 	logger.Info("")
 
-	err = resolver.Resolve(root, cfg, logger)
+	err = resolver.Resolve(root, cfg)
 	if err != nil {
 		logger.Error("Resolve returned error", "error", err)
 		return root, err
