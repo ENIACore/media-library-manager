@@ -1,9 +1,9 @@
 package extractor
 
 import (
-	"fmt"
+	//"fmt"
 	"log/slog"
-	"os"
+	//"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -14,9 +14,10 @@ import (
 
 // ExtractPath extracts path metadata from a file or directory path.
 // Uses golang 'os' and 'filepath' library to accurately determine file or directory information.
-func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
+func ExtractFile(path string, logger *slog.Logger) metadata.FileInfo {
+	/*
 	log := logger.With("func", "ExtractPath")
-	pathInfo := metadata.PathInfo{}
+	pathInfo := metadata.FileInfo{}
 	pathInfo.Source = path
 	
 	pathInfo.Ext = getExt(path)
@@ -30,6 +31,9 @@ func ExtractPath(path string, logger *slog.Logger) metadata.PathInfo {
 
 	log.Info("successfully extracted path info", "path-info", fmt.Sprintf("%+v", pathInfo))
 	return pathInfo
+	*/
+	fileInfo := metadata.FileInfo{}
+	return fileInfo
 }
 
 // extractType returns the content type based on file extension
@@ -50,6 +54,7 @@ func extractType(ext string) metadata.ContentType {
 	
 	return metadata.UnknownType
 }
+
 
 // parseBonus returns the video ext pattern if the left most segment(s) are a pattern match.
 // Returns empty string if pattern not found.

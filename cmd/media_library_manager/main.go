@@ -47,6 +47,14 @@ func main() {
 		if err != nil {
 			logger.Error("Parse returned error", "error", err)
 		}
-		fmt.Println("hi %v", root)
+
+		fmt.Println("source is: ", root.Source())
+		fmt.Println("title is: ", root.MediaInfo.Title)
+		fmt.Println("year is: ", root.MediaInfo.YearString())
+		fmt.Println("episode is: ", root.MediaInfo.EpisodeString())
+		fmt.Println("season is: ", root.MediaInfo.SeasonString())
+		fmt.Println("deleted scenes is: ", root.MediaInfo.DS)
+		fmt.Println("behind the scenes is: ", root.MediaInfo.BTS)
+		fmt.Println("bonus is: ", root.MediaInfo.Bonus)
 	}
 }

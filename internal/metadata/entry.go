@@ -13,22 +13,22 @@ type Entry struct {
 	Depth    int // Depth depth from root (root = 0)
 
 	MediaInfo MediaInfo
-	PathInfo  PathInfo
+	FileInfo  FileInfo
 	Role      EntryRole
 }
 
 func (entry *Entry) Source() string {
-	if entry == nil || entry.PathInfo.Source == "" {
+	if entry == nil || entry.FileInfo.SourcePath == "" {
 		return "no source"
 	}
-	return filepath.Base(entry.PathInfo.Source)
+	return filepath.Base(entry.FileInfo.SourcePath)
 }
 
 func (entry *Entry) Dest() string {
-	if entry == nil || entry.PathInfo.Dest == "" {
+	if entry == nil || entry.FileInfo.DestPath == "" {
 		return "no destination"
 	}
-	return filepath.Base(entry.PathInfo.Dest)
+	return filepath.Base(entry.FileInfo.DestPath)
 }
 
 func (entry *Entry) Episode() string {

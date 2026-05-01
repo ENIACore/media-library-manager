@@ -27,11 +27,6 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	mediaInfo.Year = extractYear(sanitizedName)
 	mediaInfo.Episode = extractEpisode(sanitizedName)
 	mediaInfo.Season = extractSeason(sanitizedName)
-	mediaInfo.Resolution = extractResolution(sanitizedName)
-	mediaInfo.Codec = extractCodec(sanitizedName)
-	mediaInfo.Source = extractSource(sanitizedName)
-	mediaInfo.Audio = extractAudio(sanitizedName)
-	mediaInfo.Language = extractLanguage(sanitizedName)
 	mediaInfo.DS = extractDS(sanitizedName)
 	mediaInfo.BTS = extractBTS(sanitizedName)
 	mediaInfo.Bonus = extractBonus(sanitizedName)
@@ -40,11 +35,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 
 	// Second passes for unique cases
 	sanitizedName = SanitizeName(path)
-	// second pass for language if subtitle file; ensure language isn't recognized as title
-	ext := getExt(path)
-	if extractType(ext) == metadata.Subtitle {
-		mediaInfo.Language = extractLanguage(sanitizedName)
-	}
+
 	// determine if beginning of file is extras pattern (somewhat common pattern)
 	if mediaInfo.DS == "" && parseDS(sanitizedName) != "" {
     	mediaInfo.DS = parseDS(sanitizedName)

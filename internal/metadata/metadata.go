@@ -1,5 +1,9 @@
 package metadata
 
+import (
+	"strconv"
+)
+
 // MediaInfo describes the movie, show, or episode the related file or directory pertains too.
 // nil or "" indicates missing pattern or information in file or directory.
 type MediaInfo struct {
@@ -30,4 +34,25 @@ type FileInfo struct {
 	Audio      	string
 	Language	[]string
 	Bitrate		string
+}
+
+func (info *MediaInfo) YearString() string {
+	if info.Year == nil {
+        return "nil"
+    }
+    return strconv.Itoa(*info.Year)
+}
+
+func (info *MediaInfo) EpisodeString() string {
+	if info.Episode == nil {
+        return "nil"
+    }
+    return strconv.Itoa(*info.Episode)
+}
+
+func (info *MediaInfo) SeasonString() string {
+	if info.Season == nil {
+        return "nil"
+    }
+    return strconv.Itoa(*info.Season)
 }
