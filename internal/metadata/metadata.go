@@ -7,11 +7,7 @@ type MediaInfo struct {
 	Year       *int
 	Episode    *int   // 0 = pattern found w/o number, >0 = episode number
 	Season     *int   // 0 = pattern found w/o number, >0 = season number
-	Resolution string
-	Codec      string
-	Source     string
-	Audio      string
-	Language   []string
+
 	DS         string // Deleted scenes
 	BTS	       string // Behind the scenes
 	Bonus      string // Less specific bonus (i.e featurettes, extras ect)
@@ -21,11 +17,17 @@ type MediaInfo struct {
 // PathInfo describes the file or directory related information.
 // All paths are full paths and not relative.
 // [ContentType] has a value of [UnknownType] for directories.
-type PathInfo struct {
-	Dest   	string
-	Source 	string
+type FileInfo struct {
+	DestPath 	string
+	SourcePath 	string
 
-	Ext   string
-	Type  ContentType
-	IsDir bool
+	Ext   		string
+	FileType  	ContentType
+	IsDir 		bool
+
+	Resolution 	string
+	Codec      	string
+	Audio      	string
+	Language	[]string
+	Bitrate		string
 }
