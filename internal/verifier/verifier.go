@@ -32,18 +32,16 @@ const (
 	maxResults  = 5
 )
 
-// tmdbMovieResult is the subset of a TMDb /search/movie result we care about.
 type tmdbMovieResult struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
-	ReleaseDate string `json:"release_date"` // "YYYY-MM-DD"
+	ReleaseDate string `json:"release_date"`
 }
 
-// tmdbTVResult is the subset of a TMDb /search/tv result we care about.
 type tmdbTVResult struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`
-	FirstAirDate string `json:"first_air_date"` // "YYYY-MM-DD"
+	FirstAirDate string `json:"first_air_date"`
 }
 
 type tmdbMovieResponse struct {
@@ -54,23 +52,12 @@ type tmdbTVResponse struct {
 	Results []tmdbTVResult `json:"results"`
 }
 
-// tmdbCandidate is a normalized view of a TMDb result used for interactive
-// selection, regardless of whether it came from /search/movie or /search/tv.
 type tmdbCandidate struct {
 	id    int
 	title string
 	date  string
 }
 
-// Verify queries TMDb to confirm the title and optional year on the root entry
-// are correct. On success it sets root.MediaInfo.TMDBid. For series roots it
-// also updates root.MediaInfo.Year to the original air year returned by TMDb.
-//
-// An error is returned when:
-//   - the root entry role is not verifiable (not a movie or series root)
-//   - the TMDb API key is missing from cfg
-//   - no match is found for the extracted title / year
-//   - the HTTP request fails
 func Verify(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Verify", "source", root.Source())
 
@@ -92,10 +79,9 @@ func Verify(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	}
 }
 
-// verifyMovie searches TMDb /search/movie, selects a result (interactively or
-// automatically), confirms title/year match, then sets TMDBid and canonical title.
 func verifyMovie(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	query := joinTitle(root.MediaInfo.Title)
+
 	params := url.Values{}
 	params.Set("query", query)
 	if root.MediaInfo.Year != nil {
@@ -111,6 +97,7 @@ func verifyMovie(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return fmt.Errorf("verifier: failed to parse TMDb movie response: %w", err)
 	}
+
 	if len(resp.Results) == 0 {
 		return fmt.Errorf("verifier: no TMDb results found for movie %q (year=%v)", query, root.MediaInfo.YearString())
 	}
@@ -134,15 +121,14 @@ func verifyMovie(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) 
 	root.MediaInfo.TMDBid = "tmdb-" + strconv.Itoa(best.id)
 	year := yearFromDate(best.date)
 	root.MediaInfo.Year = &year
+
 	logger.Info("movie verified", "title", best.title, "year", year, "tmdb_id", root.MediaInfo.TMDBid)
 	return nil
 }
 
-// verifySeries searches TMDb /search/tv, selects a result (interactively or
-// automatically), confirms title/year match, sets TMDBid, and updates Year to
-// the original air year.
 func verifySeries(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	query := joinTitle(root.MediaInfo.Title)
+
 	params := url.Values{}
 	params.Set("query", query)
 	if root.MediaInfo.Year != nil {
@@ -158,6 +144,7 @@ func verifySeries(root *metadata.Entry, cfg *config.Config, logger *slog.Logger)
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return fmt.Errorf("verifier: failed to parse TMDb TV response: %w", err)
 	}
+
 	if len(resp.Results) == 0 {
 		return fmt.Errorf("verifier: no TMDb results found for series %q (year=%v)", query, root.MediaInfo.YearString())
 	}
@@ -183,14 +170,16 @@ func verifySeries(root *metadata.Entry, cfg *config.Config, logger *slog.Logger)
 	if airYear != 0 {
 		root.MediaInfo.Year = &airYear
 	}
+
 	logger.Info("series verified", "title", best.title, "first_air_year", airYear, "tmdb_id", root.MediaInfo.TMDBid)
 	return nil
 }
 
-// selectResult presents candidates to the user interactively and returns the
-// chosen one, or returns candidates[0] automatically with title/year validation
-// when cfg.Interactive is false.
 func selectResult(query, mediaType string, candidates []tmdbCandidate, extractedYear *int, cfg *config.Config) (tmdbCandidate, error) {
+	if len(candidates) == 0 {
+		return tmdbCandidate{}, fmt.Errorf("verifier: no TMDb matches found for %s %q", mediaType, query)
+	}
+
 	if cfg.Interactive {
 		fmt.Printf("\nTMDb results for %s %q:\n", mediaType, query)
 		for i, c := range candidates {
@@ -204,18 +193,19 @@ func selectResult(query, mediaType string, candidates []tmdbCandidate, extracted
 	}
 
 	best := candidates[0]
+
 	if !titlesMatch(query, best.title) {
-		return tmdbCandidate{}, fmt.Errorf("verifier: TMDb title mismatch — extracted %q, got %q", query, best.title)
+		fmt.Printf("verifier: warning — title mismatch: extracted %q, got %q\n", query, best.title)
 	}
+
 	resultYear := yearFromDate(best.date)
 	if extractedYear != nil && resultYear != 0 && *extractedYear != resultYear {
-		return tmdbCandidate{}, fmt.Errorf("verifier: TMDb year mismatch for %q — extracted %d, got %d", query, *extractedYear, resultYear)
+		fmt.Printf("verifier: warning — year mismatch: extracted %d, got %d\n", *extractedYear, resultYear)
 	}
+
 	return best, nil
 }
 
-// promptSelection prints a prompt and reads a 1-based integer selection from
-// stdin. Returns the 0-based index of the chosen result.
 func promptSelection(count int) (int, error) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -234,8 +224,6 @@ func promptSelection(count int) (int, error) {
 	}
 }
 
-// tmdbGet performs a GET request to the given TMDb endpoint.
-// Uses Bearer auth for v4 JWT tokens, api_key query param for v3 hex keys.
 func tmdbGet(apiKey string, endpoint string, params url.Values) ([]byte, error) {
 	reqURL := tmdbBaseURL + endpoint + "?" + params.Encode()
 
@@ -251,6 +239,7 @@ func tmdbGet(apiKey string, endpoint string, params url.Values) ([]byte, error) 
 		q.Set("api_key", apiKey)
 		req.URL.RawQuery = q.Encode()
 	}
+
 	req.Header.Set("Accept", "application/json")
 
 	client := &http.Client{Timeout: httpTimeout}
@@ -270,9 +259,6 @@ func tmdbGet(apiKey string, endpoint string, params url.Values) ([]byte, error) 
 	return io.ReadAll(resp.Body)
 }
 
-// titleToSlice splits a TMDb title string into an uppercase []string,
-// consistent with how the rest of the pipeline stores titles.
-// e.g. "The Dark Knight" → ["THE", "DARK", "KNIGHT"]
 func titleToSlice(title string) []string {
 	parts := strings.Fields(title)
 	for i, p := range parts {
@@ -281,8 +267,6 @@ func titleToSlice(title string) []string {
 	return parts
 }
 
-// joinTitle converts a Title []string to a lowercase space-separated search string.
-// e.g. ["DARK", "KNIGHT"] → "dark knight"
 func joinTitle(parts []string) string {
 	words := make([]string, len(parts))
 	for i, p := range parts {
@@ -291,9 +275,6 @@ func joinTitle(parts []string) string {
 	return strings.Join(words, " ")
 }
 
-// titlesMatch normalizes both strings by lowercasing and stripping all
-// non-alphanumeric characters before comparing, so punctuation and
-// articles don't cause false mismatches.
 func titlesMatch(extracted, result string) bool {
 	nonAlphaNum := regexp.MustCompile(`[^a-z0-9]`)
 	norm := func(s string) string {
@@ -302,8 +283,6 @@ func titlesMatch(extracted, result string) bool {
 	return norm(extracted) == norm(result)
 }
 
-// yearFromDate parses the year out of a "YYYY-MM-DD" date string.
-// Returns 0 if the string is empty or malformed.
 func yearFromDate(date string) int {
 	if len(date) < 4 {
 		return 0
@@ -315,8 +294,6 @@ func yearFromDate(date string) int {
 	return y
 }
 
-// safeYearLen returns 4 if the date string is at least 4 chars, otherwise its length.
-// Used to safely slice the year out of a date string for display.
 func safeYearLen(date string) int {
 	if len(date) >= 4 {
 		return 4
@@ -324,7 +301,6 @@ func safeYearLen(date string) int {
 	return len(date)
 }
 
-// looksLikeJWT returns true if the key appears to be a v4 JWT read access token.
 func looksLikeJWT(key string) bool {
 	return strings.HasPrefix(key, "eyJ")
 }
