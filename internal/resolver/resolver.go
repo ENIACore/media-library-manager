@@ -470,8 +470,8 @@ func buildTitle(entry *metadata.Entry) (string, error) {
 	title := strings.Join(capitalized, " ")
 	title += " (" + strconv.Itoa(*entry.MediaInfo.Year) + ")"
 
-	if entry.MediaInfo.TMDBid != "" {
-		title = title + " [" + entry.MediaInfo.TMDBid + "]"
+	if entry.MediaInfo.TMDBid != 0 {
+		title = title + " [" + entry.TMDB() + "]"
 	}
 
 	return title, nil

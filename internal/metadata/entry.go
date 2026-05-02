@@ -45,6 +45,13 @@ func (entry *Entry) Season() string {
 	return strconv.Itoa(*entry.MediaInfo.Season)
 }
 
+func (entry *Entry) TMDB() string {
+	if entry == nil || entry.MediaInfo.TMDBid == 0 {
+		return ""
+	}
+	return "tmdb-" + strconv.Itoa(entry.MediaInfo.TMDBid)
+}
+
 // Height returns the maximum depth from this entry to its deepest descendant, starting at 0.
 func (entry *Entry) Height() int {
 	if entry.Children == nil {

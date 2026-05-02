@@ -118,11 +118,11 @@ func verifyMovie(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) 
 	}
 
 	root.MediaInfo.Title = titleToSlice(best.title)
-	root.MediaInfo.TMDBid = "tmdb-" + strconv.Itoa(best.id)
+	root.MediaInfo.TMDBid = best.id
 	year := yearFromDate(best.date)
 	root.MediaInfo.Year = &year
 
-	logger.Info("movie verified", "title", best.title, "year", year, "tmdb_id", root.MediaInfo.TMDBid)
+	logger.Info("movie verified", "title", best.title, "year", year, "tmdb_id", root.TMDB())
 	return nil
 }
 
@@ -166,12 +166,12 @@ func verifySeries(root *metadata.Entry, cfg *config.Config, logger *slog.Logger)
 
 	airYear := yearFromDate(best.date)
 	root.MediaInfo.Title = titleToSlice(best.title)
-	root.MediaInfo.TMDBid = "tmdb-" + strconv.Itoa(best.id)
+	root.MediaInfo.TMDBid = best.id
 	if airYear != 0 {
 		root.MediaInfo.Year = &airYear
 	}
 
-	logger.Info("series verified", "title", best.title, "first_air_year", airYear, "tmdb_id", root.MediaInfo.TMDBid)
+	logger.Info("series verified", "title", best.title, "first_air_year", airYear, "tmdb_id", root.TMDB())
 	return nil
 }
 
