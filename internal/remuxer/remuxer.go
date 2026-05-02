@@ -19,11 +19,11 @@ import (
 )
 
 type mkvTrack struct {
-	ID         int    `json:"id"`
-	Type       string `json:"type"`
-	Codec      string `json:"codec"`
+	ID    int    `json:"id"`
+	Type  string `json:"type"`
+	Codec string `json:"codec"`
 	Properties struct {
-		Language string `json:"language"`
+		Language  string `json:"language"`
 		TrackName string `json:"track_name"`
 	} `json:"properties"`
 }
@@ -33,11 +33,7 @@ type mkvFile struct {
 }
 
 // Remux examines the entry: if it is not an MKV file it returns immediately.
-// For each subtitle track that is S_TEXT/UTF8 and whose language can be
-// identified, it extracts the track to <DestPath>.<language>.srt — taking
-// only the first track when multiple share the same language. Subtitle tracks
-// are then stripped from the source MKV in-place.
-// When cfg.DryRun is true all operations are logged but not executed.
+// Extracts text subtitles when possible, then ALWAYS strips all subtitle tracks.
 func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Remux", "source", entry.Source())
 
@@ -49,18 +45,19 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	if err != nil {
 		return err
 	}
+
 	if len(subtitles) == 0 {
-		lg.Info("no subtitle tracks, skipping")
+		lg.Info("no subtitle tracks found, nothing to strip")
 		return nil
 	}
 
-	// Filter to S_TEXT/UTF8 tracks with a recognisable language, keeping only
-	// the first track encountered per language.
+	// Filter to text subtitles
 	type candidateTrack struct {
 		track mkvTrack
 		lang  string
 		dest  string
 	}
+
 	base := strings.TrimSuffix(entry.FileInfo.DestPath, filepath.Ext(entry.FileInfo.DestPath))
 	seen := make(map[string]bool)
 	var candidates []candidateTrack
@@ -73,6 +70,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			)
 			continue
 		}
+
 		lang := extractor.ParseLanguage([]string{strings.ToUpper(t.Properties.Language)})
 		if lang == "" {
 			lg.Info("skipping subtitle track with unrecognised language",
@@ -81,6 +79,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			)
 			continue
 		}
+
 		if seen[lang] {
 			lg.Info("skipping duplicate subtitle track for language",
 				"id", t.ID,
@@ -88,6 +87,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			)
 			continue
 		}
+
 		seen[lang] = true
 		candidates = append(candidates, candidateTrack{
 			track: t,
@@ -96,41 +96,46 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		})
 	}
 
-	if len(candidates) == 0 {
-		lg.Info("no extractable subtitle tracks after filtering, skipping")
-		return nil
-	}
-
 	if cfg.DryRun {
-		for _, c := range candidates {
-			lg.Info("dry run: would extract subtitle track",
-				"id", c.track.ID,
-				"language", c.lang,
-				"dest", filepath.Base(c.dest),
-			)
+		if len(candidates) > 0 {
+			for _, c := range candidates {
+				lg.Info("dry run: would extract subtitle track",
+					"id", c.track.ID,
+					"language", c.lang,
+					"dest", filepath.Base(c.dest),
+				)
+			}
+		} else {
+			lg.Info("dry run: no extractable subtitle tracks found")
 		}
+
 		lg.Info("dry run: would strip all subtitle tracks from MKV",
 			"path", filepath.Base(entry.FileInfo.SourcePath),
 		)
 		return nil
 	}
 
-	// Extract each candidate track to its SRT file.
-	for _, c := range candidates {
-		if err := extractTrack(entry.FileInfo.SourcePath, c.track.ID, c.dest, lg); err != nil {
-			return err
+	// Extract subtitles if available
+	if len(candidates) > 0 {
+		for _, c := range candidates {
+			if err := extractTrack(entry.FileInfo.SourcePath, c.track.ID, c.dest, lg); err != nil {
+				return err
+			}
+			lg.Info("extracted subtitle track",
+				"id", c.track.ID,
+				"language", c.lang,
+				"dest", filepath.Base(c.dest),
+			)
 		}
-		lg.Info("extracted subtitle track",
-			"id", c.track.ID,
-			"language", c.lang,
-			"dest", filepath.Base(c.dest),
-		)
+	} else {
+		lg.Info("no extractable subtitle tracks after filtering, proceeding to strip all subtitles")
 	}
 
-	// Strip all subtitle tracks from the MKV in-place.
+	// ALWAYS strip subtitles
 	if err := stripSubtitles(entry.FileInfo.SourcePath, lg); err != nil {
 		return err
 	}
+
 	lg.Info("stripped subtitle tracks from MKV",
 		"path", filepath.Base(entry.FileInfo.SourcePath),
 	)
@@ -146,16 +151,19 @@ func identifySubtitleTracks(path string) ([]mkvTrack, error) {
 			return nil, fmt.Errorf("remuxer: mkvmerge identify failed for %q: %w", path, err)
 		}
 	}
+
 	var info mkvFile
 	if err := json.Unmarshal(out, &info); err != nil {
 		return nil, fmt.Errorf("remuxer: failed to parse mkvmerge identify output for %q: %w", path, err)
 	}
+
 	var subtitles []mkvTrack
 	for _, t := range info.Tracks {
 		if t.Type == "subtitles" {
 			subtitles = append(subtitles, t)
 		}
 	}
+
 	return subtitles, nil
 }
 
@@ -165,6 +173,7 @@ func extractTrack(srcPath string, trackID int, destSRT string, lg *slog.Logger) 
 		srcPath,
 		fmt.Sprintf("%d:%s", trackID, destSRT),
 	}
+
 	out, err := exec.Command("mkvextract", args...).CombinedOutput()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 1 {
@@ -173,11 +182,11 @@ func extractTrack(srcPath string, trackID int, destSRT string, lg *slog.Logger) 
 		}
 		lg.Warn("mkvextract completed with warnings", "output", string(out))
 	}
+
 	return nil
 }
 
-// stripSubtitles rewrites the MKV at path with all subtitle tracks removed,
-// replacing the original file in-place via a temp file.
+// stripSubtitles removes ALL subtitle tracks from the MKV
 func stripSubtitles(path string, lg *slog.Logger) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), "remux-*.mkv")
 	if err != nil {
@@ -200,13 +209,14 @@ func stripSubtitles(path string, lg *slog.Logger) error {
 		os.Remove(tmpPath)
 		return fmt.Errorf("remuxer: failed to replace %q with stripped file: %w", path, err)
 	}
+
 	return nil
 }
 
 func isTextSubtitle(codec string) bool {
-    switch codec {
-    case "S_TEXT/UTF8", "SubRip/SRT", "S_TEXT/ASS", "SubStationAlpha", "S_TEXT/SSA":
-        return true
-    }
-    return false
+	switch codec {
+	case "S_TEXT/UTF8", "SubRip/SRT", "S_TEXT/ASS", "SubStationAlpha", "S_TEXT/SSA":
+		return true
+	}
+	return false
 }
