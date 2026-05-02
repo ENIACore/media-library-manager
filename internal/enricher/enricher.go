@@ -45,8 +45,12 @@ func enrichExtrasFiles(entry *metadata.Entry, ctx metadata.MediaInfo) {
 			ctx.Season = nil
 		}
 		deepCopy(&entry.MediaInfo, ctx)
-	case metadata.MovieDir, metadata.SeriesDir, metadata.SeasonDir:
+	case metadata.MovieDir, metadata.SeriesDir:
 		// Title and year intentionally not propagated to extras files
+	case metadata.SeasonDir:
+		if entry.MediaInfo.Season != nil {
+			ctx.Season = entry.MediaInfo.Season
+		}
 	default:
 		if entry.MediaInfo.Season != nil {
 			ctx.Season = entry.MediaInfo.Season

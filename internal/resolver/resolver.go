@@ -468,7 +468,7 @@ func buildTitle(entry *metadata.Entry) (string, error) {
         capitalized[i] = capitalize(part)
     }
 	title := strings.Join(capitalized, " ")
-	title += title + " (" + strconv.Itoa(*entry.MediaInfo.Year) + ")"
+	title += " (" + strconv.Itoa(*entry.MediaInfo.Year) + ")"
 
 	if entry.MediaInfo.TMDBid != "" {
 		title = title + " [" + entry.MediaInfo.TMDBid + "]"
