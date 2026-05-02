@@ -62,7 +62,8 @@ func isStrictTerminator(segments []string) bool {
         parseEpisode(segments) != nil ||
         parseVideoExt(segments) != "" ||
         parseSubtitleExt(segments) != "" ||
-        parseAudioExt(segments) != ""
+        parseAudioExt(segments) != "" ||
+		parseIdentification(segments) != ""
 }
 
 // isTerminator returns true for any known metadata pattern.
@@ -74,7 +75,8 @@ func isTerminator(segments []string) bool {
         parseBTS(segments) != "" ||
         parseBonus(segments) != "" ||
         parseEdition(segments) != "" ||
-        ParseLanguage(segments) != ""
+        ParseLanguage(segments) != "" ||
+		parseIdentification(segments) != ""
 }
 
 // extractTitle returns the title starting from the leftmost segment.
@@ -365,6 +367,15 @@ func parseEdition(segments []string) string {
 // Used as helper function for sanitizePrefix.
 func parseWebsite(segments []string) string {
 	for _, re := range patterns.GetWebsitePatterns() {
+		if match := matchSegments(segments, (*regexp.Regexp)(re)); match != nil {
+			return match[0]
+		}
+	}
+	return ""
+}
+
+func parseIdentification(segments []string) string {
+	for _, re := range patterns.GetIdentificationPatterns() {
 		if match := matchSegments(segments, (*regexp.Regexp)(re)); match != nil {
 			return match[0]
 		}
