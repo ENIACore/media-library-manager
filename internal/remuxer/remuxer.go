@@ -61,6 +61,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		lang  string
 		dest  string
 	}
+	base := strings.TrimSuffix(entry.FileInfo.DestPath, filepath.Ext(entry.FileInfo.DestPath))
 	seen := make(map[string]bool)
 	var candidates []candidateTrack
 
@@ -91,7 +92,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		candidates = append(candidates, candidateTrack{
 			track: t,
 			lang:  lang,
-			dest:  entry.FileInfo.DestPath + "." + lang + ".srt",
+			dest:  base + "." + lang + ".srt",
 		})
 	}
 
