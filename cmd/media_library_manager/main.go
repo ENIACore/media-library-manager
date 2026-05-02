@@ -27,7 +27,7 @@ func main() {
 	case "ingest":
 		ingest(tempDir, cfg, logger)
 	case "subtitle":
-		//do nothing
+		subtitle(cfg, logger)
 	default:
 		panic("Invalid mode detected, only ingest or subtitle authorized")
 	}
@@ -41,4 +41,3 @@ func createTempDir() string {
 	defer os.RemoveAll(tempDir)
 	return tempDir
 }
-
