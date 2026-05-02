@@ -13,13 +13,13 @@ func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		return fmt.Errorf("Cannot enrich nil root entry")
 	}
 
-	if !root.PathInfo.IsDir {
+	if !root.FileInfo.IsDir {
 		return nil
 	}
 
 	switch root.Role {
 	case metadata.SubtitleDir, metadata.DSDir, metadata.BTSDir, metadata.BonusDir, metadata.UnknownRole:
-		return fmt.Errorf("Unexpected entry %v at root level", root.PathInfo.Source)
+		return fmt.Errorf("Unexpected entry %v at root level", root.FileInfo.SourcePath)
 	}
 
 	enrichMovieFile(root, metadata.MediaInfo{})

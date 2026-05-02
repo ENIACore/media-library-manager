@@ -15,6 +15,7 @@ type Config struct {
     ManagerPath 	string
     LogStdout		bool
     DryRun      	bool
+	Interactive		bool
 	TMDBApiKey		string
 }
 
@@ -31,6 +32,7 @@ func New() *Config {
         ManagerPath: getEnv("ENIACORE_MANAGER_PATH", "/opt/media_manager"),
         LogStdout:   getEnvBool("ENIACORE_LOG_STDOUT", true),
         DryRun:      getEnvBool("ENIACORE_DRY_RUN", true),
+        Interactive: getEnvBool("ENIACORE_INTERACTIVE", true),
 		TMDBApiKey: getEnv("ENIACORE_TMDB_API_KEY", ""),
     }
 
@@ -43,6 +45,7 @@ func New() *Config {
     flag.StringVar(&cfg.ManagerPath, "manager-path", defaults.ManagerPath, "Path to program directory")
     flag.BoolVar(&cfg.LogStdout, "log-stdout", defaults.LogStdout, "Log to standard output")
     flag.BoolVar(&cfg.DryRun, "dry-run", defaults.DryRun, "Run without moving files")
+	flag.BoolVar(&cfg.Interactive, "interactive", defaults.Interactive, "User can interactively correct program")
 	flag.StringVar(&cfg.TMDBApiKey, "tmdb-api-key", defaults.TMDBApiKey, "TMDb API read access token or v3 key")
     flag.Parse()
 

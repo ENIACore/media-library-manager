@@ -16,6 +16,7 @@ import (
 	//"github.com/ENIACore/media_library_manager/internal/enricher"
 	"github.com/ENIACore/media_library_manager/internal/logger"
 	"github.com/ENIACore/media_library_manager/internal/parser"
+	"github.com/ENIACore/media_library_manager/internal/verifier"
 	//"github.com/ENIACore/media_library_manager/internal/resolver"
 	//"github.com/ENIACore/media_library_manager/internal/transfer"
 )
@@ -72,6 +73,10 @@ func main() {
 			logger.Error("Classify returned error", "error", err)
 		}
 
+		err = verifier.Verify(root, cfg, logger)
+		if err != nil {
+			logger.Error("Verifier returned error", "error", err)
+		}
 
 		/*
 		err = enricher.Enrich(root, cfg, logger)
