@@ -16,7 +16,7 @@ import (
 func DetectSubtitle(root *metadata.Entry, entries []*metadata.Entry, cfg *config.Config, logger *slog.Logger) []*metadata.Entry {
 	if root.FileInfo.IsDir {
 		for _, child := range root.Children {
-			DetectSubtitle(child, entries, cfg, logger)
+			entries = DetectSubtitle(child, entries, cfg, logger)
 		}
 	}
 

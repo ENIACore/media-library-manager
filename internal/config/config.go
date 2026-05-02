@@ -21,6 +21,7 @@ type Config struct {
 	Limit			int
 
 	OpenSubtitlesApiKey string
+	OpenSubtitlesUserAgent   string
 	OpenSubtitlesUser   string
 	OpenSubtitlesPass   string
 }
@@ -43,6 +44,7 @@ func New() *Config {
 		TMDBApiKey: getEnv("ENIACORE_TMDB_API_KEY", ""),
 		Limit: getEnvInt("ENIACORE_LIMIT", 10),
 		OpenSubtitlesApiKey: getEnv("ENIACORE_OS_API_KEY", ""),
+		OpenSubtitlesUserAgent:   getEnv("ENIACORE_OS_USER_AGENT", ""),
 		OpenSubtitlesUser:   getEnv("ENIACORE_OS_USER", ""),
 		OpenSubtitlesPass:   getEnv("ENIACORE_OS_PASS", ""),
     }
@@ -61,6 +63,7 @@ func New() *Config {
 	flag.StringVar(&cfg.TMDBApiKey, "tmdb-api-key", defaults.TMDBApiKey, "TMDb API read access token or v3 key")
 	flag.IntVar(&cfg.Limit, "limit", defaults.Limit, "Maximum number of movies/series to process per run (0 = unlimited)")
 	flag.StringVar(&cfg.OpenSubtitlesApiKey, "os-api-key", defaults.OpenSubtitlesApiKey, "OpenSubtitles REST API key")
+	flag.StringVar(&cfg.OpenSubtitlesUserAgent, "os-user-agent", defaults.OpenSubtitlesUserAgent, "OpenSubtitles user agent set in consumers")
 	flag.StringVar(&cfg.OpenSubtitlesUser, "os-user", defaults.OpenSubtitlesUser, "OpenSubtitles username (enables authenticated downloads)")
 	flag.StringVar(&cfg.OpenSubtitlesPass, "os-pass", defaults.OpenSubtitlesPass, "OpenSubtitles password")
     flag.Parse()

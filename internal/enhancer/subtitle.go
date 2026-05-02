@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	osBaseURL   = "https://api.opensubtitles.com/api/v1"
-	osUserAgent = "MediaLibraryManager v1.0"
-	httpTimeout = 15 * time.Second
+	osDefaultBaseURL = "https://api.opensubtitles.com/api/v1"
+	httpTimeout      = 15 * time.Second
 )
 
 type osLoginBody struct {
@@ -28,8 +27,19 @@ type osLoginBody struct {
 }
 
 type osLoginResponse struct {
-	Status int    `json:"status"`
-	Token  string `json:"token"`
+	User    osLoginUser `json:"user"`
+	BaseURL string      `json:"base_url"`
+	Token   string      `json:"token"`
+	Status  int         `json:"status"`
+}
+
+type osLoginUser struct {
+	AllowedTranslations int    `json:"allowed_translations"`
+	AllowedDownloads    int    `json:"allowed_downloads"`
+	Level               string `json:"level"`
+	UserID              int    `json:"user_id"`
+	ExtInstalled        bool   `json:"ext_installed"`
+	VIP                 bool   `json:"vip"`
 }
 
 type osSearchResponse struct {
@@ -61,17 +71,66 @@ type osDownloadResponse struct {
 	Remaining int    `json:"remaining"`
 }
 
-// FetchSubtitle downloads an English SRT subtitle for entry and writes it to entry.FileInfo.DestPath.
-// entry must have TMDBid set (by verifier/enricher) and DestPath set to the target subtitle path (by detector).
-func FetchSubtitle(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
-	lg := logger.With("func", "FetchSubtitle", "source", entry.Source())
+// Session holds the authenticated OpenSubtitles session state.
+// The token is a JWT that lasts 24 hours; reuse the session across calls and
+// re-login when it expires. BaseURL may differ from the default for VIP users.
+type Session struct {
+	Token   string
+	BaseURL string
+}
+
+// Login authenticates with OpenSubtitles and returns a Session for use with FetchSubtitle.
+func Login(cfg *config.Config, logger *slog.Logger) (*Session, error) {
+	lg := logger.With("func", "Login")
 
 	if cfg.OpenSubtitlesApiKey == "" {
-		return fmt.Errorf("enhancer: OpenSubtitles API key not set in config")
+		return nil, fmt.Errorf("enhancer: OpenSubtitles API key not set in config")
 	}
 	if cfg.OpenSubtitlesUser == "" || cfg.OpenSubtitlesPass == "" {
-		return fmt.Errorf("enhancer: OpenSubtitles username and password not set in config")
+		return nil, fmt.Errorf("enhancer: OpenSubtitles username and password not set in config")
 	}
+	if cfg.OpenSubtitlesUserAgent == "" {
+		return nil, fmt.Errorf("enhancer: OpenSubtitles user agent not set in config")
+	}
+
+	resp, err := osLogin(cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, cfg.OpenSubtitlesUser, cfg.OpenSubtitlesPass)
+	if err != nil {
+		return nil, fmt.Errorf("enhancer: OpenSubtitles login failed: %w", err)
+	}
+
+	baseURL := buildBaseURL(resp.BaseURL)
+
+	lg.Info("OpenSubtitles login successful",
+		"jwt", resp.Token,
+		"allowed_downloads", resp.User.AllowedDownloads,
+		"allowed_translations", resp.User.AllowedTranslations,
+		"level", resp.User.Level,
+		"vip", resp.User.VIP,
+		"base_url", resp.BaseURL,
+		"resolved_base_url", baseURL,
+	)
+
+	return &Session{
+		Token:   resp.Token,
+		BaseURL: baseURL,
+	}, nil
+}
+
+// buildBaseURL converts the host returned in the login response into a full URL.
+// Falls back to the documented default if the response is missing the field.
+func buildBaseURL(host string) string {
+	if host == "" {
+		return osDefaultBaseURL
+	}
+	return "https://" + host + "/api/v1"
+}
+
+// FetchSubtitle downloads an English SRT subtitle for entry and writes it to entry.FileInfo.DestPath.
+// entry must have TMDBid set (by verifier/enricher) and DestPath set to the target subtitle path (by detector).
+// session must be obtained once via Login and reused across calls.
+func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, logger *slog.Logger) error {
+	lg := logger.With("func", "FetchSubtitle", "source", entry.Source())
+
 	if entry.MediaInfo.TMDBid == 0 {
 		return fmt.Errorf("enhancer: entry %v has no TMDBid", entry.Source())
 	}
@@ -79,12 +138,7 @@ func FetchSubtitle(entry *metadata.Entry, cfg *config.Config, logger *slog.Logge
 		return fmt.Errorf("enhancer: entry %v has no subtitle destination path", entry.Source())
 	}
 
-	token, err := osLogin(cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUser, cfg.OpenSubtitlesPass)
-	if err != nil {
-		return fmt.Errorf("enhancer: OpenSubtitles login failed: %w", err)
-	}
-
-	fileID, err := searchSubtitle(entry, cfg.OpenSubtitlesApiKey)
+	fileID, err := searchSubtitle(entry, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
 	if err != nil {
 		return fmt.Errorf("enhancer: subtitle search failed for %v: %w", entry.Source(), err)
 	}
@@ -94,7 +148,7 @@ func FetchSubtitle(entry *metadata.Entry, cfg *config.Config, logger *slog.Logge
 		return nil
 	}
 
-	link, remaining, err := requestDownload(fileID, cfg.OpenSubtitlesApiKey, token)
+	link, remaining, err := requestDownload(fileID, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
 	if err != nil {
 		return fmt.Errorf("enhancer: download request failed for %v: %w", entry.Source(), err)
 	}
@@ -109,28 +163,29 @@ func FetchSubtitle(entry *metadata.Entry, cfg *config.Config, logger *slog.Logge
 	return nil
 }
 
-func osLogin(apiKey, username, password string) (string, error) {
+func osLogin(apiKey, userAgent, username, password string) (*osLoginResponse, error) {
 	body, err := json.Marshal(osLoginBody{Username: username, Password: password})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	data, err := osPost("/login", apiKey, "", body)
+	// Login itself always goes to the default base URL; the response tells us where to go next.
+	data, err := osPost(osDefaultBaseURL, "/login", apiKey, userAgent, "", body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var resp osLoginResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
-		return "", fmt.Errorf("failed to parse login response: %w", err)
+		return nil, fmt.Errorf("failed to parse login response: %w", err)
 	}
 	if resp.Token == "" {
-		return "", fmt.Errorf("login response missing token")
+		return nil, fmt.Errorf("login response missing token")
 	}
-	return resp.Token, nil
+	return &resp, nil
 }
 
-func searchSubtitle(entry *metadata.Entry, apiKey string) (int, error) {
+func searchSubtitle(entry *metadata.Entry, apiKey, userAgent string, session *Session) (int, error) {
 	params := url.Values{}
 	params.Set("languages", "en")
 
@@ -153,7 +208,7 @@ func searchSubtitle(entry *metadata.Entry, apiKey string) (int, error) {
 		return 0, fmt.Errorf("unsupported entry role %v for subtitle fetch", entry.Role.String())
 	}
 
-	data, err := osGet("/subtitles", apiKey, params)
+	data, err := osGet(session.BaseURL, "/subtitles", apiKey, userAgent, session.Token, params)
 	if err != nil {
 		return 0, err
 	}
@@ -195,13 +250,13 @@ func pickBest(subs []osSubtitle) *osSubtitle {
 	return best
 }
 
-func requestDownload(fileID int, apiKey, token string) (string, int, error) {
+func requestDownload(fileID int, apiKey, userAgent string, session *Session) (string, int, error) {
 	body, err := json.Marshal(osDownloadBody{FileID: fileID})
 	if err != nil {
 		return "", 0, err
 	}
 
-	data, err := osPost("/download", apiKey, token, body)
+	data, err := osPost(session.BaseURL, "/download", apiKey, userAgent, session.Token, body)
 	if err != nil {
 		return "", 0, err
 	}
@@ -238,13 +293,17 @@ func downloadSubtitle(link, destPath string) error {
 	return err
 }
 
-func osGet(endpoint, apiKey string, params url.Values) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, osBaseURL+endpoint+"?"+params.Encode(), nil)
+func osGet(baseURL, endpoint, apiKey, userAgent, token string, params url.Values) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, baseURL+endpoint+"?"+params.Encode(), nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Api-Key", apiKey)
-	req.Header.Set("User-Agent", osUserAgent)
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 
 	client := &http.Client{Timeout: httpTimeout}
 	resp, err := client.Do(req)
@@ -263,14 +322,15 @@ func osGet(endpoint, apiKey string, params url.Values) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func osPost(endpoint, apiKey, token string, body []byte) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodPost, osBaseURL+endpoint, bytes.NewReader(body))
+func osPost(baseURL, endpoint, apiKey, userAgent, token string, body []byte) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodPost, baseURL+endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Api-Key", apiKey)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", osUserAgent)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", userAgent)
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
