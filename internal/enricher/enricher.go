@@ -47,9 +47,15 @@ func enrichExtrasFiles(entry *metadata.Entry, ctx metadata.MediaInfo) {
 		deepCopy(&entry.MediaInfo, ctx)
 	case metadata.MovieDir, metadata.SeriesDir:
 		// Title and year intentionally not propagated to extras files
+		if entry.MediaInfo.TMDBid != 0 {
+			ctx.TMDBid = entry.MediaInfo.TMDBid
+		}
 	case metadata.SeasonDir:
 		if entry.MediaInfo.Season != nil {
 			ctx.Season = entry.MediaInfo.Season
+		}
+		if entry.MediaInfo.TMDBid != 0 {
+			ctx.TMDBid = entry.MediaInfo.TMDBid
 		}
 	default:
 		if entry.MediaInfo.Season != nil {
@@ -90,6 +96,9 @@ func enrichEpisodeFiles(entry *metadata.Entry, ctx metadata.MediaInfo) {
 		if entry.MediaInfo.Year != nil {
 			ctx.Year = entry.MediaInfo.Year
 		}
+		if entry.MediaInfo.TMDBid != 0 {
+			ctx.TMDBid = entry.MediaInfo.TMDBid
+		}
 	default:
 		if entry.MediaInfo.Season != nil {
 			ctx.Season = entry.MediaInfo.Season
@@ -120,6 +129,9 @@ func enrichMovieFile(entry *metadata.Entry, ctx metadata.MediaInfo) {
 		}
 		if entry.MediaInfo.Year != nil {
 			ctx.Year = entry.MediaInfo.Year
+		}
+		if entry.MediaInfo.TMDBid != 0 {
+			ctx.TMDBid = entry.MediaInfo.TMDBid
 		}
 	}
 
@@ -157,6 +169,9 @@ func enrichSubtitleFiles(entry *metadata.Entry, ctx metadata.MediaInfo) {
 		if entry.MediaInfo.Year != nil {
 			ctx.Year = entry.MediaInfo.Year
 		}
+		if entry.MediaInfo.TMDBid != 0 {
+			ctx.TMDBid = entry.MediaInfo.TMDBid
+		}
 	default:
 		if entry.MediaInfo.Season != nil {
 			ctx.Season = entry.MediaInfo.Season
@@ -186,5 +201,8 @@ func deepCopy(dest *metadata.MediaInfo, src metadata.MediaInfo) {
 	if src.Year != nil && dest.Year == nil {
 		year := *src.Year
 		dest.Year = &year
+	}
+	if src.TMDBid != 0 {
+		dest.TMDBid = src.TMDBid
 	}
 }
