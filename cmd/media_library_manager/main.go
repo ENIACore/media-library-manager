@@ -71,6 +71,8 @@ func main() {
 			transfer.Transfer(root, cfg, logger)
 		}
 
+		remuxFiles(root, cfg, logger)
+
 		if !root.FileInfo.IsDir {
       		root.FileInfo.DestPath = filepath.Dir(root.FileInfo.DestPath)
   		}
@@ -100,12 +102,6 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 	root, err := parser.Parse(entryPath, logger)
 	if err != nil {
 		logger.Error("Parse returned error", "error", err)
-		return nil, err 
-	}
-
-	err = remuxer.Remux(root, cfg, logger)
-	if err != nil {
-		logger.Error("Remux returned error", "error", err)
 		return nil, err 
 	}
 
@@ -156,4 +152,17 @@ func tree(path string) string {
 		return filepath.Base(path) + "\n" + strings.TrimRight(lines[1], "\n")
 	}
 	return string(output)
+}
+
+func remuxFiles(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
+	entry.FileInfo.SourcePath = entry.FileInfo.DestPath // File now exists at destination
+	err := remuxer.Remux(entry, cfg, logger)
+	if err != nil {
+		logger.Error("Remux returned error", "error", err)
+		return
+	}
+
+	for _, child := range entry.Children {
+		remuxFiles(child, cfg, logger)	
+	}
 }
