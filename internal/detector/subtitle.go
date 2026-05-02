@@ -27,8 +27,11 @@ func DetectSubtitle(root *metadata.Entry, entries []*metadata.Entry, cfg *config
 		subtitlePath += ".English.srt"
 		
 		if !fileExists(subtitlePath) {
+			logger.Info("English SRT file missing, adding entry to download list", "SourcePath", root.Source(), "SubtitlePath", subtitlePath)
 			root.FileInfo.DestPath = subtitlePath
 			entries = append(entries, root)
+		} else {
+			logger.Info("English SRT file exists, ignoring media file", "SourcePath", root.Source())
 		}
 	}
 
