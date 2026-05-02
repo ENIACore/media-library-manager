@@ -16,6 +16,8 @@ type MediaInfo struct {
 	BTS	       string // Behind the scenes
 	Bonus      string // Less specific bonus (i.e featurettes, extras ect)
 	Edition	   string
+
+	TMDBid	   string
 }
 
 // PathInfo describes the file or directory related information.

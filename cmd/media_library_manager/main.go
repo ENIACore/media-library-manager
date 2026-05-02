@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	//"strings"
 
-	//"github.com/ENIACore/media_library_manager/internal/classifier"
+	"github.com/ENIACore/media_library_manager/internal/classifier"
 	//"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/config"
 	//"github.com/ENIACore/media_library_manager/internal/enricher"
@@ -66,5 +66,18 @@ func main() {
 		fmt.Println("audio is: ", root.FileInfo.Audio)
 		fmt.Println("language is: ", root.FileInfo.Language)
 		fmt.Println("bitrate is: ", root.FileInfo.Bitrate)
+
+		err = classifier.Classify(root, logger)
+		if err != nil {
+			logger.Error("Classify returned error", "error", err)
+		}
+
+
+		/*
+		err = enricher.Enrich(root, cfg, logger)
+		if err != nil {
+			logger.Error("Enrich returned error", "error", err)
+		}
+		*/
 	}
 }
