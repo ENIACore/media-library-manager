@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	Mode			string // Most important variable, determines if running in ingest mode or subtitle mode
     TorrentPath 	string
 	IncompletePath 	string
     MoviePath   	string
@@ -26,6 +27,7 @@ var Load = sync.OnceValue(New)
 // Precedence order: command-line args > environment variables > defaults.
 func New() *Config {
     defaults := &Config{
+        Mode: getEnv("ENIACORE_MODE", "ingest"),
         TorrentPath: getEnv("ENIACORE_TORRENT_PATH", "/opt/qbit/downloads"),
         IncompletePath: getEnv("ENIACORE_INCOMPLETE_PATH", "/opt/qbit/downloads/temp"),
         MoviePath:   getEnv("ENIACORE_MOVIE_PATH", "/opt/jellyfin/media/movies"),
@@ -40,6 +42,7 @@ func New() *Config {
 
     // Parse flags with env defaults
     cfg := &Config{}
+    flag.StringVar(&cfg.Mode, "mode", defaults.Mode, "Application mode (ingest or subtitle)")
     flag.StringVar(&cfg.TorrentPath, "torrent-path", defaults.TorrentPath, "Path to downloaded torrents")
     flag.StringVar(&cfg.IncompletePath, "incomplete-path", defaults.IncompletePath, "Path to in-progress (incomplete) torrents")
     flag.StringVar(&cfg.MoviePath, "movie-path", defaults.MoviePath, "Path to movie library")
