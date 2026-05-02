@@ -67,3 +67,18 @@ const (
 	Video
 	Subtitle
 )
+
+
+// String returns the string representation of ContentType for logging purposes.
+func (r ContentType) String() string {
+	switch r {
+	case UnknownType:
+		return "UNKNOWN"
+	case Video:
+		return "VIDEO"
+	case Subtitle:
+		return "SUBTITLE"
+	default:
+		return "INVALID"
+	}
+}
