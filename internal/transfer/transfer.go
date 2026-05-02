@@ -1,4 +1,4 @@
-// Package transfer moves media files to their final destinations or error directory.
+/// Package transfer moves media files to their final destinations or error directory.
 // Package relies on resolver package for destination paths and is final stage of processing pipeline.
 package transfer
 
@@ -13,75 +13,76 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
-//os.MkdirTemp("", "media-library-manager-*")
-func TestTransfer(entry * metadata.Entry, tempDir string, logger *slog.Logger) error {
+func TestTransfer(entry *metadata.Entry, tempDir string, logger *slog.Logger) {
 	lg := logger.With("func", "TestTransfer")
 
 	for _, child := range entry.Children {
-		if err := TestTransfer(child, tempDir, logger); err != nil {
-			return err
-		}
+		TestTransfer(child, tempDir, logger)
 	}
 
-	if entry.PathInfo.IsDir {
-		entry.PathInfo.Dest = filepath.Join(tempDir, entry.PathInfo.Dest)
-		return nil
+	if entry.FileInfo.IsDir {
+		entry.FileInfo.DestPath = filepath.Join(tempDir, entry.FileInfo.DestPath)
+		return
 	}
 
-	destDir := filepath.Dir(entry.PathInfo.Dest)
+	// Ignore empty destination paths, these are failed but unnecessary files
+	if entry.FileInfo.DestPath == "" {
+		return
+	}
+
+	destDir := filepath.Dir(entry.FileInfo.DestPath)
 	destDir = filepath.Join(tempDir, destDir)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return err
+		panic("Unable to create destination directory: " + destDir)
 	}
 
-	var err error
-	entry.PathInfo.Dest = filepath.Join(tempDir, entry.PathInfo.Dest)
-	entry.PathInfo.Dest, err = resolveConflict(entry.PathInfo.Dest)
+	entry.FileInfo.DestPath = filepath.Join(tempDir, entry.FileInfo.DestPath)
+	entry.FileInfo.DestPath = resolveConflict(entry.FileInfo.DestPath)
+
+	lg.Debug("Creating dummy entry", "source", entry.Source(), "dest", entry.Dest())
+	f, err := os.Create(entry.FileInfo.DestPath)
 	if err != nil {
-		return err
+		panic("Unable to create dummy file at: " + entry.FileInfo.DestPath)
 	}
-
-    lg.Debug("Creating dummy entry", "source", entry.Source(), "dest", entry.Dest())
-	f, err := os.Create(entry.PathInfo.Dest)
-	if err != nil {
-    	return err
-	}
-	return f.Close()
-
+	f.Close()
 }
 
 // Transfer recursively moves media entries to their final destinations.
 // Uses [resolveConflict] to handle duplicate filenames. Returns error if move fails.
-func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Transfer")
 
 	if cfg.DryRun {
-		return nil
+		return
 	}
 
 	for _, child := range entry.Children {
-		if err := Transfer(child, cfg, logger); err != nil {
-			return err
+		Transfer(child, cfg, logger)
+	}
+
+	if entry.FileInfo.IsDir {
+		if err := os.RemoveAll(entry.FileInfo.SourcePath); err != nil {
+			panic("Unable to remove source path: " + entry.FileInfo.SourcePath)
 		}
 	}
 
-	if entry.PathInfo.IsDir {
-    	return os.RemoveAll(entry.PathInfo.Source)
+	// Ignore empty destination paths, these are failed but unnecessary files
+	if entry.FileInfo.DestPath == "" {
+		return
 	}
 
-	destDir := filepath.Dir(entry.PathInfo.Dest)
+	destDir := filepath.Dir(entry.FileInfo.DestPath)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return err
+		panic("Unable to make destination directory: " + destDir)
 	}
 
-	var err error
-	entry.PathInfo.Dest, err = resolveConflict(entry.PathInfo.Dest)
-	if err != nil {
-		return err
-	}
+	entry.FileInfo.DestPath = resolveConflict(entry.FileInfo.DestPath)
 
     lg.Info("Moving entry", "source", entry.Source(), "dest", entry.Dest())
-	return os.Rename(entry.PathInfo.Source, entry.PathInfo.Dest)
+	
+	if err := os.Rename(entry.FileInfo.SourcePath, entry.FileInfo.DestPath); err != nil {
+		panic("Unable to move source " + entry.FileInfo.SourcePath + " to new destination " + entry.FileInfo.DestPath)
+	}
 }
 
 // Cleanup removes all remaining entries from torrent directory after processing.
@@ -127,16 +128,12 @@ func Error(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 		panic("Unable to create error dir")
     }
 
-    sourceName := filepath.Base(root.PathInfo.Source)
+    sourceName := filepath.Base(root.FileInfo.SourcePath)
     destPath := filepath.Join(errorPath, sourceName)
-    destPath, err := resolveConflict(destPath)
-    if err != nil {
-		lg.Error("Unable to resolve conflicting paths in error dir")
-		panic("Unable to resolve conflicting paths in error dir")
-    }
+    destPath = resolveConflict(destPath)
 
     lg.Info("Moving to error dir", "source", root.Source(), "dest", destPath)
-    err = os.Rename(root.PathInfo.Source, destPath)
+	err := os.Rename(root.FileInfo.SourcePath, destPath)
 	if err != nil {
 		lg.Error("Unable to move entry to error dir")
 		panic("Unable to move entry to error dir")
@@ -145,10 +142,10 @@ func Error(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 
 // resolveConflict generates a unique filepath by appending numeric suffixes if the path exists.
 // Tries up to 10000 variations (file_1, file_2, ..., file_10000).
-// Returns the original path if no conflict, or an error if all variations are taken.
-func resolveConflict(path string) (string, error) {
+// Panics if all variations are taken.
+func resolveConflict(path string) string {
 	if !exists(path) {
-		return path, nil
+		return path
 	}
 
 	dir := filepath.Dir(path)
@@ -158,11 +155,11 @@ func resolveConflict(path string) (string, error) {
 	for i := 1; i < 10000; i++ {
 		candidate := filepath.Join(dir, fmt.Sprintf("%s_%d%s", base, i, ext))
 		if !exists(candidate) {
-			return candidate, nil
+			return candidate
 		}
 	}
 
-	return "", fmt.Errorf("could not resolve conflict for %v after 10000 attempts", path)
+	panic("Unable to resolve conflict for path: " + path)
 }
 
 // exists checks if a file or directory exists at the given path.
