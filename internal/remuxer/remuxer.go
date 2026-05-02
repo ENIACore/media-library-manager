@@ -65,7 +65,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	var candidates []candidateTrack
 
 	for _, t := range subtitles {
-		if t.Codec != "S_TEXT/UTF8" {
+		if !isTextSubtitle(t.Codec) {
 			lg.Info("skipping subtitle track with unsupported codec",
 				"id", t.ID,
 				"codec", t.Codec,
@@ -200,4 +200,12 @@ func stripSubtitles(path string, lg *slog.Logger) error {
 		return fmt.Errorf("remuxer: failed to replace %q with stripped file: %w", path, err)
 	}
 	return nil
+}
+
+func isTextSubtitle(codec string) bool {
+    switch codec {
+    case "S_TEXT/UTF8", "SubRip/SRT", "S_TEXT/ASS", "SubStationAlpha", "S_TEXT/SSA":
+        return true
+    }
+    return false
 }
