@@ -43,7 +43,11 @@ func main() {
 	numFailure := 0
 	numSuccess := 0
 
-	for _, entry := range entries {
+	for i, entry := range entries {
+
+		if cfg.Limit != 0 && i >= cfg.Limit {
+			continue
+		}
 
 		root, err := process(entry, cfg, logger)
 

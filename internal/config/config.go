@@ -17,6 +17,7 @@ type Config struct {
     DryRun      	bool
 	Interactive		bool
 	TMDBApiKey		string
+	Limit			int
 }
 
 var Load = sync.OnceValue(New)
@@ -34,6 +35,7 @@ func New() *Config {
         DryRun:      getEnvBool("ENIACORE_DRY_RUN", true),
         Interactive: getEnvBool("ENIACORE_INTERACTIVE", true),
 		TMDBApiKey: getEnv("ENIACORE_TMDB_API_KEY", ""),
+		Limit: getEnvInt("ENIACORE_LIMIT", 10),
     }
 
     // Parse flags with env defaults
@@ -47,6 +49,7 @@ func New() *Config {
     flag.BoolVar(&cfg.DryRun, "dry-run", defaults.DryRun, "Run without moving files")
 	flag.BoolVar(&cfg.Interactive, "interactive", defaults.Interactive, "User can interactively correct program")
 	flag.StringVar(&cfg.TMDBApiKey, "tmdb-api-key", defaults.TMDBApiKey, "TMDb API read access token or v3 key")
+	flag.IntVar(&cfg.Limit, "limit", defaults.Limit, "Maximum number of movies/series to process per run (0 = unlimited)")
     flag.Parse()
 
     return cfg
@@ -65,6 +68,16 @@ func getEnvBool(key string, defaultVal bool) bool {
     if value := os.Getenv(key); value != "" {
         if b, err := strconv.ParseBool(value); err == nil {
             return b
+        }
+    }
+    return defaultVal
+}
+
+// getEnvInt retrieves an integer environment variable value or returns the default if not set or invalid.
+func getEnvInt(key string, defaultVal int) int {
+    if value := os.Getenv(key); value != "" {
+        if i, err := strconv.Atoi(value); err == nil {
+            return i
         }
     }
     return defaultVal
