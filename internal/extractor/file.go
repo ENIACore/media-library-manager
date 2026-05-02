@@ -43,7 +43,7 @@ func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 		fileInfo.Audio = extractAudio(data)
 		fileInfo.Language = extractLanguage(data)
 		fileInfo.Bitrate = extractBitrate(data)
-	}
+	} 
 
 	log.Info("Extracted file info", "SourcePath", fileInfo.SourcePath, "Ext", fileInfo.Ext, "FileType", fileInfo.ContentType, "IsDir", fileInfo.IsDir, "Resolution", fileInfo.Resolution, "Codec", fileInfo.Codec, "Audio", fileInfo.Audio, "Language", fileInfo.Language, "Bitrate", fileInfo.Bitrate)
 

@@ -13,12 +13,12 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/classifier"
 	//"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/config"
-	//"github.com/ENIACore/media_library_manager/internal/enricher"
+	"github.com/ENIACore/media_library_manager/internal/enricher"
 	"github.com/ENIACore/media_library_manager/internal/logger"
 	"github.com/ENIACore/media_library_manager/internal/parser"
 	"github.com/ENIACore/media_library_manager/internal/remuxer"
 	"github.com/ENIACore/media_library_manager/internal/verifier"
-	//"github.com/ENIACore/media_library_manager/internal/resolver"
+	"github.com/ENIACore/media_library_manager/internal/resolver"
 	//"github.com/ENIACore/media_library_manager/internal/transfer"
 )
 
@@ -95,11 +95,15 @@ func main() {
 			logger.Error("Verifier returned error", "error", err)
 		}
 
-		/*
 		err = enricher.Enrich(root, cfg, logger)
 		if err != nil {
 			logger.Error("Enrich returned error", "error", err)
 		}
-		*/
+
+
+		err = resolver.Resolve(root, cfg)
+		if err != nil {
+			logger.Error("Resolve returned error", "error", err)
+		}
 	}
 }
