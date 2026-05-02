@@ -1,7 +1,6 @@
 package extractor
 
 import (
-	"fmt"
 	"log/slog"
 	"regexp"
 	"strconv"
@@ -46,7 +45,8 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	if mediaInfo.Bonus == "" && parseBonus(sanitizedName) != "" {
     	mediaInfo.Bonus = parseBonus(sanitizedName)
 	}
-	log.Info("successfully extracted media info", "media-info", fmt.Sprintf("%+v", mediaInfo))
+
+	log.Info("Extracted media info", "Title", mediaInfo.Title, "Year", mediaInfo.YearString(), "Episode", mediaInfo.EpisodeString(), "Season", mediaInfo.SeasonString(), "DS", mediaInfo.DS, "BTS", mediaInfo.BTS, "Bonus", mediaInfo.Bonus, "Edition", mediaInfo.Edition)
 
 	return mediaInfo
 }
