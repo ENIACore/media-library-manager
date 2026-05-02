@@ -1,19 +1,77 @@
 package extractor
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
-	"strconv"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 
+	lingua "github.com/pemistahl/lingua-go"
 	ffprobe "gopkg.in/vansante/go-ffprobe.v2"
 
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/patterns"
+)
+
+var getLanguageDetector = sync.OnceValue(func() lingua.LanguageDetector {
+	return lingua.NewLanguageDetectorBuilder().
+		FromAllLanguages().
+		WithLowAccuracyMode().
+		Build()
+})
+
+// linguaToKey maps lingua language constants to the exact Key values in LanguagePatternGroups.
+// Languages lingua detects that have no matching key return "".
+// Bokmal and Nynorsk both collapse to "Norwegian"; Tagalog maps to "Filipino".
+var linguaToKey = map[lingua.Language]string{
+	lingua.Arabic:     "Arabic",
+	lingua.Basque:     "Basque",
+	lingua.Catalan:    "Catalan",
+	lingua.Chinese:    "Chinese",
+	lingua.Croatian:   "Croatian",
+	lingua.Czech:      "Czech",
+	lingua.Danish:     "Danish",
+	lingua.Dutch:      "Dutch",
+	lingua.English:    "English",
+	lingua.Finnish:    "Finnish",
+	lingua.French:     "French",
+	lingua.German:     "German",
+	lingua.Greek:      "Greek",
+	lingua.Hebrew:     "Hebrew",
+	lingua.Hungarian:  "Hungarian",
+	lingua.Indonesian: "Indonesian",
+	lingua.Italian:    "Italian",
+	lingua.Japanese:   "Japanese",
+	lingua.Korean:     "Korean",
+	lingua.Malay:      "Malay",
+	lingua.Bokmal:     "Norwegian",
+	lingua.Nynorsk:    "Norwegian",
+	lingua.Polish:     "Polish",
+	lingua.Portuguese: "Portuguese",
+	lingua.Romanian:   "Romanian",
+	lingua.Russian:    "Russian",
+	lingua.Spanish:    "Spanish",
+	lingua.Swedish:    "Swedish",
+	lingua.Tagalog:    "Filipino",
+	lingua.Thai:       "Thai",
+	lingua.Turkish:    "Turkish",
+	lingua.Ukrainian:  "Ukrainian",
+	lingua.Vietnamese: "Vietnamese",
+}
+
+var (
+	srtTimestampRe  = regexp.MustCompile(`^\d{2}:\d{2}:\d{2}[,\.]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[,\.]\d{3}`)
+	srtSequenceRe   = regexp.MustCompile(`^\d+$`)
+	assDialogueRe   = regexp.MustCompile(`(?i)^Dialogue:`)
+	assOverrideRe   = regexp.MustCompile(`\{[^}]*\}`)
+	sdhBracketRe    = regexp.MustCompile(`\[[^\]]+\]`)
+	sdhMusicRe      = regexp.MustCompile(`[♪♫🎵🎶]`)
 )
 
 // ExtractPath extracts path metadata from a file or directory path.
@@ -33,7 +91,8 @@ func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 	}
 	fileInfo.IsDir = info.IsDir()
 
-	if fileInfo.ContentType == metadata.Video {
+	switch fileInfo.ContentType {
+	case metadata.Video:
 		data, err := ffprobe.ProbeURL(context.Background(), path)
 		if err != nil {
 			return fileInfo, fmt.Errorf("Stat returned error: %w", err)
@@ -43,11 +102,114 @@ func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 		fileInfo.Audio = extractAudio(data)
 		fileInfo.Language = extractLanguage(data)
 		fileInfo.Bitrate = extractBitrate(data)
-	} 
+	case metadata.Subtitle:
+		lang, isSDH, err := extractSubtitleInfo(path, fileInfo.Ext)
+		if err != nil {
+			log.Warn("Could not extract subtitle info", "err", err)
+		} else {
+			if lang != "" {
+				fileInfo.Language = append(fileInfo.Language, lang)
+			}
+			if isSDH {
+				fileInfo.Language = append(fileInfo.Language, "SDH")
+			}
+		}
+	}
 
 	log.Info("Extracted file info", "SourcePath", fileInfo.SourcePath, "Ext", fileInfo.Ext, "FileType", fileInfo.ContentType, "IsDir", fileInfo.IsDir, "Resolution", fileInfo.Resolution, "Codec", fileInfo.Codec, "Audio", fileInfo.Audio, "Language", fileInfo.Language, "Bitrate", fileInfo.Bitrate)
 
 	return fileInfo, nil
+}
+
+// extractSubtitleInfo reads a subtitle file, detects its language via lingua-go,
+// and determines whether it is SDH (contains sound descriptions / music cues).
+func extractSubtitleInfo(path, ext string) (lang string, isSDH bool, err error) {
+	lines, err := readSubtitleDialogue(path, ext)
+	if err != nil {
+		return "", false, fmt.Errorf("extractor: reading subtitle dialogue: %w", err)
+	}
+
+	sample := buildSample(lines, 3000)
+	if sample != "" {
+		detector := getLanguageDetector()
+		if detected, ok := detector.DetectLanguageOf(sample); ok {
+			lang = linguaToKey[detected]
+		}
+	}
+
+	isSDH = detectSDH(lines)
+	return lang, isSDH, nil
+}
+
+// readSubtitleDialogue reads a subtitle file and returns only the dialogue text lines,
+// stripping timestamps, sequence numbers, and format-specific markup.
+func readSubtitleDialogue(path, ext string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		switch ext {
+		case "ASS", "SSA":
+			if !assDialogueRe.MatchString(line) {
+				continue
+			}
+			// Dialogue lines: "Dialogue: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,text"
+			// Text is everything after the 9th comma.
+			parts := strings.SplitN(line, ",", 10)
+			if len(parts) < 10 {
+				continue
+			}
+			text := assOverrideRe.ReplaceAllString(parts[9], "")
+			text = strings.TrimSpace(text)
+			if text != "" {
+				lines = append(lines, text)
+			}
+		default: // SRT, VTT, and unknowns
+			if line == "" || srtSequenceRe.MatchString(line) || srtTimestampRe.MatchString(line) {
+				continue
+			}
+			lines = append(lines, line)
+		}
+	}
+	return lines, scanner.Err()
+}
+
+// buildSample concatenates dialogue lines up to maxBytes for language detection.
+func buildSample(lines []string, maxBytes int) string {
+	var b strings.Builder
+	for _, l := range lines {
+		if b.Len() >= maxBytes {
+			break
+		}
+		b.WriteString(l)
+		b.WriteByte(' ')
+	}
+	return strings.TrimSpace(b.String())
+}
+
+// detectSDH returns true when the proportion of lines containing sound-effect
+// brackets or music symbols exceeds 10% — the hallmark of SDH subtitles.
+func detectSDH(lines []string) bool {
+	total, indicators := 0, 0
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		total++
+		if sdhBracketRe.MatchString(line) || sdhMusicRe.MatchString(line) {
+			indicators++
+		}
+	}
+	if total == 0 {
+		return false
+	}
+	return float64(indicators)/float64(total) > 0.10
 }
 
 func extractCodec(data *ffprobe.ProbeData) string {
@@ -120,11 +282,21 @@ func parseAudio(segments []string) string {
 
 func extractLanguage(data *ffprobe.ProbeData) []string {
 	var languages []string
+	sdh := false
 	for _, stream := range data.Streams {
-		lang := ParseLanguage([]string{strings.ToUpper(stream.Tags.Language)})
-		if stream.CodecType == "audio" && lang != "" {
-			languages = append(languages, lang)
+		switch stream.CodecType {
+		case "audio":
+			if lang := ParseLanguage([]string{strings.ToUpper(stream.Tags.Language)}); lang != "" {
+				languages = append(languages, lang)
+			}
+		case "subtitle":
+			if stream.Disposition.HearingImpaired == 1 {
+				sdh = true
+			}
 		}
+	}
+	if sdh {
+		languages = append(languages, "SDH")
 	}
 	return languages
 }
@@ -150,7 +322,7 @@ func extractBitrate(data *ffprobe.ProbeData) string {
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("%d kbps", bps/1000)
+	return fmt.Sprintf("%dkbps", bps/1000)
 }
 
 // extractType returns the content type based on file extension

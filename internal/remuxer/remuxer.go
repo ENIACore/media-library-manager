@@ -1,5 +1,6 @@
-// Package remuxer fixes subtitle tracks in MKV files using mkvmerge.
-// Non-English subtitles are dropped; English tracks are kept and renamed to just "English".
+// Package remuxer fixes subtitle track metadata in MKV files using mkvmerge.
+// All subtitle tracks are kept; each track's language tag and title are normalised,
+// and tracks flagged as hearing-impaired are named "<Language> SDH".
 // Runs immediately after parser.Parse, before classifier assigns EntryRole.
 package remuxer
 
@@ -10,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/ENIACore/media_library_manager/internal/config"
@@ -21,14 +23,60 @@ type mkvTrack struct {
 	ID         int    `json:"id"`
 	Type       string `json:"type"`
 	Properties struct {
-		Language  string `json:"language"`
-		TrackName string `json:"track_name"`
+		Language            string `json:"language"`
+		TrackName           string `json:"track_name"`
+		HearingImpairedFlag bool   `json:"hearing_impaired_flag"`
 	} `json:"properties"`
 }
 
 type mkvFile struct {
 	Tracks []mkvTrack `json:"tracks"`
 }
+
+// keyToISO639 maps language pattern keys to ISO 639-2/B codes for mkvmerge --language.
+var keyToISO639 = map[string]string{
+	"Arabic":                 "ara",
+	"Basque":                 "baq",
+	"Brazilian-Portuguese":   "por",
+	"Canadian-French":        "fre",
+	"Catalan":                "cat",
+	"Chinese":                "chi",
+	"Croatian":               "hrv",
+	"Czech":                  "cze",
+	"Danish":                 "dan",
+	"Dutch":                  "dut",
+	"English":                "eng",
+	"Filipino":               "fil",
+	"Finnish":                "fin",
+	"French":                 "fre",
+	"Galician":               "glg",
+	"German":                 "ger",
+	"Greek":                  "gre",
+	"Hebrew":                 "heb",
+	"Hungarian":              "hun",
+	"Indonesian":             "ind",
+	"Italian":                "ita",
+	"Japanese":               "jpn",
+	"Korean":                 "kor",
+	"Latin-American-Spanish": "spa",
+	"Malay":                  "may",
+	"Norwegian":              "nor",
+	"Polish":                 "pol",
+	"Portuguese":             "por",
+	"Romanian":               "rum",
+	"Russian":                "rus",
+	"Simplified-Chinese":     "chi",
+	"Spanish":                "spa",
+	"Swedish":                "swe",
+	"Tagalog":                "tgl",
+	"Thai":                   "tha",
+	"Traditional-Chinese":    "chi",
+	"Turkish":                "tur",
+	"Ukrainian":              "ukr",
+	"Vietnamese":             "vie",
+}
+
+var sdhNameRe = regexp.MustCompile(`(?i)\bSDH\b|\bHI\b|hearing.impaired`)
 
 // Remux fixes subtitle tracks in all MKV files found in the entry tree.
 // The original file is replaced in-place. When cfg.DryRun is true, the
@@ -74,6 +122,25 @@ func identifySubtitleTracks(path string) ([]mkvTrack, error) {
 	return subtitles, nil
 }
 
+// isSDH returns true if the track is flagged hearing-impaired or its name
+// contains a common SDH/HI marker.
+func isSDH(t mkvTrack) bool {
+	return t.Properties.HearingImpairedFlag || sdhNameRe.MatchString(t.Properties.TrackName)
+}
+
+// trackName builds the normalised display name for a subtitle track.
+// Returns "" when the language is unrecognised so callers can skip renaming.
+func trackName(t mkvTrack) string {
+	lang := extractor.ParseLanguage([]string{strings.ToUpper(t.Properties.Language)})
+	if lang == "" {
+		return ""
+	}
+	if isSDH(t) {
+		return lang + " SDH"
+	}
+	return lang
+}
+
 func remuxFile(path string, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "remuxFile", "path", filepath.Base(path))
 
@@ -87,22 +154,27 @@ func remuxFile(path string, cfg *config.Config, logger *slog.Logger) error {
 		return nil
 	}
 
-	var english []mkvTrack
-	for _, t := range subtitles {
-		if extractor.ParseLanguage([]string{strings.ToUpper(t.Properties.Language)}) == "English" {
-			english = append(english, t)
-		}
+	// Build per-track metadata corrections. Tracks whose language is
+	// unrecognised are still kept but not renamed.
+	type trackFix struct {
+		track   mkvTrack
+		name    string // "" = no rename
+		isoCode string // "" = no language correction
+	}
+	fixes := make([]trackFix, len(subtitles))
+	for i, t := range subtitles {
+		name := trackName(t)
+		lang := extractor.ParseLanguage([]string{strings.ToUpper(t.Properties.Language)})
+		fixes[i] = trackFix{track: t, name: name, isoCode: keyToISO639[lang]}
 	}
 
 	if cfg.DryRun {
-		if len(english) == 0 {
-			lg.Info("dry run: would strip all subtitles (no English tracks found)")
-		} else {
-			ids := make([]string, len(english))
-			for i, t := range english {
-				ids[i] = fmt.Sprintf("%d", t.ID)
+		for _, f := range fixes {
+			if f.name != "" {
+				lg.Info("dry run: would rename subtitle track", "id", f.track.ID, "name", f.name, "iso", f.isoCode)
+			} else {
+				lg.Info("dry run: would keep subtitle track unchanged (unrecognised language)", "id", f.track.ID, "lang", f.track.Properties.Language)
 			}
-			lg.Info("dry run: would fix subtitles", "english_track_ids", strings.Join(ids, ","), "dropped", len(subtitles)-len(english))
 		}
 		return nil
 	}
@@ -115,17 +187,13 @@ func remuxFile(path string, cfg *config.Config, logger *slog.Logger) error {
 	tmp.Close()
 
 	args := []string{"-o", tmpPath}
-	if len(english) == 0 {
-		args = append(args, "--no-subtitles")
-	} else {
-		ids := make([]string, len(english))
-		for i, t := range english {
-			ids[i] = fmt.Sprintf("%d", t.ID)
+	for _, f := range fixes {
+		id := fmt.Sprintf("%d", f.track.ID)
+		if f.name != "" {
+			args = append(args, "--track-name", id+":"+f.name)
 		}
-		args = append(args, "--subtitle-tracks", strings.Join(ids, ","))
-		for _, t := range english {
-			args = append(args, "--track-name", fmt.Sprintf("%d:English", t.ID))
-			args = append(args, "--language", fmt.Sprintf("%d:eng", t.ID))
+		if f.isoCode != "" {
+			args = append(args, "--language", id+":"+f.isoCode)
 		}
 	}
 	args = append(args, path)
@@ -144,6 +212,6 @@ func remuxFile(path string, cfg *config.Config, logger *slog.Logger) error {
 		return fmt.Errorf("remuxer: failed to replace %q with remuxed file: %w", path, err)
 	}
 
-	lg.Info("subtitles fixed", "path", filepath.Base(path), "kept", len(english), "dropped", len(subtitles)-len(english))
+	lg.Info("subtitle tracks fixed", "path", filepath.Base(path), "tracks", len(subtitles))
 	return nil
 }

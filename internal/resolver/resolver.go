@@ -40,15 +40,13 @@ func Resolve(root *metadata.Entry, cfg *config.Config) error {
 	Resolvers
 */
 
-// resolveSubtitleFile sets destination path for subtitle file under "Subtitles" subdirectory.
+// resolveSubtitleFile sets destination path for subtitle file at same level as movie/episode/extras files 
 // Groups by season if applicable. Clears quality metadata before building filename.
-func resolveSubtitleFile(basePath string, entry *metadata.Entry) error {
+// Subtitle files are non-essential and don't return errors if processing is not possible
+func resolveSubtitleFile(basePath string, entry *metadata.Entry) {
 
-	if entry.Role != metadata.SubtitleFile {
-		return fmt.Errorf("Expected SubtitleFile role, received %v for node %v", entry.Role.String(), entry.Source())
-	}
-	if basePath == "" {
-		return fmt.Errorf("Expected base path for SubtitlFile role, for node %v", entry.Source())
+	if entry.Role != metadata.SubtitleFile || basePath == "" {
+		return
 	}
 	
 	// If subtitle is a part of season, it will be placed in season dir
@@ -56,50 +54,41 @@ func resolveSubtitleFile(basePath string, entry *metadata.Entry) error {
 		seasonPath := buildSeasonPath(entry)	
 		basePath = filepath.Join(basePath, seasonPath) 
 	}
+
 	// If subtitle is a part of extras, it will be placed in extras dir (also in season dir if applicable)
 	if entry.MediaInfo.DS != "" || entry.MediaInfo.BTS != "" || entry.MediaInfo.Bonus != "" {
 		extrasPath := buildExtrasPath(entry)	
 		basePath = filepath.Join(basePath, extrasPath)
 	}
-	basePath = filepath.Join(basePath, "Subtitles")
 
-	entry.FileInfo.Resolution = ""
-	entry.FileInfo.Codec = ""
-	entry.FileInfo.Audio = ""
-	entry.MediaInfo.Bonus = ""
-	filename := buildFilename(entry)
-
-	entry.FileInfo.DestPath = filepath.Join(basePath, filename)
-	return nil
+	if filename, err := buildSubtitleFileName(entry); err == nil {
+		entry.FileInfo.DestPath = filepath.Join(basePath, filename)
+	} else {
+		entry.FileInfo.DestPath = ""
+	}
 }
 
 // resolveSubtitleDir recursively sets destination path for subtitle directory and its children.
 // Allows for intermediary subtitle directories, flattening directory structure.
-func resolveSubtitleDir(basePath string, entry *metadata.Entry) error {
-	if entry.Role != metadata.SubtitleDir {
-		return fmt.Errorf("Expected SubtitleDir role, received %v for node %v", entry.Role.String(), entry.Source())
-	}
-	if basePath == "" {
-		return fmt.Errorf("Expected base path for SubtitleDir role, for node %v", entry.Source())
+// Subtitle directories are non-essential and don't return errors if processing is not possible
+func resolveSubtitleDir(basePath string, entry *metadata.Entry) {
+
+	if entry.Role != metadata.SubtitleDir || basePath == "" {
+		return
 	}
 
 	for _, child := range entry.Children {
 		switch child.Role {
 			case metadata.SubtitleFile:
-				if err := resolveSubtitleFile(basePath, child); err != nil {
-					return err
-				}
+				resolveSubtitleFile(basePath, child)
 			case metadata.SubtitleDir:
-				if err := resolveSubtitleDir(basePath, child); err != nil { // Allows for intermediary subtitle dirs, flattens dir structure
-					return err
-				}
+				resolveSubtitleDir(basePath, child)
 			default:
-				return fmt.Errorf("Unexpected child role for SubtitleDir, received role %v for node %v", entry.Role.String(), entry.Source())
+				return
 		}
 	}
 
 	entry.FileInfo.DestPath = basePath
-	return nil
 }
 
 func resolveExtrasFile(basePath string, entry *metadata.Entry) error {
@@ -140,9 +129,7 @@ func resolveExtrasDir(basePath string, entry *metadata.Entry) error {
 				return err
 			}
 		case metadata.SubtitleFile:
-			if err := resolveSubtitleFile(basePath, child); err != nil {
-				return err
-			}
+			resolveSubtitleFile(basePath, child)
 		case metadata.DSDir, metadata.BTSDir, metadata.BonusDir:
 			if err := resolveExtrasDir(basePath, child); err != nil { // Allows for intermediary bonus dirs, flattens dir structure
 				return err
@@ -164,16 +151,20 @@ func resolveEpisodeFile(basePath string, entry *metadata.Entry, cfg *config.Conf
 	}
 
 	if basePath == "" {
-		entry.MediaInfo.Year = nil
-		titlePath := buildTitlePath(entry)
-		basePath = filepath.Join(cfg.ShowPath, titlePath)
+		title, err := buildTitle(entry)
+		if err != nil {
+			return fmt.Errorf("Unable to resolve episode file: %w", err)
+		}
+		basePath = filepath.Join(cfg.ShowPath, title)
 	}
 
 	seasonPath := buildSeasonPath(entry) // Episode always determines its own season directory
 	basePath = filepath.Join(basePath, seasonPath)
 
-	entry.MediaInfo.Bonus = ""
-	filename := buildFilename(entry)
+	filename, err := buildEpisodeFileName(entry)
+	if err != nil {
+		return err
+	}
 
 	entry.FileInfo.DestPath = filepath.Join(basePath, filename)
 	return nil
@@ -188,9 +179,11 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config
 
 	// Build title-only basePath for children - episodes will add their own season
 	if basePath == "" {
-		entry.MediaInfo.Year = nil // Remove year from series dir name
-		titlePath := buildTitlePath(entry) 
-		basePath = filepath.Join(cfg.ShowPath, titlePath)
+		title, err := buildTitle(entry) 
+		if err != nil {
+			return fmt.Errorf("Unable to resolve season dir: %w", err)
+		}
+		basePath = filepath.Join(cfg.ShowPath, title)
 	}
 
 	for _, child := range entry.Children {
@@ -200,13 +193,9 @@ func resolveSeasonDir(basePath string, entry *metadata.Entry, cfg *config.Config
 					return err
 				}
 			case metadata.SubtitleFile:
-				if err := resolveSubtitleFile(basePath, child); err != nil {
-					return err
-				}
+				resolveSubtitleFile(basePath, child)
 			case metadata.SubtitleDir:
-				if err := resolveSubtitleDir(basePath, child); err != nil {
-					return err
-				}
+				resolveSubtitleDir(basePath, child)
 			case metadata.DSDir, metadata.BTSDir, metadata.BonusDir:
 				if err := resolveExtrasDir(basePath, child); err != nil {
 					return err
@@ -234,9 +223,11 @@ func resolveSeriesDir(entry *metadata.Entry, cfg *config.Config) error {
 		return fmt.Errorf("Expected SeriesDir role, received %v for node %v", entry.Role.String(), entry.Source())
 	}
 
-	entry.MediaInfo.Year = nil // Remove year from series dir name
-	titlePath := buildTitlePath(entry)
-	basePath := filepath.Join(cfg.ShowPath, titlePath)
+	title, err := buildTitle(entry)
+	if err != nil {
+		return fmt.Errorf("Unable to resolve series dir: %w", err)
+	}
+	basePath := filepath.Join(cfg.ShowPath, title)
 
 	for _, child := range entry.Children {
 		switch child.Role {
@@ -249,9 +240,7 @@ func resolveSeriesDir(entry *metadata.Entry, cfg *config.Config) error {
 					return err
 				}
 			case metadata.SubtitleDir:
-				if err := resolveSubtitleDir(basePath, child); err != nil {
-					return err
-				}
+				resolveSubtitleDir(basePath, child)
 			default:
 				return fmt.Errorf("Unexpected child role for SeriesDir, received role %v for node %v", entry.Role.String(), entry.Source())
 		}
@@ -268,14 +257,18 @@ func resolveMovieFile(basePath string, entry *metadata.Entry, cfg *config.Config
 		return fmt.Errorf("Expected MovieFile role, received %v for node %v", entry.Role.String(), entry.Source())
 	}
 	if basePath == "" {
-		titlePath := buildTitlePath(entry)
+		titlePath, err := buildTitle(entry)
+		if err != nil {
+			return err
+		}
 		basePath = filepath.Join(cfg.MoviePath, titlePath)
 	}
 
-	entry.MediaInfo.Season = nil
-	entry.MediaInfo.Episode = nil
-	entry.MediaInfo.Bonus = ""
-	filename := buildFilename(entry)
+	filename, err := buildMovieFileName(entry)
+	if err != nil {
+		return err
+	}
+
 	entry.FileInfo.DestPath = filepath.Join(basePath, filename)
 	return nil
 }
@@ -300,17 +293,13 @@ func resolveMovieDir(entry *metadata.Entry, cfg *config.Config) error {
 					return err
 				}
 			case metadata.SubtitleFile:
-				if err := resolveSubtitleFile(basePath, child); err != nil {
-					return err
-				}
+				resolveSubtitleFile(basePath, child)
 			case metadata.DSFile, metadata.BTSFile, metadata.BonusFile:
 				if err := resolveExtrasFile(basePath, child); err != nil {
 					return err
 				}
 			case metadata.SubtitleDir:
-				if err := resolveSubtitleDir(basePath, child); err != nil {
-					return err
-				}
+				resolveSubtitleDir(basePath, child)
 			case metadata.DSDir, metadata.BTSDir, metadata.BonusDir:
 				if err := resolveExtrasDir(basePath, child); err != nil {
 					return err
@@ -386,6 +375,85 @@ func buildReadableFilename(entry *metadata.Entry) string {
 
 }
 
+// Builds episode filename using title builder and metadata: Name (Year) [imdbid] S\d\dE\d\d - audio - bitrate - codec - resolution.mkv 
+func buildEpisodeFileName(entry *metadata.Entry) (string, error) {
+	if entry.MediaInfo.Season == nil || entry.MediaInfo.Episode == nil {
+		return "", fmt.Errorf("No episode or season in episode file")
+	}
+
+	filename, err := buildTitle(entry)
+	if err != nil {
+		return "", nil
+	}
+
+	filename += " " + fmt.Sprintf(" S%02d", *entry.MediaInfo.Season)
+	filename += fmt.Sprintf("E%02d", *entry.MediaInfo.Episode)
+
+	if entry.FileInfo.Audio != "" {
+		filename += " - " + entry.FileInfo.Audio 
+	}
+	if entry.FileInfo.Bitrate != "" {
+		filename += " - " + entry.FileInfo.Bitrate 
+	}
+	if entry.FileInfo.Codec != "" {
+		filename += " - " + entry.FileInfo.Codec 
+	}
+	if entry.FileInfo.Resolution != "" {
+		filename += " - " + entry.FileInfo.Resolution 
+	}
+	filename += "." + strings.ToLower(entry.FileInfo.Ext)
+
+	return filename, nil
+
+}
+
+//Builds subtitle filename using title builder and language: Name (Year) [imdbid].language.srt
+//If language not available, returns error
+func buildSubtitleFileName(entry *metadata.Entry) (string, error) {
+	if len(entry.FileInfo.Language) == 0 {
+		return "", fmt.Errorf("No language detected for subtitle")
+	}
+
+	filename, err := buildTitle(entry)
+	if err != nil {
+		return "", err
+	}
+
+
+	if entry.MediaInfo.Season != nil && entry.MediaInfo.Episode != nil {
+		filename += fmt.Sprintf(" S%02d", *entry.MediaInfo.Season)
+		filename += fmt.Sprintf("E%02d", *entry.MediaInfo.Episode)
+	}
+
+	filename += "." + entry.FileInfo.Language[0]
+	filename += "." + strings.ToLower(entry.FileInfo.Ext)
+	return filename, nil
+}
+
+// Builds movie filename using title builder and metadata: Name (Year) [imdbid] - audio - bitrate - codec - resolution.mkv 
+func buildMovieFileName(entry *metadata.Entry) (string, error) {
+	filename, err := buildTitle(entry)
+	if err != nil {
+		return "", nil
+	}
+
+	if entry.FileInfo.Audio != "" {
+		filename += " - " + entry.FileInfo.Audio 
+	}
+	if entry.FileInfo.Bitrate != "" {
+		filename += " - " + entry.FileInfo.Bitrate 
+	}
+	if entry.FileInfo.Codec != "" {
+		filename += " - " + entry.FileInfo.Codec 
+	}
+	if entry.FileInfo.Resolution != "" {
+		filename += " - " + entry.FileInfo.Resolution 
+	}
+	filename += "." + strings.ToLower(entry.FileInfo.Ext)
+
+	return filename, nil
+}
+
 // Builds title using title, year, and tmdbid: Name (Year) [tmdbid]
 func buildTitle(entry *metadata.Entry) (string, error) {
 	if len(entry.MediaInfo.Title) == 0 {
@@ -395,8 +463,12 @@ func buildTitle(entry *metadata.Entry) (string, error) {
 		return "", fmt.Errorf("Entry %v does not have year, unable to build title", entry.Source())
 	}
 
-	title := strings.Join(entry.MediaInfo.Title, " ")
-	title = title + " (" + strconv.Itoa(*entry.MediaInfo.Year) + ")"
+    capitalized := make([]string, len(entry.MediaInfo.Title))
+    for i, part := range entry.MediaInfo.Title {
+        capitalized[i] = capitalize(part)
+    }
+	title := strings.Join(capitalized, " ")
+	title += title + " (" + strconv.Itoa(*entry.MediaInfo.Year) + ")"
 
 	if entry.MediaInfo.TMDBid != "" {
 		title = title + " [" + entry.MediaInfo.TMDBid + "]"
@@ -405,30 +477,13 @@ func buildTitle(entry *metadata.Entry) (string, error) {
 	return title, nil
 }
 
-// buildTitlePath constructs directory path from title and year metadata.
-// Capitalizes each title component and joins with dots.
-/* - Legacy
-func buildTitlePath(entry *metadata.Entry) string {
-    capitalized := make([]string, len(entry.MediaInfo.Title))
-    for i, part := range entry.MediaInfo.Title {
-        capitalized[i] = capitalize(part)
-    }
-    basePath := strings.Join(capitalized, ".")
-    
-    if entry.MediaInfo.Year != nil {
-        basePath += "." + strconv.Itoa(*entry.MediaInfo.Year)
-    }
-    return basePath
-}
-*/
-
 // buildSeasonPath constructs season directory name from season metadata.
 // Defaults to "S01" if season is nil.
 func buildSeasonPath(entry *metadata.Entry) string {
 	if entry.MediaInfo.Season != nil {
-		return fmt.Sprintf("S%02d", *entry.MediaInfo.Season)
+		return fmt.Sprintf("Season %02d", *entry.MediaInfo.Season)
 	}
-	return "S01"
+	return "Season 01"
 }
 
 func buildExtrasPath(entry *metadata.Entry) string {
