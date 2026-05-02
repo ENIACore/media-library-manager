@@ -23,6 +23,7 @@ func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		return fmt.Errorf("Unexpected entry %v at root level", root.FileInfo.SourcePath)
 	}
 
+	enrichSubtitleFiles(root, metadata.MediaInfo{})
 	enrichMovieFile(root, metadata.MediaInfo{})
 	enrichEpisodeFiles(root, metadata.MediaInfo{})
 	enrichExtrasFiles(root, metadata.MediaInfo{})
@@ -120,6 +121,49 @@ func enrichMovieFile(entry *metadata.Entry, ctx metadata.MediaInfo) {
 
 	for _, child := range entry.Children {
 		enrichMovieFile(child, ctx)
+	}
+}
+
+// Passes season, episode, extras, title and year to subtitle files.
+// Season: Uses season of closest parent with non-nil season IF subtitle file doesn't have a season.
+// Episode: Uses episode of closest parent with non-nil episode IF subtitle file doesn't have an episode.
+// Extras (DS, BTS, Bonus): If an extras dir is encountered, the subtitle file inside inherits its pattern.
+// Title: Uses title of root dir (MovieDir, SeriesDir, or SeasonDir), overriding existing title.
+// Year: Uses year of root dir IF subtitle file doesn't have a year.
+func enrichSubtitleFiles(entry *metadata.Entry, ctx metadata.MediaInfo) {
+	switch entry.Role {
+	case metadata.SubtitleFile:
+		if entry.MediaInfo.Episode != nil {
+			ctx.Episode = nil
+		}
+		if entry.MediaInfo.Season != nil {
+			ctx.Season = nil
+		}
+		deepCopy(&entry.MediaInfo, ctx)
+	case metadata.DSDir:
+		ctx.DS = entry.MediaInfo.DS
+	case metadata.BTSDir:
+		ctx.BTS = entry.MediaInfo.BTS
+	case metadata.BonusDir:
+		ctx.Bonus = entry.MediaInfo.Bonus
+	case metadata.MovieDir, metadata.SeriesDir, metadata.SeasonDir:
+		if len(entry.MediaInfo.Title) > 0 {
+			ctx.Title = entry.MediaInfo.Title
+		}
+		if entry.MediaInfo.Year != nil {
+			ctx.Year = entry.MediaInfo.Year
+		}
+	default:
+		if entry.MediaInfo.Season != nil {
+			ctx.Season = entry.MediaInfo.Season
+		}
+		if entry.MediaInfo.Episode != nil {
+			ctx.Episode = entry.MediaInfo.Episode
+		}
+	}
+
+	for _, child := range entry.Children {
+		enrichSubtitleFiles(child, ctx)
 	}
 }
 
