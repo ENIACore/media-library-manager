@@ -64,6 +64,7 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 		if err := os.RemoveAll(entry.FileInfo.SourcePath); err != nil {
 			panic("Unable to remove source path: " + entry.FileInfo.SourcePath)
 		}
+		return
 	}
 
 	// Ignore empty destination paths, these are failed but unnecessary files
