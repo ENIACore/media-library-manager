@@ -56,5 +56,15 @@ func main() {
 		fmt.Println("deleted scenes is: ", root.MediaInfo.DS)
 		fmt.Println("behind the scenes is: ", root.MediaInfo.BTS)
 		fmt.Println("bonus is: ", root.MediaInfo.Bonus)
+
+		fmt.Println("source path is: ", root.FileInfo.SourcePath)
+		fmt.Println("ext is: ", root.FileInfo.Ext)
+		fmt.Println("content type is: ", root.FileInfo.ContentType)
+		fmt.Println("is dir is: ", root.FileInfo.IsDir)
+		fmt.Println("resolution is: ", root.FileInfo.Resolution)
+		fmt.Println("codec is: ", root.FileInfo.Codec)
+		fmt.Println("audio is: ", root.FileInfo.Audio)
+		fmt.Println("language is: ", root.FileInfo.Language)
+		fmt.Println("bitrate is: ", root.FileInfo.Bitrate)
 	}
 }

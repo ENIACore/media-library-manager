@@ -144,67 +144,6 @@ func extractEpisode(segments []string) *int {
 	return nil
 }
 
-// extractResolution returns the resolution pattern from segments by iterating through each segment.
-// Returns empty string if resolution is not found.
-func extractResolution(segments []string) string {
-	for i := range segments {
-		candidates := segments[i:]
-		if res := parseResolution(candidates); res != "" {
-			return res
-		}
-	}
-	return ""
-}
-
-// extractCodec returns the codec pattern from segments by iterating through each segment.
-// Returns empty string if codec is not found.
-func extractCodec(segments []string) string {
-	for i := range segments {
-		candidates := segments[i:]
-		if res := parseCodec(candidates); res != "" {
-			return res
-		}
-	}
-	return ""
-}
-
-// extractSource returns the source pattern from segments by iterating through each segment.
-// Returns empty string if source is not found.
-func extractSource(segments []string) string {
-	for i := range segments {
-		candidates := segments[i:]
-		if res := parseSource(candidates); res != "" {
-			return res
-		}
-	}
-	return ""
-}
-
-// extractAudio returns the audio pattern from segments by iterating through each segment.
-// Returns empty string if audio is not found.
-func extractAudio(segments []string) string {
-	for i := range segments {
-		candidates := segments[i:]
-		if res := parseAudio(candidates); res != "" {
-			return res
-		}
-	}
-	return ""
-}
-
-// extractLanguage returns all language patterns from segments by iterating through each segment.
-// Returns empty slice if no languages are found.
-func extractLanguage(segments []string) []string {
-	languages := []string{}
-	for i := range segments {
-		candidates := segments[i:]
-		if language := parseLanguage(candidates); language != "" {
-			languages = append(languages, language)
-		}
-	}
-	return languages
-}
-
 // extractBTS returns the behind-the-scenes pattern from segments by iterating through each segment.
 // Returns empty string if no pattern is found.
 func extractBTS(segments []string) string {
@@ -265,39 +204,11 @@ func parseResolution(segments []string) string {
 	return ""
 }
 
-// parseCodec returns the codec if the left most segment(s) are a pattern match.
-// Returns empty string if pattern not found.
-// Used as helper function for extractor.
-func parseCodec(segments []string) string {
-	for _, group := range patterns.GetCodecPatternGroups() {
-		for _, re := range group.Patterns {
-			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
-				return group.Key
-			}
-		}
-	}
-	return ""
-}
-
 // parseSource returns the source if the left most segment(s) are a pattern match.
 // Returns empty string if pattern not found.
 // Used as helper function for extractor.
 func parseSource(segments []string) string {
 	for _, group := range patterns.GetSourcePatternGroups() {
-		for _, re := range group.Patterns {
-			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
-				return group.Key
-			}
-		}
-	}
-	return ""
-}
-
-// parseAudio returns the audio if the left most segment(s) are a pattern match.
-// Returns empty string if pattern not found.
-// Used as helper function for extractor.
-func parseAudio(segments []string) string {
-	for _, group := range patterns.GetAudioPatternGroups() {
 		for _, re := range group.Patterns {
 			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
 				return group.Key
@@ -382,20 +293,6 @@ func parseEpisode(segments []string) *int {
 		return &unknown
 	}
 	return nil
-}
-
-// parseLanguage returns the language if the left most segment(s) are a pattern match.
-// Returns empty string if pattern not found.
-// Used as helper function for extractor.
-func parseLanguage(segments []string) string {
-	for _, group := range patterns.GetLanguagePatternGroups() {
-		for _, re := range group.Patterns {
-			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
-				return group.Key
-			}
-		}
-	}
-	return ""
 }
 
 // parseMisc returns the misc pattern if the left most segment(s) are a pattern match.

@@ -46,11 +46,16 @@ func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logg
 		return nil, nil	
 	}
 
+	mediaInfo := extractor.ExtractMedia(path, logger)
+	fileInfo, err := extractor.ExtractFile(path, logger)
+	if err != nil {
+		return nil, err
+	}
     node := &metadata.Entry{
         Parent:		parent,
 		Depth:		depth,
-		MediaInfo: extractor.ExtractMedia(path, logger),
-		//PathInfo: extractor.ExtractPath(path, logger),
+		MediaInfo: mediaInfo,
+		FileInfo: fileInfo,
     }
 
 	if !info.IsDir() {

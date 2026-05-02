@@ -25,9 +25,9 @@ type FileInfo struct {
 	DestPath 	string
 	SourcePath 	string
 
-	Ext   		string
-	FileType  	ContentType
 	IsDir 		bool
+	Ext   		string
+	ContentType ContentType
 
 	Resolution 	string
 	Codec      	string
