@@ -24,12 +24,12 @@ func IntPtr(i int) *int {
 func CreateTestDir(t *testing.T) string {
 	t.Helper()
 	tempDir := t.TempDir()
-	
+
 	os.MkdirAll(filepath.Join(tempDir, "source"), 0755)
 	os.MkdirAll(filepath.Join(tempDir, "movies"), 0755)
 	os.MkdirAll(filepath.Join(tempDir, "shows"), 0755)
 	os.MkdirAll(filepath.Join(tempDir, "manager"), 0755)
-	
+
 	return tempDir
 }
 
@@ -52,24 +52,19 @@ func CreateTestSubFile(parent *metadata.Entry) *metadata.Entry {
 		Parent: parent,
 		Children: nil,
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-			},
-			Year:		IntPtr(2025),
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"",
-			Codec:		"",
-			Source:		"",
-			Audio:		"",
-			Language:	[]string{"English"},
-			Bonus: 		"",
+			Title:   []string{},
+			Year:    IntPtr(2025),
+			Episode: nil,
+			Season:  nil,
+			Bonus:   "",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"subtitle.english.srt",
-			Ext: 		"SRT",	
-			Type: 		metadata.Subtitle,
-			IsDir: 		false,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "subtitle.english.srt",
+			Ext:         "SRT",
+			ContentType: metadata.Subtitle,
+			IsDir:       false,
+			Language:    []string{"English"},
 		},
 
 		Role: metadata.SubtitleFile,
@@ -84,27 +79,22 @@ func CreateTestBonusFile(parent *metadata.Entry) *metadata.Entry {
 		Children: nil,
 
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-				"TEST",
-				"TITLE",
-			},
-			Year:		IntPtr(2025),
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"1080p",
-			Codec:		"x264",
-			Source:		"Remux",
-			Audio:		"Atmos",
-			Language:	[]string{"English"},
-			Bonus: 		"Behind.The.Scenes",
+			Title:   []string{"TEST", "TITLE"},
+			Year:    IntPtr(2025),
+			Episode: nil,
+			Season:  nil,
+			Bonus:   "Behind.The.Scenes",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"test.title.2025.behind.the.scenes.1080p.x264.remux.atmos.english.mp4",
-
-			Ext: 		"MP4",	
-			Type: 		metadata.Video,
-			IsDir: 		false,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "test.title.2025.behind.the.scenes.1080p.x264.remux.atmos.english.mp4",
+			Ext:         "MP4",
+			ContentType: metadata.Video,
+			IsDir:       false,
+			Resolution:  "1080p",
+			Codec:       "x264",
+			Audio:       "Atmos",
+			Language:    []string{"English"},
 		},
 
 		Role: metadata.BonusFile,
@@ -119,27 +109,22 @@ func CreateTestEpFile(parent *metadata.Entry) *metadata.Entry {
 		Children: nil,
 
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-				"TEST",
-				"TITLE",
-			},
-			Year:		IntPtr(2025),
-			Episode:	IntPtr(1),
-			Season:		IntPtr(1),
-			Resolution:	"1080p",
-			Codec:		"x264",
-			Source:		"Remux",
-			Audio:		"Atmos",
-			Language:	[]string{"English"},
-			Bonus: 		"",
+			Title:   []string{"TEST", "TITLE"},
+			Year:    IntPtr(2025),
+			Episode: IntPtr(1),
+			Season:  IntPtr(1),
+			Bonus:   "",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"test.title.2025.S01E01.1080p.x264.remux.atmos.english.mp4",
-
-			Ext: 		"MP4",	
-			Type: 		metadata.Video,
-			IsDir: 		false,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "test.title.2025.S01E01.1080p.x264.remux.atmos.english.mp4",
+			Ext:         "MP4",
+			ContentType: metadata.Video,
+			IsDir:       false,
+			Resolution:  "1080p",
+			Codec:       "x264",
+			Audio:       "Atmos",
+			Language:    []string{"English"},
 		},
 
 		Role: metadata.EpisodeFile,
@@ -154,26 +139,22 @@ func CreateTestMovieFile(parent *metadata.Entry) *metadata.Entry {
 		Children: nil,
 
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-				"TEST",
-				"TITLE",
-			},
-			Year:		IntPtr(2025),
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"1080p",
-			Codec:		"x264",
-			Source:		"Remux",
-			Audio:		"Atmos",
-			Language:	[]string{"English"},
-			Bonus: 		"",
+			Title:   []string{"TEST", "TITLE"},
+			Year:    IntPtr(2025),
+			Episode: nil,
+			Season:  nil,
+			Bonus:   "",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"test.title.2025.1080p.x264.remux.atmos.english.mp4",
-			Ext: 		"MP4",
-			Type: 		metadata.Video,
-			IsDir: 		false,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "test.title.2025.1080p.x264.remux.atmos.english.mp4",
+			Ext:         "MP4",
+			ContentType: metadata.Video,
+			IsDir:       false,
+			Resolution:  "1080p",
+			Codec:       "x264",
+			Audio:       "Atmos",
+			Language:    []string{"English"},
 		},
 
 		Role: metadata.MovieFile,
@@ -189,24 +170,18 @@ func CreateTestSubDir(parent *metadata.Entry, children ...*metadata.Entry) *meta
 		Children: children,
 
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-			},
-			Year:		nil,
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"",
-			Codec:		"",
-			Source:		"",
-			Audio:		"",
-			Language:	nil,
-			Bonus: 		"",
+			Title:   []string{},
+			Year:    nil,
+			Episode: nil,
+			Season:  nil,
+			Bonus:   "",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"subtitles",
-			Ext: 		"",
-			Type: 		metadata.UnknownType,
-			IsDir: 		true,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "subtitles",
+			Ext:         "",
+			ContentType: metadata.UnknownType,
+			IsDir:       true,
 		},
 
 		Role: metadata.SubtitleDir,
@@ -214,7 +189,7 @@ func CreateTestSubDir(parent *metadata.Entry, children ...*metadata.Entry) *meta
 
 	for _, child := range children {
 		child.Parent = root
-		child.PathInfo.Source = filepath.Join("subtitles", child.PathInfo.Source)
+		child.FileInfo.SourcePath = filepath.Join("subtitles", child.FileInfo.SourcePath)
 	}
 
 	return root
@@ -229,24 +204,18 @@ func CreateTestBonusDir(parent *metadata.Entry, children ...*metadata.Entry) *me
 		Children: children,
 
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-			},
-			Year:		nil,
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"",
-			Codec:		"",
-			Source:		"",
-			Audio:		"",
-			Language:	nil,
-			Bonus: 		"Extra",
+			Title:   []string{},
+			Year:    nil,
+			Episode: nil,
+			Season:  nil,
+			Bonus:   "Extra",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"extras",
-			Ext: 		"",	
-			Type: 		metadata.UnknownType,
-			IsDir: 		true,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "extras",
+			Ext:         "",
+			ContentType: metadata.UnknownType,
+			IsDir:       true,
 		},
 
 		Role: metadata.BonusDir,
@@ -254,7 +223,7 @@ func CreateTestBonusDir(parent *metadata.Entry, children ...*metadata.Entry) *me
 
 	for _, child := range children {
 		child.Parent = root
-		child.PathInfo.Source = filepath.Join("extras", child.PathInfo.Source)
+		child.FileInfo.SourcePath = filepath.Join("extras", child.FileInfo.SourcePath)
 	}
 
 	return root
@@ -269,24 +238,18 @@ func CreateTestSeasonDir(parent *metadata.Entry, children ...*metadata.Entry) *m
 		Children: children,
 
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-			},
-			Year:		nil,
-			Episode:	nil,
-			Season:		IntPtr(1),
-			Resolution:	"",
-			Codec:		"",
-			Source:		"",
-			Audio:		"",
-			Language:	nil,
-			Bonus: 		"",
+			Title:   []string{},
+			Year:    nil,
+			Episode: nil,
+			Season:  IntPtr(1),
+			Bonus:   "",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"S01",
-			Ext: 		"",	
-			Type: 		metadata.UnknownType,
-			IsDir: 		true,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "S01",
+			Ext:         "",
+			ContentType: metadata.UnknownType,
+			IsDir:       true,
 		},
 
 		Role: metadata.SeasonDir,
@@ -294,7 +257,7 @@ func CreateTestSeasonDir(parent *metadata.Entry, children ...*metadata.Entry) *m
 
 	for _, child := range children {
 		child.Parent = root
-		child.PathInfo.Source = filepath.Join("S01", child.PathInfo.Source)
+		child.FileInfo.SourcePath = filepath.Join("S01", child.FileInfo.SourcePath)
 	}
 
 	return root
@@ -310,26 +273,18 @@ func CreateTestSeriesDir(parent *metadata.Entry, children ...*metadata.Entry) *m
 		Children: children,
 
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-				"TEST",
-				"TITLE",
-			},
-			Year:		nil,
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"",
-			Codec:		"",
-			Source:		"",
-			Audio:		"",
-			Language:	nil,
-			Bonus: 		"",
+			Title:   []string{"TEST", "TITLE"},
+			Year:    nil,
+			Episode: nil,
+			Season:  nil,
+			Bonus:   "",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"test.title",
-			Ext: 		"",
-			Type: 		metadata.UnknownType,
-			IsDir: 		true,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "test.title",
+			Ext:         "",
+			ContentType: metadata.UnknownType,
+			IsDir:       true,
 		},
 
 		Role: metadata.SeriesDir,
@@ -337,7 +292,7 @@ func CreateTestSeriesDir(parent *metadata.Entry, children ...*metadata.Entry) *m
 
 	for _, child := range children {
 		child.Parent = root
-		child.PathInfo.Source = filepath.Join("test.title", child.PathInfo.Source)
+		child.FileInfo.SourcePath = filepath.Join("test.title", child.FileInfo.SourcePath)
 	}
 
 	return root
@@ -352,26 +307,18 @@ func CreateTestMovieDir(parent *metadata.Entry, children ...*metadata.Entry) *me
 		Children: children,
 
 		MediaInfo: metadata.MediaInfo{
-			Title:		[]string{
-				"TEST",
-				"TITLE",
-			},
-			Year:		IntPtr(2025),
-			Episode:	nil,
-			Season:		nil,
-			Resolution:	"",
-			Codec:		"",
-			Source:		"",
-			Audio:		"",
-			Language:	nil,
-			Bonus: 		"",
+			Title:   []string{"TEST", "TITLE"},
+			Year:    IntPtr(2025),
+			Episode: nil,
+			Season:  nil,
+			Bonus:   "",
 		},
-		PathInfo: metadata.PathInfo{
-			Dest:		"",
-			Source: 	"test.title.2025",
-			Ext: 		"",
-			Type: 		metadata.UnknownType,
-			IsDir: 		true,
+		FileInfo: metadata.FileInfo{
+			DestPath:    "",
+			SourcePath:  "test.title.2025",
+			Ext:         "",
+			ContentType: metadata.UnknownType,
+			IsDir:       true,
 		},
 
 		Role: metadata.MovieDir,
@@ -379,7 +326,7 @@ func CreateTestMovieDir(parent *metadata.Entry, children ...*metadata.Entry) *me
 
 	for _, child := range children {
 		child.Parent = root
-		child.PathInfo.Source = filepath.Join("test.title.2025", child.PathInfo.Source)
+		child.FileInfo.SourcePath = filepath.Join("test.title.2025", child.FileInfo.SourcePath)
 	}
 
 	return root
@@ -389,11 +336,10 @@ func CreateTestMovieDir(parent *metadata.Entry, children ...*metadata.Entry) *me
 // Creates directories and empty files based on the Entry tree structure.
 // Updates entry source paths to absolute paths within testDir. Panics on filesystem errors.
 func CreateTestFiles(root *metadata.Entry, testDir string) {
-	source := filepath.Join(testDir, root.PathInfo.Source)	
-	root.PathInfo.Source = source
+	source := filepath.Join(testDir, root.FileInfo.SourcePath)
+	root.FileInfo.SourcePath = source
 
-	if root.PathInfo.IsDir {
-        // Create the directory itself
+	if root.FileInfo.IsDir {
 		if err := os.MkdirAll(source, 0755); err != nil {
 			panic("Unable to make test directory")
 		}
@@ -401,12 +347,11 @@ func CreateTestFiles(root *metadata.Entry, testDir string) {
 		dir := filepath.Dir(source)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			panic("Unable to make test directory")
-    	}
-
+		}
 
 		if _, err := os.Create(source); err != nil {
 			panic("Unable to make test file")
-		}		
+		}
 	}
 
 	for _, child := range root.Children {

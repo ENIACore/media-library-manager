@@ -121,7 +121,7 @@ func parseAudio(segments []string) string {
 func extractLanguage(data *ffprobe.ProbeData) []string {
 	var languages []string
 	for _, stream := range data.Streams {
-		lang := parseLanguage([]string{strings.ToUpper(stream.Tags.Language)})
+		lang := ParseLanguage([]string{strings.ToUpper(stream.Tags.Language)})
 		if stream.CodecType == "audio" && lang != "" {
 			languages = append(languages, lang)
 		}
@@ -129,10 +129,9 @@ func extractLanguage(data *ffprobe.ProbeData) []string {
 	return languages
 }
 
-// parseLanguage returns the language if the left most segment(s) are a pattern match.
+// ParseLanguage returns the language key if the left most segment(s) are a pattern match.
 // Returns empty string if pattern not found.
-// Used as helper function for extractor.
-func parseLanguage(segments []string) string {
+func ParseLanguage(segments []string) string {
 	for _, group := range patterns.GetLanguagePatternGroups() {
 		for _, re := range group.Patterns {
 			if matchSegments(segments, (*regexp.Regexp)(re)) != nil {

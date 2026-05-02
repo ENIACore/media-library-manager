@@ -74,7 +74,7 @@ func isTerminator(segments []string) bool {
         parseBTS(segments) != "" ||
         parseBonus(segments) != "" ||
         parseEdition(segments) != "" ||
-        parseLanguage(segments) != ""
+        ParseLanguage(segments) != ""
 }
 
 // extractTitle returns the title starting from the leftmost segment.
