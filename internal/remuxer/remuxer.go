@@ -1,7 +1,9 @@
 // Package remuxer extracts subtitle tracks from MKV files using mkvmerge.
-// For every subtitle track whose language can be identified, an SRT file is
-// written alongside the destination path: <DestPath>.<language>.srt
-// Runs immediately after parser.Parse, before classifier assigns EntryRole.
+// For every FULL subtitle track whose language can be identified, an SRT file
+// is written alongside the destination path: <DestPath>.<language>.srt
+// Forced, SDH/CC, and signs/songs tracks are skipped to avoid duplicates of
+// the same language. Runs immediately after parser.Parse, before classifier
+// assigns EntryRole.
 package remuxer
 
 import (
@@ -19,12 +21,19 @@ import (
 )
 
 type mkvTrack struct {
-	ID    int    `json:"id"`
-	Type  string `json:"type"`
-	Codec string `json:"codec"`
+	ID         int    `json:"id"`
+	Type       string `json:"type"`
+	Codec      string `json:"codec"`
 	Properties struct {
-		Language  string `json:"language"`
-		TrackName string `json:"track_name"`
+		Language         string `json:"language"`
+		LanguageIETF     string `json:"language_ietf"`
+		TrackName        string `json:"track_name"`
+		ForcedTrack      bool   `json:"forced_track"`
+		FlagHearingImpaired bool `json:"flag_hearing_impaired"`
+		FlagVisualImpaired  bool `json:"flag_visual_impaired"`
+		FlagOriginal     bool   `json:"flag_original"`
+		FlagCommentary   bool   `json:"flag_commentary"`
+		DefaultTrack     bool   `json:"default_track"`
 	} `json:"properties"`
 }
 
@@ -32,8 +41,24 @@ type mkvFile struct {
 	Tracks []mkvTrack `json:"tracks"`
 }
 
+// Substrings in track titles that indicate a partial/specialty subtitle track
+// rather than a full dialogue track. Matched case-insensitively.
+var partialTitleMarkers = []string{
+	"forced",
+	"sign",  // matches "signs", "signs/songs", "signs & songs"
+	"song",  // matches "songs", "sings/songs"
+	"sdh",
+	"cc",
+	"closed caption",
+	"hearing impaired",
+	"hearing-impaired",
+	"commentary",
+	"karaoke",
+	"description",
+}
+
 // Remux examines the entry: if it is not an MKV file it returns immediately.
-// Extracts text subtitles when possible, then ALWAYS strips all subtitle tracks.
+// Extracts full text subtitles when possible, then ALWAYS strips all subtitle tracks.
 func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Remux", "source", entry.Source())
 
@@ -51,7 +76,6 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		return nil
 	}
 
-	// Filter to text subtitles
 	type candidateTrack struct {
 		track mkvTrack
 		lang  string
@@ -71,6 +95,15 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			continue
 		}
 
+		if reason := isPartialSubtitle(t); reason != "" {
+			lg.Info("skipping non-full subtitle track",
+				"id", t.ID,
+				"title", t.Properties.TrackName,
+				"reason", reason,
+			)
+			continue
+		}
+
 		lang := extractor.ParseLanguage([]string{strings.ToUpper(t.Properties.Language)})
 		if lang == "" {
 			lg.Info("skipping subtitle track with unrecognised language",
@@ -84,6 +117,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			lg.Info("skipping duplicate subtitle track for language",
 				"id", t.ID,
 				"language", lang,
+				"title", t.Properties.TrackName,
 			)
 			continue
 		}
@@ -102,11 +136,12 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 				lg.Info("dry run: would extract subtitle track",
 					"id", c.track.ID,
 					"language", c.lang,
+					"title", c.track.Properties.TrackName,
 					"dest", filepath.Base(c.dest),
 				)
 			}
 		} else {
-			lg.Info("dry run: no extractable subtitle tracks found")
+			lg.Info("dry run: no extractable full subtitle tracks found")
 		}
 
 		lg.Info("dry run: would strip all subtitle tracks from MKV",
@@ -115,7 +150,6 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		return nil
 	}
 
-	// Extract subtitles if available
 	if len(candidates) > 0 {
 		for _, c := range candidates {
 			if err := extractTrack(entry.FileInfo.SourcePath, c.track.ID, c.dest, lg); err != nil {
@@ -124,11 +158,12 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			lg.Info("extracted subtitle track",
 				"id", c.track.ID,
 				"language", c.lang,
+				"title", c.track.Properties.TrackName,
 				"dest", filepath.Base(c.dest),
 			)
 		}
 	} else {
-		lg.Info("no extractable subtitle tracks after filtering, proceeding to strip all subtitles")
+		lg.Info("no extractable full subtitle tracks after filtering, proceeding to strip all subtitles")
 	}
 
 	// ALWAYS strip subtitles
@@ -141,6 +176,38 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	)
 
 	return nil
+}
+
+// isPartialSubtitle returns a non-empty reason string if the track is a
+// partial/specialty track (forced, SDH, signs/songs, commentary, etc.) rather
+// than a full dialogue track. An empty string means it's a full track.
+func isPartialSubtitle(t mkvTrack) string {
+	p := t.Properties
+
+	if p.ForcedTrack {
+		return "forced flag set"
+	}
+	if p.FlagHearingImpaired {
+		return "hearing-impaired flag set"
+	}
+	if p.FlagVisualImpaired {
+		return "visual-impaired flag set"
+	}
+	if p.FlagCommentary {
+		return "commentary flag set"
+	}
+
+	title := strings.ToLower(p.TrackName)
+	if title == "" {
+		return ""
+	}
+	for _, marker := range partialTitleMarkers {
+		if strings.Contains(title, marker) {
+			return "title contains '" + marker + "'"
+		}
+	}
+
+	return ""
 }
 
 func identifySubtitleTracks(path string) ([]mkvTrack, error) {
