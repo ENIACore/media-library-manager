@@ -44,6 +44,13 @@
         <li><a href="#configuration">Configuration</a></li>
       </ul>
     </li>
+    <li>
+      <a href="#modes">Modes</a>
+      <ul>
+        <li><a href="#ingest-mode-default">Ingest</a></li>
+        <li><a href="#subtitle-mode">Subtitle</a></li>
+      </ul>
+    </li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#how-it-works">How It Works</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
@@ -57,6 +64,8 @@
 ## About The Project
 
 Media Library Manager is a powerful automation tool designed for media enthusiasts who download content via torrents. It automatically processes downloaded files and directories, extracting metadata from filenames, classifying content, and organizing everything into a clean, standardized structure that media servers like Jellyfin and Plex can easily index.
+
+The tool runs in two modes — **ingest** (default) for processing new downloads and **subtitle** for retroactively adding missing English subtitles to an existing library.
 
 The tool handles complex scenarios including:
 - Mixed movie and TV show libraries
@@ -76,11 +85,13 @@ The tool handles complex scenarios including:
 
 ### Key Features
 
+- **Two Operating Modes**: Ingest mode for new downloads; subtitle mode for backfilling missing English subtitles
 - **Intelligent Pattern Recognition**: Extracts titles, years, seasons, episodes, quality, codecs, and more from filenames
 - **Automatic Classification**: Identifies movies, TV shows, subtitles, and bonus content
-- **Standardized Naming**: Generates clean, consistent filenames following media server conventions
+- **Jellyfin-Standard Naming**: Generates filenames and directory structures that conform to Jellyfin naming conventions
+- **TMDb Verification by ID**: Confirms and enriches titles using TMDb ID lookups for precise matching
+- **MKV Subtitle Stripping**: Removes all embedded subtitle tracks from MKV files; plaintext tracks (ASS, SSA, SRT, etc.) are extracted to standalone `.srt` files
 - **Flexible Structure Support**: Handles various torrent directory structures
-- **Subtitle Management**: Organizes subtitle files by season and language
 - **Bonus Content Handling**: Properly categorizes extras, behind-the-scenes, and bonus features
 - **Conflict Resolution**: Automatically resolves duplicate filenames
 - **Error Quarantine**: Failed entries are moved to an error directory for manual review
@@ -172,6 +183,7 @@ export ENIACORE_DRY_RUN="false"
 
 ```sh
 mlm \
+  -mode="ingest" \
   -torrent-path="/opt/qbit/downloads" \
   -incomplete-path="/opt/qbit/downloads/temp" \
   -movie-path="/opt/jellyfin/media/movies" \
@@ -185,6 +197,7 @@ mlm \
 
 | Parameter | Default Value | Description |
 |-----------|--------------|-------------|
+| `mode` | `ingest` | Operating mode: `ingest` or `subtitle` |
 | `torrent-path` | `/opt/qbit/downloads` | Path to downloaded torrents |
 | `incomplete-path` | `/opt/qbit/downloads/temp` | Path to incomplete torrents (will be skipped) |
 | `movie-path` | `/opt/jellyfin/media/movies` | Destination for movie files |
@@ -195,26 +208,71 @@ mlm \
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+<!-- MODES -->
+## Modes
+
+### Ingest Mode (default)
+
+Ingest mode processes new torrent downloads and moves them into the Jellyfin library. It runs the full pipeline: parse → remux → classify → verify → enrich → resolve → transfer.
+
+**What it does:**
+- Parses filenames and directory structures to extract metadata
+- Strips all embedded subtitle tracks from MKV files; plaintext tracks (ASS, SSA, SRT, etc.) are extracted to standalone `.srt` files alongside the video
+- Classifies each entry (movie, episode, subtitle, bonus content, etc.)
+- Verifies titles against TMDb using TMDb ID for precise matching
+- Formats filenames and paths according to Jellyfin naming conventions
+- Transfers files to their destination in the movie or show library
+
+```sh
+mlm -dry-run=false
+# equivalent to:
+mlm -mode=ingest -dry-run=false
+```
+
+### Subtitle Mode
+
+Subtitle mode scans an existing Jellyfin library for media files that are missing an English `.srt` subtitle, then fetches and downloads matching subtitles from OpenSubtitles. It processes entries in batches of 80 per run to stay within API rate limits.
+
+**What it does:**
+- Walks the configured movie and show paths
+- Identifies media files that have no English `.srt` subtitle present
+- Queries OpenSubtitles for a matching subtitle using the TMDb ID
+- Downloads and saves the `.srt` file next to the media file
+- Stops after processing 80 entries (re-run to continue)
+
+```sh
+mlm -mode=subtitle -dry-run=false
+```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 <!-- USAGE EXAMPLES -->
 ## Usage
 
 ### Basic Usage
 
-Run with default configuration (dry run enabled):
+Run ingest mode with dry run enabled (default):
 ```sh
 mlm
 ```
 
-Or if running from source:
+Or from source:
 ```sh
 go run cmd/media_library_manager/main.go
 ```
 
-### Production Usage
+### Ingest — Production
 
 Disable dry run to actually move files:
 ```sh
 mlm -dry-run=false
+```
+
+### Subtitle — Backfill Missing Subtitles
+
+Scan the library and download up to 80 missing English subtitles:
+```sh
+mlm -mode=subtitle -dry-run=false
 ```
 
 ### Custom Paths
@@ -257,38 +315,54 @@ movies/
 <!-- HOW IT WORKS -->
 ## How It Works
 
-The Media Library Manager uses a five-stage processing pipeline:
+### Ingest Pipeline
 
-### 1. Parser
+The ingest pipeline runs in six stages:
+
+#### 1. Parser
 - Recursively scans the torrent directory
 - Creates a tree structure of Entry objects representing files and directories
 - Filters out unwanted files (samples, NFO files, etc.)
 - Extracts initial metadata from filenames using pattern matching
 
-### 2. Classifier
+#### 2. Remuxer
+- Processes every MKV file in the tree
+- Strips all embedded subtitle tracks using `mkvmerge`
+- Plaintext subtitle formats (ASS, SSA, SRT, etc.) are extracted to standalone `.srt` files next to the video before being stripped, so no subtitle data is lost
+- Image-based subtitle formats (PGS, VOBSUB) are discarded
+
+#### 3. Classifier
 - Traverses the Entry tree and assigns roles to each entry
 - Classifies files as: MovieFile, EpisodeFile, SubtitleFile, or BonusFile
 - Classifies directories as: MovieDir, SeriesDir, SeasonDir, SubtitleDir, or BonusDir
 - Uses pattern recognition and tree structure analysis
 
-### 3. Enricher
-- Propagates contextual information throughout the tree
-- Passes titles and years from parent to child entries
-- Enriches episode files with season information
-- Handles intermediary subtitle and bonus directories
+#### 4. Verifier
+- Queries the TMDb API to confirm and enrich each title
+- Matches via TMDb ID for precise, unambiguous lookups
+- Sets the `TMDBid` field on verified entries
 
-### 4. Resolver
+#### 5. Resolver
 - Determines final destination paths for all entries
-- Builds standardized filenames with proper capitalization
-- Organizes content according to media server conventions
+- Builds filenames and directory structures that conform to Jellyfin naming conventions
 - Groups subtitles and extras appropriately
 
-### 5. Transfer
+#### 6. Transfer
 - Moves files to their final destinations
 - Creates necessary directory structures
 - Resolves filename conflicts automatically
 - Cleans up empty source directories
 - Moves failed entries to error directory
+
+### Subtitle Pipeline
+
+The subtitle pipeline is a lightweight scan-and-fetch loop:
+
+1. Walks the movie and show library paths
+2. Finds media files with no English `.srt` subtitle present
+3. Queries OpenSubtitles using the file's TMDb ID
+4. Downloads and saves the best-matching `.srt` alongside the media file
+5. Stops after 80 entries — re-run to continue
 
 ### Error Handling
 - Failed entries are moved to the error directory for manual review
@@ -306,9 +380,11 @@ The Media Library Manager uses a five-stage processing pipeline:
 - [x] Pattern-based metadata extraction
 - [x] Error handling and quarantine
 - [x] Readable dry run output
-- [ ] Pattern configuration identical to [Jellyfin Standards](https://jellyfin.org/docs/general/server/media/shows)
-- [ ] API integration (TMDB, TVDB) for metadata enrichment
-- [ ] Relase V1.0.0 (yay, almost there!)
+- [x] Jellyfin-standard naming conventions
+- [x] TMDb integration for title verification (ID-based)
+- [x] MKV subtitle stripping with plaintext extraction to SRT
+- [x] Subtitle mode — backfill missing English subtitles via OpenSubtitles
+- [ ] Release V1.0.0 (yay, almost there!)
 - [ ] Advanced language detection (subtitles)
 
 See the [open issues](https://github.com/ENIACore/media_library_manager/issues) for a full list of proposed features and known issues.
@@ -316,9 +392,6 @@ See the [open issues](https://github.com/ENIACore/media_library_manager/issues) 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## TODO
-- Update resolver.go to ```naming-conventions.md``` file
-- TMDB integration to ensure movie title correctness and to correct series directory year to release year
-- Add movie directory title precedence of move file title
 - Release V1.0.0
 - Improve language detection and handling for subtitles
 - Add additional functionality to parse and rename all subtitle file languages according to actual contents
