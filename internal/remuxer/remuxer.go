@@ -1,9 +1,10 @@
 // Package remuxer extracts subtitle tracks from MKV files using mkvmerge.
-// For every FULL subtitle track whose language can be identified, an SRT file
-// is written alongside the destination path: <DestPath>.<language>.srt
-// Forced, SDH/CC, and signs/songs tracks are skipped to avoid duplicates of
-// the same language. Runs immediately after parser.Parse, before classifier
-// assigns EntryRole.
+// Full subtitle tracks are written as <DestPath>.<language>.srt.
+// Variant tracks (forced, SDH, signs/songs, commentary) are written as
+// <DestPath>.<variant>.<language>.srt — e.g. "Show.Signs.Songs.English.srt"
+// or "Show.SDH.English.srt" — so they coexist with full tracks of the same
+// language without collision. Runs immediately after parser.Parse, before
+// classifier assigns EntryRole.
 package remuxer
 
 import (
@@ -25,15 +26,15 @@ type mkvTrack struct {
 	Type       string `json:"type"`
 	Codec      string `json:"codec"`
 	Properties struct {
-		Language         string `json:"language"`
-		LanguageIETF     string `json:"language_ietf"`
-		TrackName        string `json:"track_name"`
-		ForcedTrack      bool   `json:"forced_track"`
-		FlagHearingImpaired bool `json:"flag_hearing_impaired"`
-		FlagVisualImpaired  bool `json:"flag_visual_impaired"`
-		FlagOriginal     bool   `json:"flag_original"`
-		FlagCommentary   bool   `json:"flag_commentary"`
-		DefaultTrack     bool   `json:"default_track"`
+		Language            string `json:"language"`
+		LanguageIETF        string `json:"language_ietf"`
+		TrackName           string `json:"track_name"`
+		ForcedTrack         bool   `json:"forced_track"`
+		FlagHearingImpaired bool   `json:"flag_hearing_impaired"`
+		FlagVisualImpaired  bool   `json:"flag_visual_impaired"`
+		FlagOriginal        bool   `json:"flag_original"`
+		FlagCommentary      bool   `json:"flag_commentary"`
+		DefaultTrack        bool   `json:"default_track"`
 	} `json:"properties"`
 }
 
@@ -41,24 +42,31 @@ type mkvFile struct {
 	Tracks []mkvTrack `json:"tracks"`
 }
 
-// Substrings in track titles that indicate a partial/specialty subtitle track
-// rather than a full dialogue track. Matched case-insensitively.
-var partialTitleMarkers = []string{
-	"forced",
-	"sign",  // matches "signs", "signs/songs", "signs & songs"
-	"song",  // matches "songs", "sings/songs"
-	"sdh",
-	"cc",
-	"closed caption",
-	"hearing impaired",
-	"hearing-impaired",
-	"commentary",
-	"karaoke",
-	"description",
-}
+// Subtitle variant keys, used as filename prefixes before the language token.
+// Empty string means "full" (no prefix). Order matters in classifySubtitleVariant —
+// more specific variants are checked before more general ones (Signs.Songs before
+// Forced, since signs/songs tracks are typically also flagged forced).
+const (
+	variantFull        = ""
+	variantSignsSongs  = "Signs.Songs"
+	variantForced      = "Forced"
+	variantSDH         = "SDH"
+	variantCommentary  = "Commentary"
+	variantDescriptive = "Descriptive"
+)
+
+// Title substring markers, checked case-insensitively.
+var (
+	signsSongsMarkers  = []string{"sign", "song", "sing"}
+	sdhMarkers         = []string{"sdh", "cc", "closed caption", "hearing impaired", "hearing-impaired"}
+	forcedMarkers      = []string{"forced"}
+	commentaryMarkers  = []string{"commentary"}
+	descriptiveMarkers = []string{"description", "descriptive", "audio description"}
+)
 
 // Remux examines the entry: if it is not an MKV file it returns immediately.
-// Extracts full text subtitles when possible, then ALWAYS strips all subtitle tracks.
+// Extracts text subtitles when possible (full + variants), then ALWAYS strips
+// all subtitle tracks.
 func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "Remux", "source", entry.Source())
 
@@ -77,13 +85,14 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	}
 
 	type candidateTrack struct {
-		track mkvTrack
-		lang  string
-		dest  string
+		track   mkvTrack
+		lang    string
+		variant string
+		dest    string
 	}
 
 	base := strings.TrimSuffix(entry.FileInfo.DestPath, filepath.Ext(entry.FileInfo.DestPath))
-	seen := make(map[string]bool)
+	seen := make(map[string]bool) // key = variant + "|" + lang
 	var candidates []candidateTrack
 
 	for _, t := range subtitles {
@@ -91,15 +100,6 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			lg.Info("skipping subtitle track with unsupported codec",
 				"id", t.ID,
 				"codec", t.Codec,
-			)
-			continue
-		}
-
-		if reason := isPartialSubtitle(t); reason != "" {
-			lg.Info("skipping non-full subtitle track",
-				"id", t.ID,
-				"title", t.Properties.TrackName,
-				"reason", reason,
 			)
 			continue
 		}
@@ -113,20 +113,25 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			continue
 		}
 
-		if seen[lang] {
-			lg.Info("skipping duplicate subtitle track for language",
+		variant := classifySubtitleVariant(t)
+		dedupKey := variant + "|" + lang
+
+		if seen[dedupKey] {
+			lg.Info("skipping duplicate subtitle track",
 				"id", t.ID,
 				"language", lang,
+				"variant", variantLabel(variant),
 				"title", t.Properties.TrackName,
 			)
 			continue
 		}
+		seen[dedupKey] = true
 
-		seen[lang] = true
 		candidates = append(candidates, candidateTrack{
-			track: t,
-			lang:  lang,
-			dest:  base + "." + lang + ".srt",
+			track:   t,
+			lang:    lang,
+			variant: variant,
+			dest:    buildDestPath(base, lang, variant),
 		})
 	}
 
@@ -136,12 +141,13 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 				lg.Info("dry run: would extract subtitle track",
 					"id", c.track.ID,
 					"language", c.lang,
+					"variant", variantLabel(c.variant),
 					"title", c.track.Properties.TrackName,
 					"dest", filepath.Base(c.dest),
 				)
 			}
 		} else {
-			lg.Info("dry run: no extractable full subtitle tracks found")
+			lg.Info("dry run: no extractable subtitle tracks found")
 		}
 
 		lg.Info("dry run: would strip all subtitle tracks from MKV",
@@ -158,15 +164,15 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			lg.Info("extracted subtitle track",
 				"id", c.track.ID,
 				"language", c.lang,
+				"variant", variantLabel(c.variant),
 				"title", c.track.Properties.TrackName,
 				"dest", filepath.Base(c.dest),
 			)
 		}
 	} else {
-		lg.Info("no extractable full subtitle tracks after filtering, proceeding to strip all subtitles")
+		lg.Info("no extractable subtitle tracks after filtering, proceeding to strip all subtitles")
 	}
 
-	// ALWAYS strip subtitles
 	if err := stripSubtitles(entry.FileInfo.SourcePath, lg); err != nil {
 		return err
 	}
@@ -178,36 +184,64 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	return nil
 }
 
-// isPartialSubtitle returns a non-empty reason string if the track is a
-// partial/specialty track (forced, SDH, signs/songs, commentary, etc.) rather
-// than a full dialogue track. An empty string means it's a full track.
-func isPartialSubtitle(t mkvTrack) string {
+// classifySubtitleVariant returns the variant key for a subtitle track, or
+// variantFull ("") for a full dialogue track. Disposition flags are checked
+// alongside title-based heuristics; titles take precedence for the more
+// specific variants because the forced flag alone can't distinguish
+// Signs/Songs from generic forced subs. Order is significant: Signs/Songs
+// is checked before Forced because signs/songs tracks usually also have
+// the forced flag set.
+func classifySubtitleVariant(t mkvTrack) string {
 	p := t.Properties
-
-	if p.ForcedTrack {
-		return "forced flag set"
-	}
-	if p.FlagHearingImpaired {
-		return "hearing-impaired flag set"
-	}
-	if p.FlagVisualImpaired {
-		return "visual-impaired flag set"
-	}
-	if p.FlagCommentary {
-		return "commentary flag set"
-	}
-
 	title := strings.ToLower(p.TrackName)
-	if title == "" {
-		return ""
+
+	if titleContainsAny(title, signsSongsMarkers) {
+		return variantSignsSongs
 	}
-	for _, marker := range partialTitleMarkers {
-		if strings.Contains(title, marker) {
-			return "title contains '" + marker + "'"
+	if titleContainsAny(title, sdhMarkers) || p.FlagHearingImpaired {
+		return variantSDH
+	}
+	if titleContainsAny(title, commentaryMarkers) || p.FlagCommentary {
+		return variantCommentary
+	}
+	if titleContainsAny(title, descriptiveMarkers) || p.FlagVisualImpaired {
+		return variantDescriptive
+	}
+	if titleContainsAny(title, forcedMarkers) || p.ForcedTrack {
+		return variantForced
+	}
+
+	return variantFull
+}
+
+func titleContainsAny(title string, markers []string) bool {
+	if title == "" {
+		return false
+	}
+	for _, m := range markers {
+		if strings.Contains(title, m) {
+			return true
 		}
 	}
+	return false
+}
 
-	return ""
+// variantLabel returns a human-friendly label for logging.
+func variantLabel(v string) string {
+	if v == variantFull {
+		return "Full"
+	}
+	return v
+}
+
+// buildDestPath constructs the output SRT path, all dot-separated.
+// Full tracks: "<base>.<lang>.srt"
+// Variants:   "<base>.<variant>.<lang>.srt"
+func buildDestPath(base, lang, variant string) string {
+	if variant == variantFull {
+		return base + "." + lang + ".srt"
+	}
+	return base + "." + variant + "." + lang + ".srt"
 }
 
 func identifySubtitleTracks(path string) ([]mkvTrack, error) {
