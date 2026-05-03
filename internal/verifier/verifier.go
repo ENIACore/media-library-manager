@@ -72,7 +72,7 @@ func Verify(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	switch root.Role {
 	case metadata.MovieDir, metadata.MovieFile:
 		return verifyMovie(root, cfg, lg)
-	case metadata.SeriesDir:
+	case metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
 		return verifySeries(root, cfg, lg)
 	default:
 		return fmt.Errorf("verifier: role %v for entry %v is not verifiable at root level", root.Role.String(), root.Source())
