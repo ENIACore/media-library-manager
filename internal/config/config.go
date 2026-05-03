@@ -8,18 +8,22 @@ import (
 )
 
 type Config struct {
+	// Both modes
 	Mode			string // Most important variable, determines if running in ingest mode or subtitle mode
-    TorrentPath 	string
-	IncompletePath 	string
     MoviePath   	string
     ShowPath    	string
     ManagerPath 	string
     LogStdout		bool
     DryRun      	bool
-	Interactive		bool
 	TMDBApiKey		string
+
+	// Ingest mode
+    TorrentPath 	string
+	IncompletePath 	string
+	Interactive		bool
 	Limit			int
 
+	// Subtitle mode
 	OpenSubtitlesApiKey string
 	OpenSubtitlesUserAgent   string
 	OpenSubtitlesUser   string
