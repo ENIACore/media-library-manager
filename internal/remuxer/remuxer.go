@@ -1,9 +1,10 @@
 // Package remuxer extracts subtitle tracks from MKV files using mkvmerge.
-// Full subtitle tracks are written as <DestPath>.<language>.srt.
+// Full subtitle tracks are written as <DestPath>.<language>.<ext>.
 // Variant tracks (forced, SDH, signs/songs, commentary) are written as
-// <DestPath>.<variant>.<language>.srt — e.g. "Show.Signs.Songs.English.srt"
+// <DestPath>.<variant>.<language>.<ext> — e.g. "Show.Signs.Songs.English.ass"
 // or "Show.SDH.English.srt" — so they coexist with full tracks of the same
-// language without collision. Runs immediately after parser.Parse, before
+// language without collision. The extension is derived from the source
+// codec: srt, ass, or ssa. Runs immediately after parser.Parse, before
 // classifier assigns EntryRole.
 package remuxer
 
@@ -26,6 +27,7 @@ type mkvTrack struct {
 	Type       string `json:"type"`
 	Codec      string `json:"codec"`
 	Properties struct {
+		CodecID             string `json:"codec_id"`
 		Language            string `json:"language"`
 		LanguageIETF        string `json:"language_ietf"`
 		TrackName           string `json:"track_name"`
@@ -53,6 +55,13 @@ const (
 	variantSDH         = "SDH"
 	variantCommentary  = "Commentary"
 	variantDescriptive = "Descriptive"
+)
+
+// Subtitle file extensions we emit.
+const (
+	extSRT = "srt"
+	extASS = "ass"
+	extSSA = "ssa"
 )
 
 // Title substring markers, checked case-insensitively.
@@ -88,6 +97,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		track   mkvTrack
 		lang    string
 		variant string
+		ext     string
 		dest    string
 	}
 
@@ -96,10 +106,12 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	var candidates []candidateTrack
 
 	for _, t := range subtitles {
-		if !isTextSubtitle(t.Codec) {
+		ext, ok := subtitleExtension(t)
+		if !ok {
 			lg.Info("skipping subtitle track with unsupported codec",
 				"id", t.ID,
 				"codec", t.Codec,
+				"codec_id", t.Properties.CodecID,
 			)
 			continue
 		}
@@ -131,7 +143,8 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 			track:   t,
 			lang:    lang,
 			variant: variant,
-			dest:    buildDestPath(base, lang, variant),
+			ext:     ext,
+			dest:    buildDestPath(base, lang, variant, ext),
 		})
 	}
 
@@ -142,6 +155,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 					"id", c.track.ID,
 					"language", c.lang,
 					"variant", variantLabel(c.variant),
+					"format", c.ext,
 					"title", c.track.Properties.TrackName,
 					"dest", filepath.Base(c.dest),
 				)
@@ -165,6 +179,7 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 				"id", c.track.ID,
 				"language", c.lang,
 				"variant", variantLabel(c.variant),
+				"format", c.ext,
 				"title", c.track.Properties.TrackName,
 				"dest", filepath.Base(c.dest),
 			)
@@ -234,14 +249,43 @@ func variantLabel(v string) string {
 	return v
 }
 
-// buildDestPath constructs the output SRT path, all dot-separated.
-// Full tracks: "<base>.<lang>.srt"
-// Variants:   "<base>.<variant>.<lang>.srt"
-func buildDestPath(base, lang, variant string) string {
+// buildDestPath constructs the output subtitle path, all dot-separated.
+// Full tracks: "<base>.<lang>.<ext>"
+// Variants:   "<base>.<variant>.<lang>.<ext>"
+func buildDestPath(base, lang, variant, ext string) string {
 	if variant == variantFull {
-		return base + "." + lang + ".srt"
+		return base + "." + lang + "." + ext
 	}
-	return base + "." + variant + "." + lang + ".srt"
+	return base + "." + variant + "." + lang + "." + ext
+}
+
+// subtitleExtension returns the file extension to use for a given subtitle
+// track, derived from its codec. Returns false for codecs we can't extract
+// as text (PGS, VobSub, etc.).
+//
+// mkvmerge's `codec` field is a human-readable label that varies by version,
+// while `codec_id` is the stable Matroska identifier. We check codec_id first
+// for reliability and fall back to codec for older mkvmerge output.
+func subtitleExtension(t mkvTrack) (string, bool) {
+	switch strings.ToUpper(t.Properties.CodecID) {
+	case "S_TEXT/UTF8", "S_TEXT/ASCII":
+		return extSRT, true
+	case "S_TEXT/ASS":
+		return extASS, true
+	case "S_TEXT/SSA":
+		return extSSA, true
+	}
+
+	switch t.Codec {
+	case "SubRip/SRT", "S_TEXT/UTF8":
+		return extSRT, true
+	case "SubStationAlpha", "S_TEXT/ASS", "ASS":
+		return extASS, true
+	case "S_TEXT/SSA", "SSA":
+		return extSSA, true
+	}
+
+	return "", false
 }
 
 func identifySubtitleTracks(path string) ([]mkvTrack, error) {
@@ -268,11 +312,11 @@ func identifySubtitleTracks(path string) ([]mkvTrack, error) {
 	return subtitles, nil
 }
 
-func extractTrack(srcPath string, trackID int, destSRT string, lg *slog.Logger) error {
+func extractTrack(srcPath string, trackID int, destPath string, lg *slog.Logger) error {
 	args := []string{
 		"tracks",
 		srcPath,
-		fmt.Sprintf("%d:%s", trackID, destSRT),
+		fmt.Sprintf("%d:%s", trackID, destPath),
 	}
 
 	out, err := exec.Command("mkvextract", args...).CombinedOutput()
@@ -312,12 +356,4 @@ func stripSubtitles(path string, lg *slog.Logger) error {
 	}
 
 	return nil
-}
-
-func isTextSubtitle(codec string) bool {
-	switch codec {
-	case "S_TEXT/UTF8", "SubRip/SRT", "S_TEXT/ASS", "SubStationAlpha", "S_TEXT/SSA":
-		return true
-	}
-	return false
 }

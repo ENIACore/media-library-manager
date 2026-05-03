@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="v1.0-beta"
+VERSION="v1.1-beta"
 NOTES="First beta release - lacks documentation and extensive testing"
 
 gh release create ${VERSION} \
