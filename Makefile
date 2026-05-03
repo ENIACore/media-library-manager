@@ -1,7 +1,7 @@
 # Media Library Manager - Build Configuration
 BINARY_NAME=mlm
 VERSION?=dev
-MAIN_PATH=cmd/media_library_manager/main.go
+MAIN_PATH=./cmd/media_library_manager
 
 # Build directories
 BUILD_DIR=build

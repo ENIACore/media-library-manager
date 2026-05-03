@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-VERSION="v0.9.9.1"
-NOTES="Updated logging release"
+VERSION="v1.0-beta"
+NOTES="First beta release - lacks documentation and extensive testing"
 
 gh release create ${VERSION} \
   dist/mlm-linux-amd64 \

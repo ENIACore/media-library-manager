@@ -67,6 +67,8 @@ Media Library Manager is a powerful automation tool designed for media enthusias
 
 The tool runs in two modes — **ingest** (default) for processing new downloads and **subtitle** for retroactively adding missing English subtitles to an existing library.
 
+> **v1.0-beta** — First public release. All pipeline functionality is complete, including subtitle language detection. Documentation is incomplete, the codebase needs refinement, and test coverage is not yet in place.
+
 The tool handles complex scenarios including:
 - Mixed movie and TV show libraries
 - Multi-season TV series with bonus content
@@ -91,6 +93,7 @@ The tool handles complex scenarios including:
 - **Jellyfin-Standard Naming**: Generates filenames and directory structures that conform to Jellyfin naming conventions
 - **TMDb Verification by ID**: Confirms and enriches titles using TMDb ID lookups for precise matching
 - **MKV Subtitle Stripping**: Removes all embedded subtitle tracks from MKV files; plaintext tracks (ASS, SSA, SRT, etc.) are extracted to standalone `.srt` files
+- **Subtitle Language Detection**: Detects the actual language of subtitle files and names them accordingly
 - **Flexible Structure Support**: Handles various torrent directory structures
 - **Bonus Content Handling**: Properly categorizes extras, behind-the-scenes, and bonus features
 - **Conflict Resolution**: Automatically resolves duplicate filenames
@@ -170,41 +173,87 @@ The application can be configured using command-line flags or environment variab
 #### Environment Variables
 
 ```sh
-export ENIACORE_TORRENT_PATH="/path/to/downloads"
-export ENIACORE_INCOMPLETE_PATH="/path/to/downloads/temp"
+# Both modes
+export ENIACORE_MODE="ingest"
 export ENIACORE_MOVIE_PATH="/path/to/movies"
 export ENIACORE_SHOW_PATH="/path/to/shows"
 export ENIACORE_MANAGER_PATH="/path/to/manager"
 export ENIACORE_LOG_STDOUT="true"
 export ENIACORE_DRY_RUN="false"
+export ENIACORE_TMDB_API_KEY="your_tmdb_key"
+
+# Ingest mode
+export ENIACORE_TORRENT_PATH="/path/to/downloads"
+export ENIACORE_INCOMPLETE_PATH="/path/to/downloads/temp"
+export ENIACORE_INTERACTIVE="true"
+export ENIACORE_LIMIT="10"
+
+# Subtitle mode
+export ENIACORE_OS_API_KEY="your_opensubtitles_api_key"
+export ENIACORE_OS_USER_AGENT="your_app_user_agent"
+export ENIACORE_OS_USER="your_opensubtitles_username"
+export ENIACORE_OS_PASS="your_opensubtitles_password"
 ```
 
 #### Command-Line Flags
 
 ```sh
+# Both modes
 mlm \
   -mode="ingest" \
-  -torrent-path="/opt/qbit/downloads" \
-  -incomplete-path="/opt/qbit/downloads/temp" \
   -movie-path="/opt/jellyfin/media/movies" \
   -show-path="/opt/jellyfin/media/shows" \
   -manager-path="/opt/media_manager" \
   -log-stdout=true \
-  -dry-run=false
+  -dry-run=false \
+  -tmdb-api-key="your_tmdb_key"
+
+# Ingest mode flags
+mlm \
+  -torrent-path="/opt/qbit/downloads" \
+  -incomplete-path="/opt/qbit/downloads/temp" \
+  -interactive=true \
+  -limit=10
+
+# Subtitle mode flags
+mlm -mode=subtitle \
+  -os-api-key="your_opensubtitles_api_key" \
+  -os-user-agent="your_app_user_agent" \
+  -os-user="your_opensubtitles_username" \
+  -os-pass="your_opensubtitles_password"
 ```
 
 #### Default Values
 
-| Parameter | Default Value | Description |
-|-----------|--------------|-------------|
-| `mode` | `ingest` | Operating mode: `ingest` or `subtitle` |
-| `torrent-path` | `/opt/qbit/downloads` | Path to downloaded torrents |
-| `incomplete-path` | `/opt/qbit/downloads/temp` | Path to incomplete torrents (will be skipped) |
-| `movie-path` | `/opt/jellyfin/media/movies` | Destination for movie files |
-| `show-path` | `/opt/jellyfin/media/shows` | Destination for TV show files |
-| `manager-path` | `/opt/media_manager` | Program directory (for logs and errors) |
-| `log-stdout` | `true` | Log to standard output |
-| `dry-run` | `true` | Run without moving files |
+**Both modes**
+
+| Parameter | Env Var | Default | Description |
+|-----------|---------|---------|-------------|
+| `mode` | `ENIACORE_MODE` | `ingest` | Operating mode: `ingest` or `subtitle` |
+| `movie-path` | `ENIACORE_MOVIE_PATH` | `/opt/jellyfin/media/movies` | Destination for movie files |
+| `show-path` | `ENIACORE_SHOW_PATH` | `/opt/jellyfin/media/shows` | Destination for TV show files |
+| `manager-path` | `ENIACORE_MANAGER_PATH` | `/opt/media_manager` | Program directory (for logs and errors) |
+| `log-stdout` | `ENIACORE_LOG_STDOUT` | `true` | Log to standard output |
+| `dry-run` | `ENIACORE_DRY_RUN` | `true` | Run without moving files |
+| `tmdb-api-key` | `ENIACORE_TMDB_API_KEY` | `""` | TMDb API read access token or v3 key |
+
+**Ingest mode**
+
+| Parameter | Env Var | Default | Description |
+|-----------|---------|---------|-------------|
+| `torrent-path` | `ENIACORE_TORRENT_PATH` | `/opt/qbit/downloads` | Path to downloaded torrents |
+| `incomplete-path` | `ENIACORE_INCOMPLETE_PATH` | `/opt/qbit/downloads/temp` | Path to incomplete torrents (skipped) |
+| `interactive` | `ENIACORE_INTERACTIVE` | `true` | Allow interactive correction during processing |
+| `limit` | `ENIACORE_LIMIT` | `10` | Max movies/series to process per run (0 = unlimited) |
+
+**Subtitle mode**
+
+| Parameter | Env Var | Default | Description |
+|-----------|---------|---------|-------------|
+| `os-api-key` | `ENIACORE_OS_API_KEY` | `""` | OpenSubtitles REST API key |
+| `os-user-agent` | `ENIACORE_OS_USER_AGENT` | `""` | OpenSubtitles user agent |
+| `os-user` | `ENIACORE_OS_USER` | `""` | OpenSubtitles username (enables authenticated downloads) |
+| `os-pass` | `ENIACORE_OS_PASS` | `""` | OpenSubtitles password |
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -384,21 +433,13 @@ The subtitle pipeline is a lightweight scan-and-fetch loop:
 - [x] TMDb integration for title verification (ID-based)
 - [x] MKV subtitle stripping with plaintext extraction to SRT
 - [x] Subtitle mode — backfill missing English subtitles via OpenSubtitles
-- [ ] Release V1.0.0 (yay, almost there!)
-- [ ] Advanced language detection (subtitles)
+- [x] Subtitle language detection
+- [x] Released v1.0-beta
+- [ ] Full documentation
+- [ ] Test coverage
+- [ ] Codebase refinement and cleanup
 
 See the [open issues](https://github.com/ENIACore/media_library_manager/issues) for a full list of proposed features and known issues.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## TODO
-- Release V1.0.0
-- Improve language detection and handling for subtitles
-- Add additional functionality to parse and rename all subtitle file languages according to actual contents
-
-## TODO Test Batches
-- Fix Test batch 4 (1) failing test
-- Fix Test batch 1, "Walk The Line" Line is being recognized as an Audio value
 
 <!-- CONTRIBUTING -->
 ## Contributing
