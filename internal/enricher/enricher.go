@@ -27,6 +27,7 @@ func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	enrichMovieFile(root, metadata.MediaInfo{})
 	enrichEpisodeFiles(root, metadata.MediaInfo{})
 	enrichExtrasFiles(root, metadata.MediaInfo{})
+	enrichSubtitleWithSibling(root)
 
 	return nil
 }
@@ -184,6 +185,104 @@ func enrichSubtitleFiles(entry *metadata.Entry, ctx metadata.MediaInfo) {
 	for _, child := range entry.Children {
 		enrichSubtitleFiles(child, ctx)
 	}
+}
+
+// enrichSubtitleWithSibling matches each subtitle file to its sibling video file at the same parent
+// level and copies FileInfo quality metadata (Audio, Codec, Bitrate, Resolution) from the video to
+// the subtitle. Subtitles with no matching sibling are removed from the entry tree.
+func enrichSubtitleWithSibling(entry *metadata.Entry) {
+	if !entry.FileInfo.IsDir {
+		return
+	}
+
+	var videoFiles []*metadata.Entry
+	for _, child := range entry.Children {
+		if child.Role == metadata.EpisodeFile || child.Role == metadata.MovieFile {
+			videoFiles = append(videoFiles, child)
+		}
+	}
+
+	if len(videoFiles) > 0 {
+		kept := make([]*metadata.Entry, 0, len(entry.Children))
+		for _, child := range entry.Children {
+			switch child.Role {
+			case metadata.SubtitleFile:
+				if matchSubtitleToVideo(child, videoFiles) {
+					kept = append(kept, child)
+				}
+			case metadata.SubtitleDir:
+				pruneSubtitleDir(child, videoFiles)
+				if len(child.Children) > 0 {
+					kept = append(kept, child)
+				}
+			default:
+				kept = append(kept, child)
+			}
+		}
+		entry.Children = kept
+	}
+
+	for _, child := range entry.Children {
+		enrichSubtitleWithSibling(child)
+	}
+}
+
+// pruneSubtitleDir removes subtitle files from a subtitle directory that have no matching video sibling.
+func pruneSubtitleDir(dir *metadata.Entry, videoFiles []*metadata.Entry) {
+	kept := make([]*metadata.Entry, 0, len(dir.Children))
+	for _, child := range dir.Children {
+		switch child.Role {
+		case metadata.SubtitleFile:
+			if matchSubtitleToVideo(child, videoFiles) {
+				kept = append(kept, child)
+			}
+		case metadata.SubtitleDir:
+			pruneSubtitleDir(child, videoFiles)
+			if len(child.Children) > 0 {
+				kept = append(kept, child)
+			}
+		}
+	}
+	dir.Children = kept
+}
+
+// matchSubtitleToVideo finds the video file for a subtitle (by episode number if available,
+// or the sole video file otherwise) and copies its FileInfo quality fields to the subtitle.
+// Returns false if no match is found.
+func matchSubtitleToVideo(sub *metadata.Entry, videoFiles []*metadata.Entry) bool {
+	var match *metadata.Entry
+
+	if sub.MediaInfo.Episode != nil {
+		for _, v := range videoFiles {
+			if v.MediaInfo.Episode != nil && *v.MediaInfo.Episode == *sub.MediaInfo.Episode {
+				match = v
+				break
+			}
+		}
+	}
+
+	if match == nil && len(videoFiles) == 1 {
+		match = videoFiles[0]
+	}
+
+	if match == nil {
+		return false
+	}
+
+	if sub.FileInfo.Audio == "" {
+		sub.FileInfo.Audio = match.FileInfo.Audio
+	}
+	if sub.FileInfo.Codec == "" {
+		sub.FileInfo.Codec = match.FileInfo.Codec
+	}
+	if sub.FileInfo.Bitrate == "" {
+		sub.FileInfo.Bitrate = match.FileInfo.Bitrate
+	}
+	if sub.FileInfo.Resolution == "" {
+		sub.FileInfo.Resolution = match.FileInfo.Resolution
+	}
+
+	return true
 }
 
 func deepCopy(dest *metadata.MediaInfo, src metadata.MediaInfo) {

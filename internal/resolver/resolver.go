@@ -375,83 +375,73 @@ func buildReadableFilename(entry *metadata.Entry) string {
 
 }
 
-// Builds episode filename using title builder and metadata: Name (Year) [imdbid] S\d\dE\d\d - audio - bitrate - codec - resolution.mkv 
+// buildVideoFileStem constructs the filename stem shared by episode, movie, and subtitle files.
+// Format: Name (Year) [tmdbid] [ S##E##] [ - audio - bitrate - codec - resolution]
+// Season/episode suffix is only added when both are non-nil.
+func buildVideoFileStem(entry *metadata.Entry) (string, error) {
+	stem, err := buildTitle(entry)
+	if err != nil {
+		return "", err
+	}
+
+	if entry.MediaInfo.Season != nil && entry.MediaInfo.Episode != nil {
+		stem += fmt.Sprintf(" S%02d", *entry.MediaInfo.Season)
+		stem += fmt.Sprintf("E%02d", *entry.MediaInfo.Episode)
+	}
+
+	if entry.FileInfo.Audio != "" {
+		stem += " - " + entry.FileInfo.Audio
+	}
+	if entry.FileInfo.Bitrate != "" {
+		stem += " - " + entry.FileInfo.Bitrate
+	}
+	if entry.FileInfo.Codec != "" {
+		stem += " - " + entry.FileInfo.Codec
+	}
+	if entry.FileInfo.Resolution != "" {
+		stem += " - " + entry.FileInfo.Resolution
+	}
+
+	return stem, nil
+}
+
+// buildEpisodeFileName builds: Name (Year) [tmdbid]  S##E## - audio - bitrate - codec - resolution.ext
 func buildEpisodeFileName(entry *metadata.Entry) (string, error) {
 	if entry.MediaInfo.Season == nil || entry.MediaInfo.Episode == nil {
 		return "", fmt.Errorf("No episode or season in episode file")
 	}
 
-	filename, err := buildTitle(entry)
+	stem, err := buildVideoFileStem(entry)
 	if err != nil {
 		return "", nil
 	}
 
-	filename += " " + fmt.Sprintf(" S%02d", *entry.MediaInfo.Season)
-	filename += fmt.Sprintf("E%02d", *entry.MediaInfo.Episode)
-
-	if entry.FileInfo.Audio != "" {
-		filename += " - " + entry.FileInfo.Audio 
-	}
-	if entry.FileInfo.Bitrate != "" {
-		filename += " - " + entry.FileInfo.Bitrate 
-	}
-	if entry.FileInfo.Codec != "" {
-		filename += " - " + entry.FileInfo.Codec 
-	}
-	if entry.FileInfo.Resolution != "" {
-		filename += " - " + entry.FileInfo.Resolution 
-	}
-	filename += "." + strings.ToLower(entry.FileInfo.Ext)
-
-	return filename, nil
-
+	return stem + "." + strings.ToLower(entry.FileInfo.Ext), nil
 }
 
-//Builds subtitle filename using title builder and language: Name (Year) [imdbid].language.srt
-//If language not available, returns error
+// buildSubtitleFileName builds the same stem as the sibling video file and appends .language.ext
+// Returns error if language is not set.
 func buildSubtitleFileName(entry *metadata.Entry) (string, error) {
 	if len(entry.FileInfo.Language) == 0 {
 		return "", fmt.Errorf("No language detected for subtitle")
 	}
 
-	filename, err := buildTitle(entry)
+	stem, err := buildVideoFileStem(entry)
 	if err != nil {
 		return "", err
 	}
 
-
-	if entry.MediaInfo.Season != nil && entry.MediaInfo.Episode != nil {
-		filename += fmt.Sprintf(" S%02d", *entry.MediaInfo.Season)
-		filename += fmt.Sprintf("E%02d", *entry.MediaInfo.Episode)
-	}
-
-	filename += "." + entry.FileInfo.Language[0]
-	filename += "." + strings.ToLower(entry.FileInfo.Ext)
-	return filename, nil
+	return stem + "." + entry.FileInfo.Language[0] + "." + strings.ToLower(entry.FileInfo.Ext), nil
 }
 
-// Builds movie filename using title builder and metadata: Name (Year) [imdbid] - audio - bitrate - codec - resolution.mkv 
+// buildMovieFileName builds: Name (Year) [tmdbid] - audio - bitrate - codec - resolution.ext
 func buildMovieFileName(entry *metadata.Entry) (string, error) {
-	filename, err := buildTitle(entry)
+	stem, err := buildVideoFileStem(entry)
 	if err != nil {
 		return "", nil
 	}
 
-	if entry.FileInfo.Audio != "" {
-		filename += " - " + entry.FileInfo.Audio 
-	}
-	if entry.FileInfo.Bitrate != "" {
-		filename += " - " + entry.FileInfo.Bitrate 
-	}
-	if entry.FileInfo.Codec != "" {
-		filename += " - " + entry.FileInfo.Codec 
-	}
-	if entry.FileInfo.Resolution != "" {
-		filename += " - " + entry.FileInfo.Resolution 
-	}
-	filename += "." + strings.ToLower(entry.FileInfo.Ext)
-
-	return filename, nil
+	return stem + "." + strings.ToLower(entry.FileInfo.Ext), nil
 }
 
 // Builds title using title, year, and tmdbid: Name (Year) [tmdbid]

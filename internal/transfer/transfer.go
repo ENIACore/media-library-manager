@@ -86,30 +86,29 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	}
 }
 
-// Cleanup removes all remaining entries from torrent directory after processing.
-// Skips incomplete directory specified in [config.Config.IncompletePath].
-func Cleanup(cfg *config.Config, logger *slog.Logger) {
+// Cleanup removes processed entries from torrent directory after processing.
+// Only removes entries in processedNames; skips everything else so unprocessed
+// entries (e.g. when --limit is set) are left intact.
+func Cleanup(cfg *config.Config, logger *slog.Logger, processedNames []string) {
 	lg := logger.With("func", "Cleanup")
 
 	if cfg.DryRun {
 		return
 	}
 
-	entries, err := os.ReadDir(cfg.TorrentPath)
-	if err != nil {
-		lg.Error("Error occurred during cleanup ReadDir call, returning", "error", err)
-		return
+	nameSet := make(map[string]struct{}, len(processedNames))
+	for _, name := range processedNames {
+		nameSet[name] = struct{}{}
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() && entry.Name() == filepath.Base(cfg.IncompletePath) {
-        	continue
-    	}
-		if err := os.RemoveAll(filepath.Join(cfg.TorrentPath, entry.Name())); err != nil {
+	for name := range nameSet {
+		path := filepath.Join(cfg.TorrentPath, name)
+		lg.Debug("Cleaning up processed entry", "name", name)
+		if err := os.RemoveAll(path); err != nil {
 			lg.Error("Error occurred during cleanup RemoveAll call, returning", "error", err)
 			return
 		}
-	}	
+	}
 }
 
 // Error moves failed entry to manager's error directory for manual review.
