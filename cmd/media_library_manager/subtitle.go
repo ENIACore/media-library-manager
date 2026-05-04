@@ -4,8 +4,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -19,22 +17,25 @@ import (
 func subtitle(cfg *config.Config, logger *slog.Logger) {
 	cfg.Interactive = false // If processing subtitles, it is assumed the existing title/year/tmdbid is accurate
 
-	count := processLibrary(cfg.MoviePath, cfg, logger)
-	if count > 80 {
+	session, err := enhancer.Login(cfg, logger)
+	if err != nil {
+		logger.Error("OpenSubtitles login failed", "error", err)
 		return
 	}
-	processLibrary(cfg.ShowPath, cfg, logger)
+
+	count := processLibrary(cfg.MoviePath, 0, session, cfg, logger)
+	processLibrary(cfg.ShowPath, count, session, cfg, logger)
 }
 
-func processLibrary(libraryPath string, cfg *config.Config, logger *slog.Logger) int {
-	count := 0
+func processLibrary(libraryPath string, count int, session *enhancer.Session, cfg *config.Config, logger *slog.Logger) int {
+
 	entries, err := os.ReadDir(libraryPath)
 	if err != nil {
 		panic("unable to read from library path: " + err.Error())
 	}
 
 	for _, entry := range entries {
-		if count > 80 {
+		if overLimit(count, cfg) {
 			return count
 		}
 
@@ -49,14 +50,8 @@ func processLibrary(libraryPath string, cfg *config.Config, logger *slog.Logger)
 			continue
 		}
 
-		session, err := enhancer.Login(cfg, logger)
-		if err != nil {
-			logger.Error("OpenSubtitles login failed", "error", err)
-			continue
-		}
-
 		for _, videoPath := range paths {
-			if count > 80 {
+			if overLimit(count, cfg) {
 				return count
 			}
 
@@ -77,11 +72,9 @@ func processLibrary(libraryPath string, cfg *config.Config, logger *slog.Logger)
 	return count
 }
 
-var tmdbIDRe = regexp.MustCompile(`\[tmdb-(\d+)\]`)
-
 func buildEntry(videoPath string, logger *slog.Logger) *metadata.Entry {
 	mediaInfo := extractor.ExtractMedia(videoPath, logger)
-	mediaInfo.TMDBid = extractTMDBid(videoPath)
+	mediaInfo.TMDBid = extractor.ExtractTMDBid(videoPath)
 
 	ext := filepath.Ext(videoPath)
 	subtitlePath := strings.TrimSuffix(videoPath, ext) + ".English.srt"
@@ -103,19 +96,3 @@ func buildEntry(videoPath string, logger *slog.Logger) *metadata.Entry {
 	}
 }
 
-func extractTMDBid(path string) int {
-	dir := filepath.Dir(path)
-	for {
-		if m := tmdbIDRe.FindStringSubmatch(filepath.Base(dir)); m != nil {
-			if id, err := strconv.Atoi(m[1]); err == nil {
-				return id
-			}
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return 0
-}

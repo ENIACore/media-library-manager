@@ -41,3 +41,10 @@ func createTempDir() string {
 	defer os.RemoveAll(tempDir)
 	return tempDir
 }
+
+func overLimit(count int, cfg *config.Config) bool {
+	if cfg.Limit != 0 && count > cfg.Limit {
+		return true
+	}
+	return false
+}

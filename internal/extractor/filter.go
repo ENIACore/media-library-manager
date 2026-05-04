@@ -30,7 +30,7 @@ func Filter(path string, logger *slog.Logger) bool {
 		return true
 	}
 
-	pathType := extractType(ext)
+	pathType := ExtractType(ext)
 	if pathType == metadata.UnknownType && !info.IsDir() {
 		lg.Info("Path is a unknown file type, filtering path", "path", path)
 		return true

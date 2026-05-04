@@ -30,11 +30,9 @@ func ingest(tempDir string, cfg *config.Config, logger *slog.Logger) {
 	numSuccess := 0
 	var processedNames []string
 
-	fmt.Println("limit is: ")
-	fmt.Println(cfg.Limit)
 	for i, entry := range entries {
 
-		if cfg.Limit != 0 && i >= cfg.Limit {
+		if overLimit(i, cfg) {
 			break
 		}
 

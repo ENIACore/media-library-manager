@@ -83,7 +83,7 @@ func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 	fileInfo.SourcePath = path
 	
 	fileInfo.Ext = getExt(path)
-	fileInfo.ContentType = extractType(fileInfo.Ext)
+	fileInfo.ContentType = ExtractType(fileInfo.Ext)
 
 	info, err := os.Stat(path)
 	if err != nil {
@@ -325,9 +325,9 @@ func extractBitrate(data *ffprobe.ProbeData) string {
 	return fmt.Sprintf("%dkbps", bps/1000)
 }
 
-// extractType returns the content type based on file extension
-// Returns UnknownType if extension empty, not found or unsupported.
-func extractType(ext string) metadata.ContentType {
+// ExtractType returns the content type based on file extension.
+// Returns UnknownType if extension is empty, not found, or unsupported.
+func ExtractType(ext string) metadata.ContentType {
 	if ext == "" {
 		return metadata.UnknownType
 	}

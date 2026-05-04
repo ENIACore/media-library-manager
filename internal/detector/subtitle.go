@@ -9,14 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-var videoExts = map[string]bool{
-	"MP4": true, "MKV": true, "AVI": true, "MOV": true, "FLV": true,
-	"WMV": true, "WEBM": true, "M4V": true, "TS": true, "M2TS": true,
-	"MPG": true, "MPEG": true, "VOB": true, "3GP": true, "OGV": true,
-	"RMVB": true, "RM": true, "DIVX": true, "F4V": true,
-}
+	"github.com/ENIACore/media_library_manager/internal/extractor"
+	"github.com/ENIACore/media_library_manager/internal/metadata"
+)
 
 // DetectSubtitle walks basePath and returns full paths of video files
 // that do not have a sibling .English.srt file.
@@ -32,17 +28,17 @@ func DetectSubtitle(basePath string, logger *slog.Logger) ([]string, error) {
 		}
 
 		ext := strings.ToUpper(strings.TrimPrefix(filepath.Ext(path), "."))
-		if !videoExts[ext] {
+		if extractor.ExtractType(ext) != metadata.Video {
 			return nil
 		}
 
 		subtitlePath := strings.TrimSuffix(path, filepath.Ext(path)) + ".English.srt"
 		if fileExists(subtitlePath) {
-			logger.Info("English SRT file exists, skipping", "path", filepath.Base(path))
+			logger.Info("English SRT file exists, skipping", "path", filepath.Base(path)) //- Avoiding logging in detection due to high number of files
 			return nil
 		}
 
-		logger.Info("English SRT missing, adding to list", "path", filepath.Base(path))
+		logger.Info("English SRT missing, adding to list", "path", filepath.Base(path)) //- Avoiding logging in detection due to high number of files
 		missing = append(missing, path)
 		return nil
 	})

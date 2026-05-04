@@ -10,18 +10,19 @@ import (
 type Config struct {
 	// Both modes
 	Mode			string // Most important variable, determines if running in ingest mode or subtitle mode
+	Limit			int
     MoviePath   	string
     ShowPath    	string
     ManagerPath 	string
     LogStdout		bool
     DryRun      	bool
-	TMDBApiKey		string
 
 	// Ingest mode
     TorrentPath 	string
 	IncompletePath 	string
 	Interactive		bool
-	Limit			int
+	TMDBApiKey		string
+
 
 	// Subtitle mode
 	OpenSubtitlesApiKey string
@@ -65,7 +66,7 @@ func New() *Config {
     flag.BoolVar(&cfg.DryRun, "dry-run", defaults.DryRun, "Run without moving files")
 	flag.BoolVar(&cfg.Interactive, "interactive", defaults.Interactive, "User can interactively correct program")
 	flag.StringVar(&cfg.TMDBApiKey, "tmdb-api-key", defaults.TMDBApiKey, "TMDb API read access token or v3 key")
-	flag.IntVar(&cfg.Limit, "limit", defaults.Limit, "Maximum number of movies/series to process per run (0 = unlimited)")
+	flag.IntVar(&cfg.Limit, "limit", defaults.Limit, "Limits number of entries to process (ingest and subtitle mode) (0 = unlimited)")
 	flag.StringVar(&cfg.OpenSubtitlesApiKey, "os-api-key", defaults.OpenSubtitlesApiKey, "OpenSubtitles REST API key")
 	flag.StringVar(&cfg.OpenSubtitlesUserAgent, "os-user-agent", defaults.OpenSubtitlesUserAgent, "OpenSubtitles user agent set in consumers")
 	flag.StringVar(&cfg.OpenSubtitlesUser, "os-user", defaults.OpenSubtitlesUser, "OpenSubtitles username (enables authenticated downloads)")
