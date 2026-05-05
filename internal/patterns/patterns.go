@@ -137,6 +137,8 @@ var SamplePatterns = []Pattern{
 
 // MiscPatterns are noise tokens in torrent names with no useful metadata value.
 var MiscPatterns = append([]Pattern{
+	`NEW`, `ESUB`,
+
 	// === UNUSED QUALITY INDICATORS ===
 	// HDR variants
 	`HDR`, `HDR10`, `HDR10PLUS`, `HDR10\+`, `DOLBY\.VISION`, `DOLBYVISION`, `DV`, `HLG`,
@@ -280,6 +282,7 @@ var DeletedScenesPatternGroups = []PatternGroup{
 		`DELETED`,
 		`EXTENDED\.SCENE[S]?`,
 		`ALTERNATE\.SCENE[S]?`,
+		`ALTERNATE\.ENDING[S]?`,
 		`ADDITIONAL\.SCENE[S]?`,
 	}},
 }
@@ -335,7 +338,7 @@ var EditionPatternGroups = []PatternGroup{
 	{Key: `Extended`, Patterns: []Pattern{`EXTENDED`, `EXTENDED\.CUT`, `EXTENDED\.EDITION`}},
 	{Key: `Unrated`, Patterns: []Pattern{`UNRATED`}},
 	{Key: `Uncut`, Patterns: []Pattern{`UNCUT`}},
-	{Key: `DirectorsCut`, Patterns: []Pattern{`DIRECTORS\.CUT`}},
+	{Key: `DirectorsCut`, Patterns: []Pattern{`DIRECTOR[S]?\.CUT[S]?`, `DC`}},
 	{Key: `Theatrical`, Patterns: []Pattern{`THEATRICAL`, `THEATRICAL\.CUT`}},
 	{Key: `Criterion`, Patterns: []Pattern{`CRITERION`}},
 	{Key: `SpecialEdition`, Patterns: []Pattern{`SPECIAL\.EDITION`}},

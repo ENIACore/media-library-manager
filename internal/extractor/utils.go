@@ -47,3 +47,25 @@ func matchSegments(segments []string, re *regexp.Regexp) []string {
 	}
 	return nil
 }
+
+// matchSegmentsFromEnd matches a regex pattern against the tail of segments.
+// The tail window size is determined by the number of '\.' separators in the pattern.
+// Enables multi-word pattern matching at the end of a sanitized file or directory name.
+// Returns [full match, capture groups...]
+func matchSegmentsFromEnd(segments []string, re *regexp.Regexp) []string {
+	numDots := strings.Count(re.String(), `\.`)
+	width := numDots + 1
+ 
+	if width > len(segments) {
+		return nil
+	}
+ 
+	start := len(segments) - width
+	str := strings.Join(segments[start:], ".")
+ 
+	if match := re.FindStringSubmatch(str); match != nil && match[0] == str {
+		return match
+	}
+	return nil
+}
+

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ENIACore/media_library_manager/internal/metadata"
@@ -80,22 +81,31 @@ func isTerminator(segments []string) bool {
 }
 
 // extractTitle returns the title starting from the leftmost segment.
-// Extraction stops at the first terminator
-// A Year is determined to be part of the title if it is not succeeded by a terminator or is is succeeded by a valid movie year
+// Edition patterns (e.g. EXTENDED, DIRECTORS.CUT) between the title and year are skipped:
+// they are not added to the title, and scanning continues to find the year.
+// Extraction stops at the first strict terminator (before year) or unstrict terminator (after year).
 func extractTitle(segments []string) []string {
 	var title []string
 	var year *int
+	skip := 0
 	for i, segment := range segments {
+		if skip > 0 {
+			skip--
+			continue
+		}
 		candidates := segments[i:]
-		
-		// If year found, use unstrict terminator
+
 		if year != nil && isTerminator(candidates) {
-            break
-        }
-		// If year not found, use strict terminator without english words	
-        if year == nil && isStrictTerminator(candidates) {
-            break
-        }
+			break
+		}
+		if year == nil && isStrictTerminator(candidates) {
+			break
+		}
+		// Before year: skip edition/BTS/DS segments rather than including them in the title
+		if year == nil && (parseEdition(candidates) != "" || parseBTS(candidates) != "" || parseDS(candidates) != "") {
+			skip = skipSegmentCount(candidates) - 1
+			continue
+		}
 
 		if year != nil {
 			title = append(title, strconv.Itoa(*year))
@@ -108,13 +118,33 @@ func extractTitle(segments []string) []string {
 	return title
 }
 
+// skipSegmentCount returns the number of segments consumed by the first matching edition, BTS, or DS pattern.
+func skipSegmentCount(segments []string) int {
+	allGroups := [][]patterns.CompiledPatternGroup{
+		patterns.GetEditionPatterns(),
+		patterns.GetBehindTheScenesPatternGroups(),
+		patterns.GetDeletedScenesPatternGroups(),
+	}
+	for _, groups := range allGroups {
+		for _, group := range groups {
+			for _, re := range group.Patterns {
+				if matchSegments(segments, (*regexp.Regexp)(re)) != nil {
+					return strings.Count((*regexp.Regexp)(re).String(), `\.`) + 1
+				}
+			}
+		}
+	}
+	return 1
+}
+
 // extractYear returns the year from segments or nil if not found.
-// Scans segments until a terminator is encountered
+// Stops only at strict terminators (resolution, codec, source, audio, season, episode, extension)
+// so that edition and misc words between the title and year are scanned through.
 func extractYear(segments []string) *int {
 	var year *int
 	for i, segment := range segments {
 		candidates := segments[i:]
-		if isTerminator(candidates) {
+		if isStrictTerminator(candidates) {
 			return year
 		}
 		year = parseYear(segment)

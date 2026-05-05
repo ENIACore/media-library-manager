@@ -20,42 +20,50 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ENIACore/media_library_manager/internal/classifier"
 	"github.com/ENIACore/media_library_manager/internal/config"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
 const (
 	tmdbBaseURL = "https://api.themoviedb.org/3"
-	searchMovie = "/search/movie"
-	searchTV    = "/search/tv"
+	searchMulti = "/search/multi"
 	httpTimeout = 10 * time.Second
 	maxResults  = 5
 )
 
-type tmdbMovieResult struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	ReleaseDate string `json:"release_date"`
-}
-
-type tmdbTVResult struct {
+type tmdbMultiResult struct {
 	ID           int    `json:"id"`
-	Name         string `json:"name"`
-	FirstAirDate string `json:"first_air_date"`
+	MediaType    string `json:"media_type"`
+	Title        string `json:"title"`          // movie
+	Name         string `json:"name"`           // tv
+	ReleaseDate  string `json:"release_date"`   // movie
+	FirstAirDate string `json:"first_air_date"` // tv
 }
 
-type tmdbMovieResponse struct {
-	Results []tmdbMovieResult `json:"results"`
+func (r tmdbMultiResult) canonicalTitle() string {
+	if r.MediaType == "tv" {
+		return r.Name
+	}
+	return r.Title
 }
 
-type tmdbTVResponse struct {
-	Results []tmdbTVResult `json:"results"`
+func (r tmdbMultiResult) canonicalDate() string {
+	if r.MediaType == "tv" {
+		return r.FirstAirDate
+	}
+	return r.ReleaseDate
+}
+
+type tmdbMultiResponse struct {
+	Results []tmdbMultiResult `json:"results"`
 }
 
 type tmdbCandidate struct {
-	id    int
-	title string
-	date  string
+	id        int
+	title     string
+	date      string
+	mediaType string
 }
 
 func Verify(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
@@ -70,109 +78,107 @@ func Verify(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 	}
 
 	switch root.Role {
-	case metadata.MovieDir, metadata.MovieFile:
-		return verifyMovie(root, cfg, lg)
-	case metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
-		return verifySeries(root, cfg, lg)
+	case metadata.MovieDir, metadata.MovieFile,
+		metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
 	default:
 		return fmt.Errorf("verifier: role %v for entry %v is not verifiable at root level", root.Role.String(), root.Source())
 	}
-}
 
-func verifyMovie(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
-	query := joinTitle(root.MediaInfo.Title)
-
-	params := url.Values{}
-	params.Set("query", query)
-	if root.MediaInfo.Year != nil {
-		params.Set("year", strconv.Itoa(*root.MediaInfo.Year))
-	}
-
-	body, err := tmdbGet(cfg.TMDBApiKey, searchMovie, params)
-	if err != nil {
-		return fmt.Errorf("verifier: TMDb request failed for movie %q: %w", query, err)
-	}
-
-	var resp tmdbMovieResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return fmt.Errorf("verifier: failed to parse TMDb movie response: %w", err)
-	}
-
-	if len(resp.Results) == 0 {
-		return fmt.Errorf("verifier: no TMDb results found for movie %q (year=%v)", query, root.MediaInfo.YearString())
-	}
-
-	results := resp.Results
-	if len(results) > maxResults {
-		results = results[:maxResults]
-	}
-
-	candidates := make([]tmdbCandidate, len(results))
-	for i, r := range results {
-		candidates[i] = tmdbCandidate{id: r.ID, title: r.Title, date: r.ReleaseDate}
-	}
-
-	best, err := selectResult(query, "movie", candidates, root.MediaInfo.Year, cfg)
+	tmdbType, err := verifyEntry(root, cfg, lg)
 	if err != nil {
 		return err
 	}
 
-	root.MediaInfo.Title = titleToSlice(best.title)
-	root.MediaInfo.TMDBid = best.id
-	year := yearFromDate(best.date)
-	root.MediaInfo.Year = &year
-
-	logger.Info("movie verified", "title", best.title, "year", year, "tmdb_id", root.TMDB())
-	return nil
+	return classifier.Reclassify(root, tmdbType, lg)
 }
 
-func verifySeries(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+// verifyEntry searches TMDb using the preferred media type derived from the current
+// role and falls back to the other type when no results are found.
+// It updates root.MediaInfo (Title, Year, TMDBid) and returns the TMDB media_type.
+func verifyEntry(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) (string, error) {
 	query := joinTitle(root.MediaInfo.Title)
+	preferred := preferredMediaType(root.Role)
 
-	params := url.Values{}
-	params.Set("query", query)
-	if root.MediaInfo.Year != nil {
-		params.Set("first_air_date_year", strconv.Itoa(*root.MediaInfo.Year))
-	}
-
-	body, err := tmdbGet(cfg.TMDBApiKey, searchTV, params)
+	candidates, err := multiSearch(query, preferred, root.MediaInfo.Year, cfg.TMDBApiKey)
 	if err != nil {
-		return fmt.Errorf("verifier: TMDb request failed for series %q: %w", query, err)
+		return "", fmt.Errorf("verifier: TMDb request failed for %q: %w", query, err)
 	}
 
-	var resp tmdbTVResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return fmt.Errorf("verifier: failed to parse TMDb TV response: %w", err)
+	// Nothing found for the preferred type — try the other one.
+	if len(candidates) == 0 {
+		fallback := "tv"
+		if preferred == "tv" {
+			fallback = "movie"
+		}
+		candidates, err = multiSearch(query, fallback, root.MediaInfo.Year, cfg.TMDBApiKey)
+		if err != nil {
+			return "", fmt.Errorf("verifier: TMDb fallback request failed for %q: %w", query, err)
+		}
 	}
 
-	if len(resp.Results) == 0 {
-		return fmt.Errorf("verifier: no TMDb results found for series %q (year=%v)", query, root.MediaInfo.YearString())
+	if len(candidates) == 0 {
+		return "", fmt.Errorf("verifier: no TMDb results found for %q (year=%v)", query, root.MediaInfo.YearString())
 	}
 
-	results := resp.Results
-	if len(results) > maxResults {
-		results = results[:maxResults]
-	}
-
-	candidates := make([]tmdbCandidate, len(results))
-	for i, r := range results {
-		candidates[i] = tmdbCandidate{id: r.ID, title: r.Name, date: r.FirstAirDate}
-	}
-
-	best, err := selectResult(query, "series", candidates, root.MediaInfo.Year, cfg)
+	best, err := selectResult(query, candidates[0].mediaType, candidates, root.MediaInfo.Year, cfg)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	airYear := yearFromDate(best.date)
 	root.MediaInfo.Title = titleToSlice(best.title)
 	root.MediaInfo.TMDBid = best.id
-	if airYear != 0 {
-		root.MediaInfo.Year = &airYear
+	if year := yearFromDate(best.date); year != 0 {
+		root.MediaInfo.Year = &year
 	}
 
-	logger.Info("series verified", "title", best.title, "first_air_year", airYear, "tmdb_id", root.TMDB())
-	return nil
+	logger.Info("verified", "title", best.title, "year", root.MediaInfo.YearString(), "media_type", best.mediaType, "tmdb_id", root.TMDB())
+	return best.mediaType, nil
+}
+
+// preferredMediaType returns "tv" for series/season/episode roles and "movie" for everything else.
+func preferredMediaType(role metadata.EntryRole) string {
+	switch role {
+	case metadata.SeriesDir, metadata.SeasonDir, metadata.EpisodeFile:
+		return "tv"
+	default:
+		return "movie"
+	}
+}
+
+// multiSearch calls /search/multi and returns candidates filtered to the requested mediaType ("movie" or "tv").
+func multiSearch(query, mediaType string, year *int, apiKey string) ([]tmdbCandidate, error) {
+	params := url.Values{}
+	params.Set("query", query)
+	if year != nil {
+		params.Set("year", strconv.Itoa(*year))
+	}
+
+	body, err := tmdbGet(apiKey, searchMulti, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp tmdbMultiResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse TMDb multi response: %w", err)
+	}
+
+	var candidates []tmdbCandidate
+	for _, r := range resp.Results {
+		if r.MediaType != mediaType {
+			continue
+		}
+		candidates = append(candidates, tmdbCandidate{
+			id:        r.ID,
+			title:     r.canonicalTitle(),
+			date:      r.canonicalDate(),
+			mediaType: r.MediaType,
+		})
+		if len(candidates) == maxResults {
+			break
+		}
+	}
+	return candidates, nil
 }
 
 func selectResult(query, mediaType string, candidates []tmdbCandidate, extractedYear *int, cfg *config.Config) (tmdbCandidate, error) {

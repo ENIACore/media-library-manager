@@ -43,7 +43,7 @@ var SourcePatternGroups = []PatternGroup{
 	// Remux is highest quality — first
 	{Key: `Remux`, Patterns: []Pattern{`REMUX`}},
 	// Blu-ray disc formats — raw disc images before rips
-	{Key: `BluRay`, Patterns: []Pattern{`BLURAY`, `BDMV`, `BDISO`, `BD25`, `BD50`, `BD66`, `BD100`}},
+	{Key: `BluRay`, Patterns: []Pattern{`BLURAY`, `BDMV`, `BDISO`, `BD25`, `BD50`, `BD66`, `BD100`, `BD`, `BLU\.RAY`}},
 	// BDRip: encode direct from BD disc (better than BRRip)
 	{Key: `BDRip`, Patterns: []Pattern{`BDRIP`, `BD\.RIP`}},
 	// BRRip: re-encode of an existing BDRip (lower quality than BDRip)

@@ -39,7 +39,7 @@ func Filter(path string, logger *slog.Logger) bool {
 
 	sanitizedName := SanitizeName(path)
 	
-	// Considered sample if sample is at front of name
+	// Considered sample if sample is at front of name 
 	if isSample(sanitizedName) {
 		lg.Info("Path is sample, filtering path", "path", path)
 		return true
@@ -49,22 +49,26 @@ func Filter(path string, logger *slog.Logger) bool {
 }
 
 // isSample determines if sanitized name contains pattern(s) indicating path is for sample(s) 
-// A sample is a file that represents the video quality of a movie or show
+// A sample is a file that represents the video quality of a movie or show.
+// Checks both the front and the back of the name.
 func isSample(segments []string) bool {
-	if parseSample(segments) != "" {
-		return true
+	for i := range segments {
+		candidates := segments[i:]
+		if sample := parseSample(candidates); sample != "" {
+			return true
+		}
 	}
 	return false
 }
-
-// parseSample returns the sample pattern if the left most segment(s) are a pattern match.
+ 
+// parseSample returns the sample pattern if the left most or right most segment(s) are a pattern match.
 // Returns empty string if pattern not found.
 // Used as helper function for isSample.
 func parseSample(segments []string) string {
 	for _, re := range patterns.GetSamplePatterns() {
-		match := matchSegments(segments, (*regexp.Regexp)(re))
-		if match != nil {
-			return match [0]
+		re := (*regexp.Regexp)(re)
+		if match := matchSegments(segments, re); match != nil {
+			return match[0]
 		}
 	}
 	return ""

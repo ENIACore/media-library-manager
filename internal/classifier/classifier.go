@@ -14,7 +14,8 @@ func Classify(root *metadata.Entry, logger *slog.Logger) error {
 	lg := logger.With("func", "Classify")
 
 	if root.FileInfo.IsDir {
-		if classifySubtitleDir(root, logger) || classifyExtrasDir(root, metadata.UnknownRole, logger) || classifySeasonDir(root, logger) || classifySeriesDir(root, logger) || classifyMovieDir(root, logger) {
+		isRoot := root.Depth == 0
+		if classifySubtitleDir(root, logger) || (!isRoot && classifyExtrasDir(root, metadata.UnknownRole, logger)) || classifySeasonDir(root, logger) || classifySeriesDir(root, logger) || classifyMovieDir(root, logger) {
 			return nil
 		}
 	} else {
@@ -185,6 +186,54 @@ func classifyMovieDir(entry *metadata.Entry, logger *slog.Logger) bool {
 	return hasMovie
 }
 
+// Reclassify overrides the role assigned by [Classify] using the authoritative media_type
+// returned by TMDb. Call this after [Verify] has confirmed the title.
+func Reclassify(root *metadata.Entry, tmdbMediaType string, logger *slog.Logger) error {
+	lg := logger.With("func", "Reclassify", "source", root.Source())
+
+	switch tmdbMediaType {
+	case "movie":
+		return reclassifyAsMovie(root, lg)
+	case "tv":
+		// TODO: reclassify movie-classified entries as TV (SeasonDir, SeriesDir, EpisodeFile, etc.)
+		lg.Info("Classification confirmed as tv", "source", root.Source(), "role", root.Role.String())
+		return nil
+	default:
+		return fmt.Errorf("classifier: unknown TMDb media type %q", tmdbMediaType)
+	}
+}
+
+func reclassifyAsMovie(root *metadata.Entry, logger *slog.Logger) error {
+	if !root.FileInfo.IsDir {
+		root.Role = metadata.MovieFile
+		logger.Info("Reclassified as movie file", "source", root.Source())
+		return nil
+	}
+
+	root.Role = metadata.MovieDir
+	logger.Info("Reclassified as movie dir", "source", root.Source())
+
+	for _, child := range root.Children {
+		if classifySubtitleFile(child) || classifySubtitleDir(child, logger) {
+			continue
+		}
+		if classifyDSFile(child) || classifyBTSFile(child) || classifyBonusFile(child) {
+			continue
+		}
+		if classifyExtrasDir(child, metadata.UnknownRole, logger) {
+			continue
+		}
+		if child.FileInfo.ContentType == metadata.Video {
+			child.Role = metadata.MovieFile
+			logger.Info("Reclassified as movie file", "source", child.Source())
+			continue
+		}
+		logger.Warn("Reclassify: unclassified child", "source", child.Source())
+	}
+
+	return nil
+}
+
 func classifySubtitleFile(entry *metadata.Entry) bool {
 	if entry.FileInfo.ContentType == metadata.Subtitle {
 		entry.Role = metadata.SubtitleFile
@@ -195,7 +244,8 @@ func classifySubtitleFile(entry *metadata.Entry) bool {
 
 func classifyDSFile(entry *metadata.Entry) bool {
 	if entry.FileInfo.ContentType == metadata.Video {
-		if entry.MediaInfo.DS != "" || (entry.Parent != nil && entry.Parent.MediaInfo.DS != "") {
+		parentDS := entry.Parent != nil && entry.Parent.Depth > 0 && entry.Parent.MediaInfo.DS != ""
+		if entry.MediaInfo.DS != "" || parentDS {
 			entry.Role = metadata.DSFile
 			return true
 		}
@@ -205,7 +255,8 @@ func classifyDSFile(entry *metadata.Entry) bool {
 
 func classifyBTSFile(entry *metadata.Entry) bool {
 	if entry.FileInfo.ContentType == metadata.Video {
-		if entry.MediaInfo.BTS != "" || (entry.Parent != nil && entry.Parent.MediaInfo.BTS != "") {
+		parentBTS := entry.Parent != nil && entry.Parent.Depth > 0 && entry.Parent.MediaInfo.BTS != ""
+		if entry.MediaInfo.BTS != "" || parentBTS {
 			entry.Role = metadata.BTSFile
 			return true
 		}
@@ -215,7 +266,8 @@ func classifyBTSFile(entry *metadata.Entry) bool {
 
 func classifyBonusFile(entry *metadata.Entry) bool {
 	if entry.FileInfo.ContentType == metadata.Video {
-		if entry.MediaInfo.Bonus != "" || (entry.Parent != nil && entry.Parent.MediaInfo.Bonus != "") {
+		parentBonus := entry.Parent != nil && entry.Parent.Depth > 0 && entry.Parent.MediaInfo.Bonus != ""
+		if entry.MediaInfo.Bonus != "" || parentBonus {
 			entry.Role = metadata.BonusFile
 			return true
 		}
