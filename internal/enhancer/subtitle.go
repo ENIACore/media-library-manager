@@ -3,6 +3,7 @@ package enhancer
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,6 +16,9 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/config"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
+
+// ErrUnauthorized is returned by API helpers when the server responds with 401.
+var ErrUnauthorized = errors.New("OpenSubtitles authentication failed (401)")
 
 const (
 	osDefaultBaseURL = "https://api.opensubtitles.com/api/v1"
@@ -125,9 +129,40 @@ func buildBaseURL(host string) string {
 	return "https://" + host + "/api/v1"
 }
 
+// VerifySession checks whether the session's JWT is still accepted by the API.
+// Returns true if valid, false on 401. Returns an error for other failures.
+func VerifySession(session *Session, cfg *config.Config, logger *slog.Logger) (bool, error) {
+	lg := logger.With("func", "VerifySession")
+	_, err := osGet(session.BaseURL, "/infos/user", cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session.Token, url.Values{})
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			lg.Debug("cached session is no longer valid")
+			return false, nil
+		}
+		return false, err
+	}
+	lg.Debug("cached session verified")
+	return true, nil
+}
+
+// refreshSession invalidates the disk cache, re-authenticates, and updates session in-place.
+func refreshSession(session *Session, cfg *config.Config, logger *slog.Logger) error {
+	InvalidateCache(cfg)
+	newSess, err := Login(cfg, logger)
+	if err != nil {
+		return err
+	}
+	*session = *newSess
+	if err := SaveSession(session, cfg); err != nil {
+		logger.Warn("failed to persist refreshed session", "error", err)
+	}
+	return nil
+}
+
 // FetchSubtitle downloads an English SRT subtitle for entry and writes it to entry.FileInfo.DestPath.
 // entry must have TMDBid set (by verifier/enricher) and DestPath set to the target subtitle path (by detector).
 // session must be obtained once via Login and reused across calls.
+// A 401 response from /subtitles or /download triggers a one-time re-login; the session is updated in-place.
 func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "FetchSubtitle", "source", entry.Source())
 
@@ -138,7 +173,17 @@ func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, 
 		return fmt.Errorf("enhancer: entry %v has no subtitle destination path", entry.Source())
 	}
 
+	reauthed := false
+
 	fileID, err := searchSubtitle(entry, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
+	if errors.Is(err, ErrUnauthorized) && !reauthed {
+		lg.Warn("session expired during subtitle search, re-authenticating")
+		reauthed = true
+		if rerr := refreshSession(session, cfg, logger); rerr != nil {
+			return fmt.Errorf("enhancer: re-authentication failed: %w", rerr)
+		}
+		fileID, err = searchSubtitle(entry, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
+	}
 	if err != nil {
 		return fmt.Errorf("enhancer: subtitle search failed for %v: %w", entry.Source(), err)
 	}
@@ -149,6 +194,14 @@ func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, 
 	}
 
 	link, remaining, err := requestDownload(fileID, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
+	if errors.Is(err, ErrUnauthorized) && !reauthed {
+		lg.Warn("session expired during download request, re-authenticating")
+		reauthed = true
+		if rerr := refreshSession(session, cfg, logger); rerr != nil {
+			return fmt.Errorf("enhancer: re-authentication failed: %w", rerr)
+		}
+		link, remaining, err = requestDownload(fileID, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
+	}
 	if err != nil {
 		return fmt.Errorf("enhancer: download request failed for %v: %w", entry.Source(), err)
 	}
@@ -313,7 +366,7 @@ func osGet(baseURL, endpoint, apiKey, userAgent, token string, params url.Values
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("OpenSubtitles authentication failed (401)")
+		return nil, ErrUnauthorized
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("OpenSubtitles returned status %d", resp.StatusCode)
@@ -343,7 +396,7 @@ func osPost(baseURL, endpoint, apiKey, userAgent, token string, body []byte) ([]
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("OpenSubtitles authentication failed (401)")
+		return nil, ErrUnauthorized
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("OpenSubtitles returned status %d", resp.StatusCode)

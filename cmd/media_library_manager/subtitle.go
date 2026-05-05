@@ -17,10 +17,28 @@ import (
 func subtitle(cfg *config.Config, logger *slog.Logger) {
 	cfg.Interactive = false // If processing subtitles, it is assumed the existing title/year/tmdbid is accurate
 
-	session, err := enhancer.Login(cfg, logger)
-	if err != nil {
-		logger.Error("OpenSubtitles login failed", "error", err)
-		return
+	var session *enhancer.Session
+
+	if cached := enhancer.LoadCachedSession(cfg); cached != nil {
+		valid, err := enhancer.VerifySession(cached, cfg, logger)
+		if err != nil {
+			logger.Warn("session verification failed, falling back to login", "error", err)
+		} else if valid {
+			logger.Info("using cached OpenSubtitles session")
+			session = cached
+		}
+	}
+
+	if session == nil {
+		var err error
+		session, err = enhancer.Login(cfg, logger)
+		if err != nil {
+			logger.Error("OpenSubtitles login failed", "error", err)
+			return
+		}
+		if err := enhancer.SaveSession(session, cfg); err != nil {
+			logger.Warn("failed to cache OpenSubtitles session", "error", err)
+		}
 	}
 
 	count := processLibrary(cfg.MoviePath, 0, session, cfg, logger)
