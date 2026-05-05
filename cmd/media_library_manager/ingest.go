@@ -87,7 +87,7 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 		return nil, nil
 	}
 
-	root, err := parser.Parse(entryPath, logger)
+	root, err := parser.Parse(entryPath, cfg.DryRun, logger)
 	if err != nil {
 		logger.Error("Parse returned error", "error", err)
 		return nil, err 

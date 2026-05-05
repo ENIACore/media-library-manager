@@ -76,12 +76,12 @@ var (
 
 // ExtractPath extracts path metadata from a file or directory path.
 // Uses golang 'os' and 'filepath' library to accurately determine file or directory information.
-func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
+func ExtractFile(path string, dryRun bool, logger *slog.Logger) (metadata.FileInfo, error) {
 	log := logger.With("func", "ExtractPath")
 	fileInfo := metadata.FileInfo{}
 	fileInfo.DestPath = ""
 	fileInfo.SourcePath = path
-	
+
 	fileInfo.Ext = getExt(path)
 	fileInfo.ContentType = ExtractType(fileInfo.Ext)
 
@@ -93,15 +93,17 @@ func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 
 	switch fileInfo.ContentType {
 	case metadata.Video:
-		data, err := ffprobe.ProbeURL(context.Background(), path)
-		if err != nil {
-			return fileInfo, fmt.Errorf("Stat returned error: %w", err)
+		if !dryRun {
+			data, err := ffprobe.ProbeURL(context.Background(), path)
+			if err != nil {
+				return fileInfo, fmt.Errorf("Stat returned error: %w", err)
+			}
+			fileInfo.Resolution = extractResolution(data)
+			fileInfo.Codec = extractCodec(data)
+			fileInfo.Audio = extractAudio(data)
+			fileInfo.Language = extractLanguage(data)
+			fileInfo.Bitrate = extractBitrate(data)
 		}
-		fileInfo.Resolution = extractResolution(data)
-		fileInfo.Codec = extractCodec(data)
-		fileInfo.Audio = extractAudio(data)
-		fileInfo.Language = extractLanguage(data)
-		fileInfo.Bitrate = extractBitrate(data)
 	case metadata.Subtitle:
 		lang, isSDH, err := extractSubtitleInfo(path, fileInfo.Ext)
 		if err != nil {
