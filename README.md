@@ -2,6 +2,7 @@
 <a id="readme-top"></a>
 
 <!-- PROJECT SHIELDS -->
+[![Version][version-shield]][version-url]
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
@@ -435,6 +436,7 @@ The subtitle pipeline is a lightweight scan-and-fetch loop:
 - [x] Subtitle mode — backfill missing English subtitles via OpenSubtitles
 - [x] Subtitle language detection
 - [x] Released v1.0-beta
+- [ ] Refactor `Reclassify` function; add TV show reclassification support to `Reclassify`
 - [ ] Full documentation
 - [ ] Test coverage
 - [ ] Codebase refinement and cleanup
@@ -471,6 +473,8 @@ Project Link: [https://github.com/ENIACore/media_library_manager](https://github
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
+[version-shield]: https://img.shields.io/badge/version-v1.0--beta-blue?style=for-the-badge
+[version-url]: https://github.com/ENIACore/media_library_manager/releases/tag/v1.0-beta
 [contributors-shield]: https://img.shields.io/github/contributors/ENIACore/media_library_manager.svg?style=for-the-badge
 [contributors-url]: https://github.com/ENIACore/media_library_manager/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/ENIACore/media_library_manager.svg?style=for-the-badge

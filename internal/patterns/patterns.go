@@ -135,6 +135,10 @@ var SamplePatterns = []Pattern{
 	`PREVIEW[S]?`,
 }
 
+var JunkPatterns = []Pattern{
+	`ETRG`,
+}
+
 // MiscPatterns are noise tokens in torrent names with no useful metadata value.
 var MiscPatterns = append([]Pattern{
 	`NEW`, `ESUB`,
@@ -369,6 +373,9 @@ var (
 	})
 	GetSamplePatterns = sync.OnceValue(func() []*CompiledPattern {
 		return compilePatterns(SamplePatterns)
+	})
+	GetJunkPatterns = sync.OnceValue(func() []*CompiledPattern {
+		return compilePatterns(JunkPatterns)
 	})
 	GetMiscPatterns = sync.OnceValue(func() []*CompiledPattern {
 		return compilePatterns(MiscPatterns)

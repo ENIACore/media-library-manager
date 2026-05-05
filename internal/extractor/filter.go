@@ -39,9 +39,13 @@ func Filter(path string, logger *slog.Logger) bool {
 
 	sanitizedName := SanitizeName(path)
 	
-	// Considered sample if sample is at front of name 
 	if isSample(sanitizedName) {
 		lg.Info("Path is sample, filtering path", "path", path)
+		return true
+	}
+
+	if isJunk(sanitizedName) {
+		lg.Info("Path is junk (advertisement), filtering path", "path", path)
 		return true
 	}
 
@@ -66,6 +70,27 @@ func isSample(segments []string) bool {
 // Used as helper function for isSample.
 func parseSample(segments []string) string {
 	for _, re := range patterns.GetSamplePatterns() {
+		re := (*regexp.Regexp)(re)
+		if match := matchSegments(segments, re); match != nil {
+			return match[0]
+		}
+	}
+	return ""
+}
+
+
+func isJunk(segments []string) bool {
+	for i := range segments {
+		candidates := segments[i:]
+		if junk := parseJunk(candidates); junk != "" {
+			return true
+		}
+	}
+	return false
+}
+ 
+func parseJunk(segments []string) string {
+	for _, re := range patterns.GetJunkPatterns() {
 		re := (*regexp.Regexp)(re)
 		if match := matchSegments(segments, re); match != nil {
 			return match[0]
