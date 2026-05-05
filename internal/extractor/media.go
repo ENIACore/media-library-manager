@@ -27,9 +27,11 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	mediaInfo.Year = extractYear(sanitizedName)
 	mediaInfo.Episode = extractEpisode(sanitizedName)
 	mediaInfo.Season = extractSeason(sanitizedName)
+
 	mediaInfo.DS = extractDS(sanitizedName)
 	mediaInfo.BTS = extractBTS(sanitizedName)
 	mediaInfo.Bonus = extractBonus(sanitizedName)
+
 	mediaInfo.Edition = extractEdition(sanitizedName)
 
 
