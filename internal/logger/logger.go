@@ -1,14 +1,15 @@
 package logger
 
 import (
-	"io"
-	"fmt"
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
 	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
@@ -16,6 +17,22 @@ import (
 // Returns a string in the format YYYY-MM-DD_HH:MM:SS.
 func formatTimestamp(now time.Time) string {
 	return now.Format("2006-01-02_15:04:05")
+}
+
+// stripTime removes the default time attribute from log records to keep output uncluttered.
+func stripTime(groups []string, a slog.Attr) slog.Attr {
+	if a.Key == slog.TimeKey && len(groups) == 0 {
+		return slog.Attr{}
+	}
+	return a
+}
+
+// handlerOpts builds the standard handler options for the given level, with timestamps removed.
+func handlerOpts(level slog.Level) *slog.HandlerOptions {
+	return &slog.HandlerOptions{
+		Level:       level,
+		ReplaceAttr: stripTime,
+	}
 }
 
 // getFile opens or creates a log file for writing.
@@ -35,7 +52,6 @@ func getFile(dirpath string, filename string) io.Writer {
 		return os.Stdout
 	}
 	return file
-
 }
 
 // multiHandler implements slog.Handler interface by delegating to multiple handlers.
@@ -44,7 +60,6 @@ type multiHandler struct {
 	handlers []slog.Handler
 }
 
-// Enabled returns true if any handler would accept a log record at the given level.
 func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	for _, handler := range h.handlers {
 		if handler.Enabled(ctx, level) {
@@ -54,8 +69,6 @@ func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return false
 }
 
-// Handle distributes the log record to all enabled handlers.
-// Re-checks Enabled for each handler to ensure proper level filtering.
 func (h *multiHandler) Handle(ctx context.Context, r slog.Record) error {
 	for _, handler := range h.handlers {
 		if handler.Enabled(ctx, r.Level) {
@@ -67,7 +80,6 @@ func (h *multiHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-// WithAttrs returns a new multiHandler with attributes added to all handlers.
 func (h *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	handlers := make([]slog.Handler, len(h.handlers))
 	for i, handler := range h.handlers {
@@ -76,7 +88,6 @@ func (h *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &multiHandler{handlers: handlers}
 }
 
-// WithGroup returns a new multiHandler with a group added to all handlers.
 func (h *multiHandler) WithGroup(name string) slog.Handler {
 	handlers := make([]slog.Handler, len(h.handlers))
 	for i, handler := range h.handlers {
@@ -90,28 +101,24 @@ var getSessionTimestamp = sync.OnceValue(func() string {
 })
 
 // NewLogger creates and returns a structured logger configured to write to multiple log files.
-// Creates separate log files for DEBUG, INFO, and WARN levels in a timestamped session directory.
+// Creates separate log files for debug, info, and warn levels in a timestamped session directory.
 // The session timestamp is generated once and reused for all loggers in the process.
 func NewLogger(cfg *config.Config) *slog.Logger {
 	if cfg.LogStdout {
-		handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions {
-			Level: slog.LevelDebug,
-		})
-		return slog.New(handler)
+		return slog.New(slog.NewTextHandler(os.Stdout, handlerOpts(slog.LevelDebug)))
 	}
 
 	basepath := filepath.Join(cfg.ManagerPath, "logs", getSessionTimestamp())
 
-
-	debugFile := getFile(basepath, "DEBUG.log")
-	infoFile := getFile(basepath, "INFO.log")
-	warnFile := getFile(basepath, "WARN.log")
+	debugFile := getFile(basepath, "debug.log")
+	infoFile := getFile(basepath, "info.log")
+	warnFile := getFile(basepath, "warn.log")
 
 	handler := &multiHandler{
 		handlers: []slog.Handler{
-			slog.NewTextHandler(debugFile, &slog.HandlerOptions{Level: slog.LevelDebug}),
-			slog.NewTextHandler(infoFile, &slog.HandlerOptions{Level: slog.LevelInfo}),
-			slog.NewTextHandler(warnFile, &slog.HandlerOptions{Level: slog.LevelWarn}),
+			slog.NewTextHandler(debugFile, handlerOpts(slog.LevelDebug)),
+			slog.NewTextHandler(infoFile, handlerOpts(slog.LevelInfo)),
+			slog.NewTextHandler(warnFile, handlerOpts(slog.LevelWarn)),
 		},
 	}
 
