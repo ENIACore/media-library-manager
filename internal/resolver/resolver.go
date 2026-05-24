@@ -395,6 +395,9 @@ func buildVideoFileStem(entry *metadata.Entry) (string, error) {
 	if entry.FileInfo.Bitrate != "" {
 		stem += " - " + entry.FileInfo.Bitrate
 	}
+	if entry.FileInfo.BitDepth != "" {
+		stem += " - " + entry.FileInfo.BitDepth
+	}
 	if entry.FileInfo.Codec != "" {
 		stem += " - " + entry.FileInfo.Codec
 	}

@@ -103,6 +103,7 @@ func ExtractFile(path string, dryRun bool, logger *slog.Logger) (metadata.FileIn
 			fileInfo.Audio = extractAudio(data)
 			fileInfo.Language = extractLanguage(data)
 			fileInfo.Bitrate = extractBitrate(data)
+			fileInfo.BitDepth = extractBitDepth(data)
 		}
 	case metadata.Subtitle:
 		lang, isSDH, err := extractSubtitleInfo(path, fileInfo.Ext)
@@ -118,7 +119,7 @@ func ExtractFile(path string, dryRun bool, logger *slog.Logger) (metadata.FileIn
 		}
 	}
 
-	log.Info("Extracted file info", "SourcePath", fileInfo.SourcePath, "Ext", fileInfo.Ext, "FileType", fileInfo.ContentType, "IsDir", fileInfo.IsDir, "Resolution", fileInfo.Resolution, "Codec", fileInfo.Codec, "Audio", fileInfo.Audio, "Language", fileInfo.Language, "Bitrate", fileInfo.Bitrate)
+	log.Info("Extracted file info", "SourcePath", fileInfo.SourcePath, "Ext", fileInfo.Ext, "FileType", fileInfo.ContentType, "IsDir", fileInfo.IsDir, "Resolution", fileInfo.Resolution, "Codec", fileInfo.Codec, "Audio", fileInfo.Audio, "Language", fileInfo.Language, "Bitrate", fileInfo.Bitrate, "BitDepth", fileInfo.BitDepth)
 
 	return fileInfo, nil
 }
@@ -325,6 +326,15 @@ func extractBitrate(data *ffprobe.ProbeData) string {
 		return ""
 	}
 	return fmt.Sprintf("%dkbps", bps/1000)
+}
+
+func extractBitDepth(data *ffprobe.ProbeData) string {
+	if vs := data.FirstVideoStream(); vs != nil {
+		if vs.BitsPerRawSample != "" && vs.BitsPerRawSample != "0" {
+			return vs.BitsPerRawSample + "bit"
+		}
+	}
+	return ""
 }
 
 // ExtractType returns the content type based on file extension.

@@ -36,6 +36,7 @@ type FileInfo struct {
 	Audio      	string
 	Language	[]string
 	Bitrate		string
+	BitDepth	string
 }
 
 func (info *MediaInfo) YearString() string {

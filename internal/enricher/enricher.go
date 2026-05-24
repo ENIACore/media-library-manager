@@ -278,6 +278,9 @@ func matchSubtitleToVideo(sub *metadata.Entry, videoFiles []*metadata.Entry) boo
 	if sub.FileInfo.Bitrate == "" {
 		sub.FileInfo.Bitrate = match.FileInfo.Bitrate
 	}
+	if sub.FileInfo.BitDepth == "" {
+		sub.FileInfo.BitDepth = match.FileInfo.BitDepth
+	}
 	if sub.FileInfo.Resolution == "" {
 		sub.FileInfo.Resolution = match.FileInfo.Resolution
 	}
