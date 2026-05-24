@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"log/slog"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
-	"github.com/ENIACore/media_library_manager/internal/config"
 )
 
 // Enrich uses helper functions to propagate necessary information throughout tree.
 // Subtitles are skipped entirely. The verified root title propagates downward, overriding existing titles.
-func Enrich(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
+func Enrich(root *metadata.Entry, logger *slog.Logger) error {
 	if root == nil {
 		return fmt.Errorf("Cannot enrich nil root entry")
 	}

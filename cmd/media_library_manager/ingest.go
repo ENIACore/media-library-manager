@@ -53,11 +53,7 @@ func ingest(tempDir string, cfg *config.Config, logger *slog.Logger) {
 		fmt.Println("------------- Old Structure") 
 		fmt.Println(output)
 
-		if cfg.DryRun {
-			transfer.TestTransfer(root, tempDir, logger)
-		} else {
-			transfer.Transfer(root, cfg, logger)
-		}
+		transfer.Transfer(root, cfg, logger)
 
 		remuxFiles(root, cfg, logger)
 
@@ -87,7 +83,7 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 		return nil, nil
 	}
 
-	root, err := parser.Parse(entryPath, cfg.DryRun, logger)
+	root, err := parser.Parse(entryPath, logger)
 	if err != nil {
 		logger.Error("Parse returned error", "error", err)
 		return nil, err 
@@ -105,7 +101,7 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 		return root, err
 	}
 
-	err = enricher.Enrich(root, cfg, logger)
+	err = enricher.Enrich(root, logger)
 	if err != nil {
 		logger.Error("Enrich returned error", "error", err)
 		return root, err

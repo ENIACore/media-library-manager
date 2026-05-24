@@ -86,17 +86,6 @@ func NormalizeAudioTracks(entry *metadata.Entry, cfg *config.Config, logger *slo
 
 		isoCode := keyToISO639[key]
 
-		if cfg.DryRun {
-			lg.Info("dry run: would normalize audio track",
-				"id", t.ID,
-				"old_title", t.Properties.TrackName,
-				"new_title", key,
-				"old_language", t.Properties.Language,
-				"new_language", isoCode,
-			)
-			continue
-		}
-
 		lg.Info("normalizing audio track",
 			"id", t.ID,
 			"old_title", t.Properties.TrackName,

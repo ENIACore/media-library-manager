@@ -13,48 +13,11 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
-func TestTransfer(entry *metadata.Entry, tempDir string, logger *slog.Logger) {
-	lg := logger.With("func", "TestTransfer")
-
-	for _, child := range entry.Children {
-		TestTransfer(child, tempDir, logger)
-	}
-
-	if entry.FileInfo.IsDir {
-		entry.FileInfo.DestPath = filepath.Join(tempDir, entry.FileInfo.DestPath)
-		return
-	}
-
-	// Ignore empty destination paths, these are failed but unnecessary files
-	if entry.FileInfo.DestPath == "" {
-		return
-	}
-
-	destDir := filepath.Dir(entry.FileInfo.DestPath)
-	destDir = filepath.Join(tempDir, destDir)
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		panic("Unable to create destination directory: " + destDir)
-	}
-
-	entry.FileInfo.DestPath = filepath.Join(tempDir, entry.FileInfo.DestPath)
-	entry.FileInfo.DestPath = resolveConflict(entry.FileInfo.DestPath)
-
-	lg.Debug("Creating dummy entry", "source", entry.Source(), "dest", entry.Dest())
-	f, err := os.Create(entry.FileInfo.DestPath)
-	if err != nil {
-		panic("Unable to create dummy file at: " + entry.FileInfo.DestPath)
-	}
-	f.Close()
-}
-
 // Transfer recursively moves media entries to their final destinations.
 // Uses [resolveConflict] to handle duplicate filenames. Returns error if move fails.
 func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Transfer")
 
-	if cfg.DryRun {
-		return
-	}
 
 	for _, child := range entry.Children {
 		Transfer(child, cfg, logger)
@@ -92,10 +55,6 @@ func Transfer(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 func Cleanup(cfg *config.Config, logger *slog.Logger, processedNames []string) {
 	lg := logger.With("func", "Cleanup")
 
-	if cfg.DryRun {
-		return
-	}
-
 	nameSet := make(map[string]struct{}, len(processedNames))
 	for _, name := range processedNames {
 		nameSet[name] = struct{}{}
@@ -116,9 +75,6 @@ func Cleanup(cfg *config.Config, logger *slog.Logger, processedNames []string) {
 func Error(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
 	lg := logger.With("func", "Error")
 	if root == nil {
-		return
-	}
-	if cfg.DryRun {
 		return
 	}
 

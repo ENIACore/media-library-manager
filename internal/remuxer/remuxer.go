@@ -148,28 +148,6 @@ func Remux(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 		})
 	}
 
-	if cfg.DryRun {
-		if len(candidates) > 0 {
-			for _, c := range candidates {
-				lg.Info("dry run: would extract subtitle track",
-					"id", c.track.ID,
-					"language", c.lang,
-					"variant", variantLabel(c.variant),
-					"format", c.ext,
-					"title", c.track.Properties.TrackName,
-					"dest", filepath.Base(c.dest),
-				)
-			}
-		} else {
-			lg.Info("dry run: no extractable subtitle tracks found")
-		}
-
-		lg.Info("dry run: would strip all subtitle tracks from MKV",
-			"path", filepath.Base(entry.FileInfo.SourcePath),
-		)
-		return nil
-	}
-
 	if len(candidates) > 0 {
 		for _, c := range candidates {
 			if err := extractTrack(entry.FileInfo.SourcePath, c.track.ID, c.dest, lg); err != nil {

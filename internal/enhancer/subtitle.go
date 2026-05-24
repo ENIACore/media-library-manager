@@ -188,11 +188,6 @@ func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, 
 		return fmt.Errorf("enhancer: subtitle search failed for %v: %w", entry.Source(), err)
 	}
 
-	if cfg.DryRun {
-		lg.Info("dry run: subtitle found, skipping download", "file_id", fileID, "dest", entry.FileInfo.DestPath)
-		return nil
-	}
-
 	link, remaining, err := requestDownload(fileID, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
 	if errors.Is(err, ErrUnauthorized) && !reauthed {
 		lg.Warn("session expired during download request, re-authenticating")

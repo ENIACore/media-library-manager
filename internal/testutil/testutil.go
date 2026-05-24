@@ -34,13 +34,11 @@ func CreateTestDir(t *testing.T) string {
 }
 
 // CreateTestCfg creates a test configuration pointing to subdirectories within testDir.
-// Sets up paths for movies, shows, and manager directories with DryRun disabled.
 func CreateTestCfg(testDir string) config.Config {
 	return config.Config{
 		MoviePath:   filepath.Join(testDir, "movies"),
 		ShowPath:    filepath.Join(testDir, "shows"),
 		ManagerPath: filepath.Join(testDir, "manager"),
-		DryRun:      false,
 	}
 
 }

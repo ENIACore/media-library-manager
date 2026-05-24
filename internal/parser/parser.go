@@ -14,8 +14,8 @@ import (
 // Parse constructs [metadata.Entry] tree starting at given path.
 // Throws error if file system error occurs or no valid [metadata.Entry] object can be created.
 // Returns root of [metadata.Entry] tree.
-func Parse(path string, dryRun bool, logger *slog.Logger) (*metadata.Entry, error) {
-	root, err := parseTree(path, nil, 0, dryRun, logger)
+func Parse(path string, logger *slog.Logger) (*metadata.Entry, error) {
+	root, err := parseTree(path, nil, 0, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func Parse(path string, dryRun bool, logger *slog.Logger) (*metadata.Entry, erro
 // parseTree recursively builds a tree of [metadata.Entry] objects from given path and is a helper function to [Parse].
 // It skips creating [metadata.Entry] object when [extractor.Filter] returns true.
 // It uses [extractor.ExtractPath] and [extractor.ExtractMedia] to extract media and path information related to entry.
-func parseTree(path string, parent *metadata.Entry, depth int, dryRun bool, logger *slog.Logger) (*metadata.Entry, error) {
+func parseTree(path string, parent *metadata.Entry, depth int, logger *slog.Logger) (*metadata.Entry, error) {
 
 	info, err := os.Stat(path)
 	if err != nil {
@@ -63,7 +63,7 @@ func parseTree(path string, parent *metadata.Entry, depth int, dryRun bool, logg
 	children := make([]*metadata.Entry, 0, len(entries))
 	for _, entry := range entries {
 		childPath := filepath.Join(path, entry.Name())
-		child, err := parseTree(childPath, node, depth+1, dryRun, logger)
+		child, err := parseTree(childPath, node, depth+1, logger)
 		if err != nil {
 			return nil, err
 		} else if child != nil {
