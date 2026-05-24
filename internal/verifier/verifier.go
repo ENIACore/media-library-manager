@@ -98,6 +98,10 @@ func Verify(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error
 func verifyEntry(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) (string, error) {
 	query := joinTitle(root.MediaInfo.Title)
 	preferred := preferredMediaType(root.Role)
+	fallback := "tv"
+	if preferred == "tv" {
+		fallback = "movie"
+	}
 
 	candidates, err := multiSearch(query, preferred, root.MediaInfo.Year, cfg.TMDBApiKey)
 	if err != nil {
@@ -106,10 +110,6 @@ func verifyEntry(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) 
 
 	// Nothing found for the preferred type — try the other one.
 	if len(candidates) == 0 {
-		fallback := "tv"
-		if preferred == "tv" {
-			fallback = "movie"
-		}
 		candidates, err = multiSearch(query, fallback, root.MediaInfo.Year, cfg.TMDBApiKey)
 		if err != nil {
 			return "", fmt.Errorf("verifier: TMDb fallback request failed for %q: %w", query, err)
