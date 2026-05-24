@@ -26,57 +26,17 @@ var getLanguageDetector = sync.OnceValue(func() lingua.LanguageDetector {
 		Build()
 })
 
-// linguaToKey maps lingua language constants to the exact Key values in LanguagePatternGroups.
-// Languages lingua detects that have no matching key return "".
-// Bokmal and Nynorsk both collapse to "Norwegian"; Tagalog maps to "Filipino".
-var linguaToKey = map[lingua.Language]string{
-	lingua.Arabic:     "Arabic",
-	lingua.Basque:     "Basque",
-	lingua.Catalan:    "Catalan",
-	lingua.Chinese:    "Chinese",
-	lingua.Croatian:   "Croatian",
-	lingua.Czech:      "Czech",
-	lingua.Danish:     "Danish",
-	lingua.Dutch:      "Dutch",
-	lingua.English:    "English",
-	lingua.Finnish:    "Finnish",
-	lingua.French:     "French",
-	lingua.German:     "German",
-	lingua.Greek:      "Greek",
-	lingua.Hebrew:     "Hebrew",
-	lingua.Hungarian:  "Hungarian",
-	lingua.Indonesian: "Indonesian",
-	lingua.Italian:    "Italian",
-	lingua.Japanese:   "Japanese",
-	lingua.Korean:     "Korean",
-	lingua.Malay:      "Malay",
-	lingua.Bokmal:     "Norwegian",
-	lingua.Nynorsk:    "Norwegian",
-	lingua.Polish:     "Polish",
-	lingua.Portuguese: "Portuguese",
-	lingua.Romanian:   "Romanian",
-	lingua.Russian:    "Russian",
-	lingua.Spanish:    "Spanish",
-	lingua.Swedish:    "Swedish",
-	lingua.Tagalog:    "Filipino",
-	lingua.Thai:       "Thai",
-	lingua.Turkish:    "Turkish",
-	lingua.Ukrainian:  "Ukrainian",
-	lingua.Vietnamese: "Vietnamese",
-}
-
-var (
-	srtTimestampRe  = regexp.MustCompile(`^\d{2}:\d{2}:\d{2}[,\.]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[,\.]\d{3}`)
-	srtSequenceRe   = regexp.MustCompile(`^\d+$`)
-	assDialogueRe   = regexp.MustCompile(`(?i)^Dialogue:`)
-	assOverrideRe   = regexp.MustCompile(`\{[^}]*\}`)
-	sdhBracketRe    = regexp.MustCompile(`\[[^\]]+\]`)
-	sdhMusicRe      = regexp.MustCompile(`[♪♫🎵🎶]`)
-)
+var linguaToKey = patterns.GetLinguaToKey()
+var assDialogueRe = (*regexp.Regexp)(patterns.GetAssDialoguePattern())
+var assOverrideRe = (*regexp.Regexp)(patterns.GetAssOverridePattern())
+var srtSequenceRe = (*regexp.Regexp)(patterns.GetSrtSequencePattern())
+var srtTimestampRe = (*regexp.Regexp)(patterns.GetSrtTimestampPattern())
+var sdhBracketRe = (*regexp.Regexp)(patterns.GetSdhBracketPattern())
+var sdhMusicRe = (*regexp.Regexp)(patterns.GetSdhMusicPattern())
 
 // ExtractPath extracts path metadata from a file or directory path.
 // Uses golang 'os' and 'filepath' library to accurately determine file or directory information.
-func ExtractFile(path string, dryRun bool, logger *slog.Logger) (metadata.FileInfo, error) {
+func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 	log := logger.With("func", "ExtractPath")
 	fileInfo := metadata.FileInfo{}
 	fileInfo.DestPath = ""
@@ -93,18 +53,16 @@ func ExtractFile(path string, dryRun bool, logger *slog.Logger) (metadata.FileIn
 
 	switch fileInfo.ContentType {
 	case metadata.Video:
-		if !dryRun {
-			data, err := ffprobe.ProbeURL(context.Background(), path)
-			if err != nil {
-				return fileInfo, fmt.Errorf("Stat returned error: %w", err)
-			}
-			fileInfo.Resolution = extractResolution(data)
-			fileInfo.Codec = extractCodec(data)
-			fileInfo.Audio = extractAudio(data)
-			fileInfo.Language = extractLanguage(data)
-			fileInfo.Bitrate = extractBitrate(data)
-			fileInfo.BitDepth = extractBitDepth(data)
+		data, err := ffprobe.ProbeURL(context.Background(), path)
+		if err != nil {
+			return fileInfo, fmt.Errorf("Stat returned error: %w", err)
 		}
+		fileInfo.Resolution = extractResolution(data)
+		fileInfo.Codec = extractCodec(data)
+		fileInfo.Audio = extractAudio(data)
+		fileInfo.Language = extractLanguage(data)
+		fileInfo.Bitrate = extractBitrate(data)
+		fileInfo.BitDepth = extractBitDepth(data)
 	case metadata.Subtitle:
 		lang, isSDH, err := extractSubtitleInfo(path, fileInfo.Ext)
 		if err != nil {

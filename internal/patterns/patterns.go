@@ -230,47 +230,6 @@ var MiscPatterns = append([]Pattern{
 	`AI\.UPSCALE`, `UPSCALED`, `AI\.ENHANCED`,
 }, ReleaseWebsites...)
 
-var LanguagePatternGroups = []PatternGroup{
-	{Key: `English`, Patterns: []Pattern{`ENGLISH`, `ENG`, `EN`}},
-	{Key: `Spanish`, Patterns: []Pattern{`SPANISH`, `CASTELLANO`, `SPA`, `ESPAÑOL`, `ESPANOL`}},
-	{Key: `Latin-American-Spanish`, Patterns: []Pattern{`LATIN.AMERICAN`, `LATINOAMERICANO`, `LATAM`, }},
-	{Key: `French`, Patterns: []Pattern{`FRENCH`, `FRANCAIS`, `FRANÇAIS`, `FRA`, `FR`, `FRE`}},
-	{Key: `Canadian-French`, Patterns: []Pattern{`CANADIAN`, `QUEBEC`, `QC`}},
-	{Key: `German`, Patterns: []Pattern{`GERMAN`, `DEUTSCH`, `GER`, `DE`, `DEU`}},
-	{Key: `Italian`, Patterns: []Pattern{`ITALIAN`, `ITA`, `ITALIANO`}},
-	{Key: `Portuguese`, Patterns: []Pattern{`PORTUGUESE`, `PORTUGUES`, `PORTUGUÊS`, `POR`, `PT`}},
-	{Key: `Brazilian-Portuguese`, Patterns: []Pattern{`BRAZILIAN`, `BRAZIL`, `BR`, `PORTUGUESE.BR`, `PT.BR`, `POR.BR`}},
-	{Key: `Russian`, Patterns: []Pattern{`RUSSIAN`, `RUS`, `RU`}},
-	{Key: `Japanese`, Patterns: []Pattern{`JAPANESE`, `JAP`, `JPN`, `JP`, `JA`}},
-	{Key: `Korean`, Patterns: []Pattern{`KOREAN`, `KOR`, `KO`, `KR`}},
-	{Key: `Arabic`, Patterns: []Pattern{`ARABIC`, `ARA`, `AR`}},
-	{Key: `Hebrew`, Patterns: []Pattern{`HEBREW`, `HEB`, }},
-	{Key: `Thai`, Patterns: []Pattern{`THAI`, `THA`, `TH`}},
-	{Key: `Turkish`, Patterns: []Pattern{`TURKISH`, `TUR`, `TR`}},
-	{Key: `Greek`, Patterns: []Pattern{`GREEK`, `GRE`, `EL`, `GRC`}},
-	{Key: `Polish`, Patterns: []Pattern{`POLISH`, `POL`, `PL`, `POLSKI`}},
-	{Key: `Hungarian`, Patterns: []Pattern{`HUNGARIAN`, `HUN`, `HU`, `MAGYAR`}},
-	{Key: `Czech`, Patterns: []Pattern{`CZECH`, `CZE`, `CS`, `CES`}},
-	{Key: `Chinese`, Patterns: []Pattern{`CHINESE`, `CHI`, `ZH`, `CN`}},
-	{Key: `Simplified-Chinese`, Patterns: []Pattern{`SIMPLIFIED`, `HANS`, `ZH.HANS`, `ZH.CN`, `CHS`}},
-	{Key: `Traditional-Chinese`, Patterns: []Pattern{`TRADITIONAL`, `HANT`, `ZH.HANT`, `ZH.TW`, `CHT`}},
-	{Key: `Dutch`, Patterns: []Pattern{`DUTCH`, `DUT`, `NL`, `NLD`, `NEDERLANDS`}},
-	{Key: `Danish`, Patterns: []Pattern{`DANISH`, `DAN`, `DA`, `DANSK`}},
-	{Key: `Finnish`, Patterns: []Pattern{`FINNISH`, `FIN`, `FI`, `SUOMI`}},
-	{Key: `Swedish`, Patterns: []Pattern{`SWEDISH`, `SWE`, `SV`, `SVENSKA`}},
-	{Key: `Norwegian`, Patterns: []Pattern{`NORWEGIAN`, `NOR`, `NOB`, `NORSK`}},
-	{Key: `Croatian`, Patterns: []Pattern{`CROATIAN`, `HRV`, `HR`, `HRVATSKI`}},
-	{Key: `Romanian`, Patterns: []Pattern{`ROMANIAN`, `RUM`, `RO`, `RON`, `ROMANA`}},
-	{Key: `Ukrainian`, Patterns: []Pattern{`UKRAINIAN`, `UKR`, `UK`}},
-	{Key: `Vietnamese`, Patterns: []Pattern{`VIETNAMESE`, `VIE`, `VI`}},
-	{Key: `Indonesian`, Patterns: []Pattern{`INDONESIAN`, `IND`, `ID`, `BAHASA`}},
-	{Key: `Malay`, Patterns: []Pattern{`MALAY`, `MAY`, `MS`, `MSA`}},
-	{Key: `Filipino`, Patterns: []Pattern{`FILIPINO`, `FIL`, `TAGALOG`, `TL`}},
-	{Key: `Basque`, Patterns: []Pattern{`BASQUE`, `BAQ`, `EU`, `EUS`, `EUSKARA`}},
-	{Key: `Catalan`, Patterns: []Pattern{`CATALAN`, `CAT`, `CA`, `CATALA`}},
-	{Key: `Galician`, Patterns: []Pattern{`GALICIAN`, `GLG`, `GL`, `GALEGO`}},
-}
-
 var BehindTheScenesPatternGroups = []PatternGroup{
 	{Key: `Behind.The.Scenes`, Patterns: []Pattern{
 		`BEHIND\.THE\.SCENE[S]?`,
@@ -356,9 +315,6 @@ var EditionPatternGroups = []PatternGroup{
 }
 
 var (
-	GetLanguagePatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
-		return compilePatternGroups(LanguagePatternGroups)
-	})
 	GetBehindTheScenesPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
         return compilePatternGroups(BehindTheScenesPatternGroups)
     })

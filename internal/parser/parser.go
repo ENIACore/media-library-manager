@@ -46,16 +46,9 @@ func parseTree(path string, parent *metadata.Entry, depth int, dryRun bool, logg
 		return nil, nil
 	}
 
-	mediaInfo := extractor.ExtractMedia(path, logger)
-	fileInfo, err := extractor.ExtractFile(path, dryRun, logger)
+	node, err := parseEntry(path, parent, depth, logger)
 	if err != nil {
 		return nil, err
-	}
-	node := &metadata.Entry{
-		Parent:    parent,
-		Depth:     depth,
-		MediaInfo: mediaInfo,
-		FileInfo:  fileInfo,
 	}
 
 	if !info.IsDir() {
@@ -80,6 +73,23 @@ func parseTree(path string, parent *metadata.Entry, depth int, dryRun bool, logg
 	node.Children = children
     
     return node, nil
+}
+
+func parseEntry(path string, parent *metadata.Entry, depth int, logger *slog.Logger) (*metadata.Entry, error) {
+
+	mediaInfo := extractor.ExtractMedia(path, logger)
+	fileInfo, err := extractor.ExtractFile(path, logger)
+	if err != nil {
+		return nil, err
+	}
+	node := &metadata.Entry{
+		Parent:    parent,
+		Depth:     depth,
+		MediaInfo: mediaInfo,
+		FileInfo:  fileInfo,
+	}
+
+	return node, nil
 }
 
 // pruneTree recursively removes empty directories from [metadata.Entry] tree.
