@@ -274,6 +274,9 @@ func matchSubtitleToVideo(sub *metadata.Entry, videoFiles []*metadata.Entry) boo
 	if sub.FileInfo.AspectRatio == "" {
 		sub.FileInfo.AspectRatio = match.FileInfo.AspectRatio
 	}
+	if sub.MediaInfo.Source == "" {
+		sub.MediaInfo.Source = match.MediaInfo.Source
+	}
 	if sub.FileInfo.Codec == "" {
 		sub.FileInfo.Codec = match.FileInfo.Codec
 	}
