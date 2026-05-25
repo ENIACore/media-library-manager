@@ -237,6 +237,20 @@ func extractSource(segments []string) string {
 	return ""
 }
 
+// extractTMDBid scans segments for a TMDB.<id> token and returns the integer id, or 0 if not found.
+func extractTMDBid(segments []string) int {
+	for i := range segments {
+		for _, re := range patterns.GetTMDBPatterns() {
+			if match := matchSegments(segments[i:], (*regexp.Regexp)(re)); match != nil {
+				if id, err := strconv.Atoi(match[1]); err == nil {
+					return id
+				}
+			}
+		}
+	}
+	return 0
+}
+
 // parseResolution returns the resolution if the left most segment(s) are a pattern match.
 // Returns empty string if pattern not found.
 // Used as helper function for extractor.

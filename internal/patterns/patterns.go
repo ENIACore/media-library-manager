@@ -114,20 +114,21 @@ var WebsitePatterns = append([]Pattern{
 	`[A-Z0-9]+\.(COM|NET|ORG|IO|INFO|BIZ)`,
 }, ReleaseWebsites...)
 
-// Patterns for tv/movie database identifiers (used as terminators)
-var IdentificationPatterns = []Pattern{
-	// TMDb: TMDB.12345
+var TMDBPatterns = []Pattern{
 	`TMDB\.(\d+)`,
+}
 
-	// IMDb: TT1234567
+var IMDBPatterns = []Pattern{
 	`TT(\d{7,})`,
-
-	// TVDb: TVDB.12345
-	`TVDB\.(\d+)`,
-
-	// General fallback (rare but sometimes used)
 	`IMDB\.(TT\d+)`,
 }
+
+var TVDBPatterns = []Pattern{
+	`TVDB\.(\d+)`,
+}
+
+// IdentificationPatterns are db identifier tokens used as terminators.
+var IdentificationPatterns = append(append(append([]Pattern{}, TMDBPatterns...), IMDBPatterns...), TVDBPatterns...)
 
 // Patterns that indicate directory or file is a sample and should be ignored
 var SamplePatterns = []Pattern{
@@ -341,6 +342,9 @@ var (
 	})
 	GetIdentificationPatterns = sync.OnceValue(func() []*CompiledPattern {
 		return compilePatterns(IdentificationPatterns)
+	})
+	GetTMDBPatterns = sync.OnceValue(func() []*CompiledPattern {
+		return compilePatterns(TMDBPatterns)
 	})
 )
 

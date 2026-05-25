@@ -26,10 +26,12 @@ import (
 )
 
 const (
-	tmdbBaseURL = "https://api.themoviedb.org/3"
-	searchMulti = "/search/multi"
-	httpTimeout = 10 * time.Second
-	maxResults  = 5
+	tmdbBaseURL  = "https://api.themoviedb.org/3"
+	searchMulti  = "/search/multi"
+	movieDetail  = "/movie/"
+	tvDetail     = "/tv/"
+	httpTimeout  = 10 * time.Second
+	maxResults   = 5
 )
 
 type tmdbMultiResult struct {
@@ -64,6 +66,43 @@ type tmdbCandidate struct {
 	title     string
 	date      string
 	mediaType string
+}
+
+type tmdbDetailResponse struct {
+	ID           int    `json:"id"`
+	Title        string `json:"title"`          // movie
+	Name         string `json:"name"`           // tv
+	ReleaseDate  string `json:"release_date"`   // movie
+	FirstAirDate string `json:"first_air_date"` // tv
+}
+
+// lookupByID fetches a single TMDB record directly by numeric ID, trying preferred
+// media type first and falling back to the other. Returns an error if both fail.
+func lookupByID(id int, preferred, fallback, apiKey string) (tmdbCandidate, error) {
+	fetch := func(mediaType string) (tmdbCandidate, error) {
+		endpoint := movieDetail + strconv.Itoa(id)
+		if mediaType == "tv" {
+			endpoint = tvDetail + strconv.Itoa(id)
+		}
+		body, err := tmdbGet(apiKey, endpoint, url.Values{})
+		if err != nil {
+			return tmdbCandidate{}, err
+		}
+		var detail tmdbDetailResponse
+		if err := json.Unmarshal(body, &detail); err != nil {
+			return tmdbCandidate{}, fmt.Errorf("failed to parse TMDb detail response: %w", err)
+		}
+		title, date := detail.Title, detail.ReleaseDate
+		if mediaType == "tv" {
+			title, date = detail.Name, detail.FirstAirDate
+		}
+		return tmdbCandidate{id: detail.ID, title: title, date: date, mediaType: mediaType}, nil
+	}
+
+	if c, err := fetch(preferred); err == nil {
+		return c, nil
+	}
+	return fetch(fallback)
 }
 
 func Verify(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) error {
@@ -101,6 +140,20 @@ func verifyEntry(root *metadata.Entry, cfg *config.Config, logger *slog.Logger) 
 	fallback := "tv"
 	if preferred == "tv" {
 		fallback = "movie"
+	}
+
+	// If the filename already contains a TMDB id, try a direct lookup first.
+	if root.MediaInfo.TMDBid != 0 {
+		if best, err := lookupByID(root.MediaInfo.TMDBid, preferred, fallback, cfg.TMDBApiKey); err == nil {
+			root.MediaInfo.Title = titleToSlice(best.title)
+			root.MediaInfo.TMDBid = best.id
+			if year := yearFromDate(best.date); year != 0 {
+				root.MediaInfo.Year = &year
+			}
+			logger.Info("verified by id", "title", best.title, "year", root.MediaInfo.YearString(), "media_type", best.mediaType, "tmdb_id", root.TMDB())
+			return best.mediaType, nil
+		}
+		logger.Info("tmdb id lookup failed, falling back to title search", "tmdb_id", root.MediaInfo.TMDBid)
 	}
 
 	candidates, err := multiSearch(query, preferred, root.MediaInfo.Year, cfg.TMDBApiKey)
