@@ -10,4 +10,5 @@ gh release create ${VERSION} \
   dist/mlm-darwin-arm64 \
   dist/mlm-windows-amd64.exe \
   --title "${VERSION}" \
-  --notes "${NOTES}"
+  --notes "${NOTES}" \
+  --clobber
