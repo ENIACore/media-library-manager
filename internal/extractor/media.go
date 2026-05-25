@@ -33,7 +33,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 	mediaInfo.Bonus = extractBonus(sanitizedName)
 
 	mediaInfo.Edition = extractEdition(sanitizedName)
-
+	mediaInfo.Source = extractSource(sanitizedName)
 
 	// Second passes for unique cases
 	sanitizedName = SanitizeName(path)
@@ -49,7 +49,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
     	mediaInfo.Bonus = parseBonus(sanitizedName)
 	}
 
-	log.Info("Extracted media info", "Title", mediaInfo.Title, "Year", mediaInfo.YearString(), "Episode", mediaInfo.EpisodeString(), "Season", mediaInfo.SeasonString(), "DS", mediaInfo.DS, "BTS", mediaInfo.BTS, "Bonus", mediaInfo.Bonus, "Edition", mediaInfo.Edition)
+	log.Info("Extracted media info", "Title", mediaInfo.Title, "Year", mediaInfo.YearString(), "Episode", mediaInfo.EpisodeString(), "Season", mediaInfo.SeasonString(), "DS", mediaInfo.DS, "BTS", mediaInfo.BTS, "Bonus", mediaInfo.Bonus, "Edition", mediaInfo.Edition, "Source", mediaInfo.Source)
 
 	return mediaInfo
 }
@@ -219,6 +219,18 @@ func extractEdition(segments []string) string {
 		candidates := segments[i:]
 		if edition := parseEdition(candidates); edition != "" {
 			return edition
+		}
+	}
+	return ""
+}
+
+// extractSource returns the source pattern from segments by iterating through each segment.
+// Returns empty string if no pattern is found.
+func extractSource(segments []string) string {
+	for i := range segments {
+		candidates := segments[i:]
+		if source := parseSource(candidates); source != "" {
+			return source
 		}
 	}
 	return ""

@@ -60,6 +60,7 @@ func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 		fileInfo.Resolution = extractResolution(data)
 		fileInfo.Codec = extractCodec(data)
 		fileInfo.Audio = extractAudio(data)
+		fileInfo.AspectRatio = extractAspectRatio(data)
 		fileInfo.Language = extractLanguage(data)
 		fileInfo.Bitrate = extractBitrate(data)
 		fileInfo.BitDepth = extractBitDepth(data)
@@ -77,7 +78,7 @@ func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 		}
 	}
 
-	log.Info("Extracted file info", "SourcePath", fileInfo.SourcePath, "Ext", fileInfo.Ext, "FileType", fileInfo.ContentType, "IsDir", fileInfo.IsDir, "Resolution", fileInfo.Resolution, "Codec", fileInfo.Codec, "Audio", fileInfo.Audio, "Language", fileInfo.Language, "Bitrate", fileInfo.Bitrate, "BitDepth", fileInfo.BitDepth)
+	log.Info("Extracted file info", "SourcePath", fileInfo.SourcePath, "Ext", fileInfo.Ext, "FileType", fileInfo.ContentType, "IsDir", fileInfo.IsDir, "Resolution", fileInfo.Resolution, "Codec", fileInfo.Codec, "Audio", fileInfo.Audio, "AspectRatio", fileInfo.AspectRatio, "Language", fileInfo.Language, "Bitrate", fileInfo.Bitrate, "BitDepth", fileInfo.BitDepth)
 
 	return fileInfo, nil
 }
@@ -284,6 +285,13 @@ func extractBitrate(data *ffprobe.ProbeData) string {
 		return ""
 	}
 	return fmt.Sprintf("%dkbps", bps/1000)
+}
+
+func extractAspectRatio(data *ffprobe.ProbeData) string {
+	if vs := data.FirstVideoStream(); vs != nil && vs.Width > 0 && vs.Height > 0 {
+		return fmt.Sprintf("%dx%d", vs.Width, vs.Height)
+	}
+	return ""
 }
 
 func extractBitDepth(data *ffprobe.ProbeData) string {

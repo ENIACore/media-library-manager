@@ -16,6 +16,7 @@ type MediaInfo struct {
 	BTS	       string // Behind the scenes
 	Bonus      string // Less specific bonus (i.e featurettes, extras ect)
 	Edition	   string
+	Source     string
 
 	TMDBid	   int
 }
@@ -34,6 +35,7 @@ type FileInfo struct {
 	Resolution 	string
 	Codec      	string
 	Audio      	string
+	AspectRatio	string
 	Language	[]string
 	Bitrate		string
 	BitDepth	string

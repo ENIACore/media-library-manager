@@ -392,6 +392,12 @@ func buildVideoFileStem(entry *metadata.Entry) (string, error) {
 	if entry.FileInfo.Audio != "" {
 		stem += " - " + entry.FileInfo.Audio
 	}
+	if entry.FileInfo.AspectRatio != "" {
+		stem += " - " + entry.FileInfo.AspectRatio
+	}
+	if entry.MediaInfo.Source != "" {
+		stem += " - " + entry.MediaInfo.Source
+	}
 	if entry.FileInfo.Bitrate != "" {
 		stem += " - " + entry.FileInfo.Bitrate
 	}
