@@ -34,6 +34,7 @@ func ExtractMedia(path string, logger *slog.Logger) metadata.MediaInfo {
 
 	mediaInfo.Edition = extractEdition(sanitizedName)
 	mediaInfo.Source = extractSource(sanitizedName)
+	mediaInfo.TMDBid = extractTMDBid(sanitizedName)
 
 	// Second passes for unique cases
 	sanitizedName = SanitizeName(path)
