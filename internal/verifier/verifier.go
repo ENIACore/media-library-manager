@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -231,6 +232,16 @@ func multiSearch(query, mediaType string, year *int, apiKey string) ([]tmdbCandi
 			break
 		}
 	}
+
+	// TMDb ranks by popularity, not year — sort year-matching candidates first.
+	if year != nil {
+		sort.SliceStable(candidates, func(i, j int) bool {
+			yi := yearFromDate(candidates[i].date) == *year
+			yj := yearFromDate(candidates[j].date) == *year
+			return yi && !yj
+		})
+	}
+
 	return candidates, nil
 }
 
