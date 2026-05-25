@@ -65,15 +65,18 @@ func ExtractFile(path string, logger *slog.Logger) (metadata.FileInfo, error) {
 		fileInfo.Bitrate = extractBitrate(data)
 		fileInfo.BitDepth = extractBitDepth(data)
 	case metadata.Subtitle:
+		segments := SanitizeName(path)
+		fileInfo.Language = append(fileInfo.Language, parseSubtitleModifiers(segments)...)
+
 		lang, isSDH, err := extractSubtitleInfo(path, fileInfo.Ext)
 		if err != nil {
 			log.Warn("Could not extract subtitle info", "err", err)
 		} else {
+			if isSDH && !containsLang(fileInfo.Language, "SDH") {
+				fileInfo.Language = append(fileInfo.Language, "SDH")
+			}
 			if lang != "" {
 				fileInfo.Language = append(fileInfo.Language, lang)
-			}
-			if isSDH {
-				fileInfo.Language = append(fileInfo.Language, "SDH")
 			}
 		}
 	}
@@ -245,6 +248,7 @@ func parseAudio(segments []string) string {
 func extractLanguage(data *ffprobe.ProbeData) []string {
 	var languages []string
 	sdh := false
+	forced := false
 	for _, stream := range data.Streams {
 		switch stream.CodecType {
 		case "audio":
@@ -255,12 +259,50 @@ func extractLanguage(data *ffprobe.ProbeData) []string {
 			if stream.Disposition.HearingImpaired == 1 {
 				sdh = true
 			}
+			if stream.Disposition.Forced == 1 {
+				forced = true
+			}
 		}
+	}
+	if forced {
+		languages = append(languages, "Forced")
 	}
 	if sdh {
 		languages = append(languages, "SDH")
 	}
 	return languages
+}
+
+// parseSubtitleModifiers scans all segments for subtitle modifier patterns (Forced, SDH).
+// Returns found modifier keys in SubtitleModifierPatternGroups order so the Language array
+// has modifiers in a stable order regardless of where they appear in the filename.
+func parseSubtitleModifiers(segments []string) []string {
+	var modifiers []string
+	for _, group := range patterns.GetSubtitleModifierPatternGroups() {
+		found := false
+		for i := range segments {
+			if found {
+				break
+			}
+			for _, re := range group.Patterns {
+				if matchSegments(segments[i:], (*regexp.Regexp)(re)) != nil {
+					modifiers = append(modifiers, group.Key)
+					found = true
+					break
+				}
+			}
+		}
+	}
+	return modifiers
+}
+
+func containsLang(langs []string, target string) bool {
+	for _, l := range langs {
+		if l == target {
+			return true
+		}
+	}
+	return false
 }
 
 // ParseLanguage returns the language key if the left most segment(s) are a pattern match.

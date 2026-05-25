@@ -315,6 +315,13 @@ var EditionPatternGroups = []PatternGroup{
 	{Key: `3D`, Patterns: []Pattern{`3D`, `HSBS`, `HOU`, `HALF\.SBS`, `FULL\.SBS`}},
 }
 
+// SubtitleModifierPatternGroups matches subtitle modifier tokens in filename segments.
+// Forced is listed first so it appears before SDH in the Language array when both are present.
+var SubtitleModifierPatternGroups = []PatternGroup{
+	{Key: "Forced", Patterns: []Pattern{`FORCED`}},
+	{Key: "SDH", Patterns: []Pattern{`SDH`}},
+}
+
 var (
 	GetBehindTheScenesPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
         return compilePatternGroups(BehindTheScenesPatternGroups)
@@ -345,6 +352,9 @@ var (
 	})
 	GetTMDBPatterns = sync.OnceValue(func() []*CompiledPattern {
 		return compilePatterns(TMDBPatterns)
+	})
+	GetSubtitleModifierPatternGroups = sync.OnceValue(func() []CompiledPatternGroup {
+		return compilePatternGroups(SubtitleModifierPatternGroups)
 	})
 )
 

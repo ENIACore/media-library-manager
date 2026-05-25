@@ -429,7 +429,8 @@ func buildEpisodeFileName(entry *metadata.Entry) (string, error) {
 }
 
 // buildSubtitleFileName builds the same stem as the sibling video file and appends .language.ext
-// Returns error if language is not set.
+// Language array elements (modifiers + language, e.g. ["Forced", "SDH", "English"]) are joined
+// with "." so the result is stem.Forced.SDH.English.ext. Returns error if language is not set.
 func buildSubtitleFileName(entry *metadata.Entry) (string, error) {
 	if len(entry.FileInfo.Language) == 0 {
 		return "", fmt.Errorf("No language detected for subtitle")
@@ -440,7 +441,8 @@ func buildSubtitleFileName(entry *metadata.Entry) (string, error) {
 		return "", err
 	}
 
-	return stem + "." + entry.FileInfo.Language[0] + "." + strings.ToLower(entry.FileInfo.Ext), nil
+	label := strings.Join(entry.FileInfo.Language, ".")
+	return stem + "." + label + "." + strings.ToLower(entry.FileInfo.Ext), nil
 }
 
 // buildMovieFileName builds: Name (Year) [tmdbid] - audio - bitrate - codec - resolution.ext
