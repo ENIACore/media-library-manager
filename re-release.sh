@@ -9,6 +9,4 @@ gh release upload ${VERSION} \
   dist/mlm-darwin-amd64 \
   dist/mlm-darwin-arm64 \
   dist/mlm-windows-amd64.exe \
-  --title "${VERSION}" \
-  --notes "${NOTES}" \
   --clobber
