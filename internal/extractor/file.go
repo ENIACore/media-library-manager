@@ -337,10 +337,26 @@ func extractAspectRatio(data *ffprobe.ProbeData) string {
 }
 
 func extractBitDepth(data *ffprobe.ProbeData) string {
-	if vs := data.FirstVideoStream(); vs != nil {
-		if vs.BitsPerRawSample != "" && vs.BitsPerRawSample != "0" {
-			return vs.BitsPerRawSample + "bit"
-		}
+	vs := data.FirstVideoStream()
+	if vs == nil {
+		return ""
+	}
+	if vs.BitsPerRawSample != "" && vs.BitsPerRawSample != "0" {
+		return vs.BitsPerRawSample + "bit"
+	}
+	// AV1 and some other codecs omit BitsPerRawSample; parse it from pix_fmt instead.
+	// e.g. "yuv420p10le" → 10bit, "yuv420p12le" → 12bit, "yuv420p" → 8bit
+	if strings.Contains(vs.PixFmt, "10") {
+		return "10bit"
+	}
+	if strings.Contains(vs.PixFmt, "12") {
+		return "12bit"
+	}
+	if strings.Contains(vs.PixFmt, "16") {
+		return "16bit"
+	}
+	if vs.PixFmt != "" {
+		return "8bit"
 	}
 	return ""
 }
