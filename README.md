@@ -180,7 +180,6 @@ export ENIACORE_MOVIE_PATH="/path/to/movies"
 export ENIACORE_SHOW_PATH="/path/to/shows"
 export ENIACORE_MANAGER_PATH="/path/to/manager"
 export ENIACORE_LOG_STDOUT="true"
-export ENIACORE_DRY_RUN="false"
 export ENIACORE_TMDB_API_KEY="your_tmdb_key"
 
 # Ingest mode
@@ -206,7 +205,6 @@ mlm \
   -show-path="/opt/jellyfin/media/shows" \
   -manager-path="/opt/media_manager" \
   -log-stdout=true \
-  -dry-run=false \
   -tmdb-api-key="your_tmdb_key"
 
 # Ingest mode flags
@@ -235,7 +233,6 @@ mlm -mode=subtitle \
 | `show-path` | `ENIACORE_SHOW_PATH` | `/opt/jellyfin/media/shows` | Destination for TV show files |
 | `manager-path` | `ENIACORE_MANAGER_PATH` | `/opt/media_manager` | Program directory (for logs and errors) |
 | `log-stdout` | `ENIACORE_LOG_STDOUT` | `true` | Log to standard output |
-| `dry-run` | `ENIACORE_DRY_RUN` | `true` | Run without moving files |
 | `tmdb-api-key` | `ENIACORE_TMDB_API_KEY` | `""` | TMDb API read access token or v3 key |
 
 **Ingest mode**
@@ -274,9 +271,9 @@ Ingest mode processes new torrent downloads and moves them into the Jellyfin lib
 - Transfers files to their destination in the movie or show library
 
 ```sh
-mlm -dry-run=false
+mlm
 # equivalent to:
-mlm -mode=ingest -dry-run=false
+mlm -mode=ingest
 ```
 
 ### Subtitle Mode
@@ -436,7 +433,8 @@ The subtitle pipeline is a lightweight scan-and-fetch loop:
 - [x] Subtitle mode — backfill missing English subtitles via OpenSubtitles
 - [x] Subtitle language detection
 - [x] Released v1.0-beta
-- [ ] Refactor `Reclassify` function; add TV show reclassification support to `Reclassify`
+- [ ] Subtitle language detection refinement (current mkv extraction does not accurately classify SDH, Forced, etc)
+- [ ] Subtitle mode fix
 - [ ] Full documentation
 - [ ] Test coverage
 - [ ] Codebase refinement and cleanup
