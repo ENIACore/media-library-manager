@@ -433,6 +433,7 @@ The subtitle pipeline is a lightweight scan-and-fetch loop:
 - [x] Subtitle mode — backfill missing English subtitles via OpenSubtitles
 - [x] Subtitle language detection
 - [x] Released v1.0-beta
+- [ ] Fix buggy resolution detection
 - [ ] Subtitle language detection refinement (current mkv extraction does not accurately classify SDH, Forced, etc)
 - [ ] Subtitle mode fix
 - [ ] Full documentation
