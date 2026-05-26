@@ -157,6 +157,7 @@ var MiscPatterns = append([]Pattern{
 	`REPACK`, `RERIP`,
 	`REAL`,
 	`RETAIL`,
+	`REISSUE`,
 
 	// === RELEASE INFO ===
 	`INTERNAL`, `INT`,
@@ -229,6 +230,11 @@ var MiscPatterns = append([]Pattern{
 	`COLORIZED`,
 	`RESTORED`,
 	`AI\.UPSCALE`, `UPSCALED`, `AI\.ENHANCED`,
+
+	// === STUDIOS ===
+	`PARAMOUNT`,
+	`AMAZON`,
+	`AMZN`,
 }, ReleaseWebsites...)
 
 var BehindTheScenesPatternGroups = []PatternGroup{

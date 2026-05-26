@@ -133,6 +133,9 @@ func enrichMovieFile(entry *metadata.Entry, ctx metadata.MediaInfo) {
 		if entry.MediaInfo.TMDBid != 0 {
 			ctx.TMDBid = entry.MediaInfo.TMDBid
 		}
+		if entry.MediaInfo.Edition != "" {
+			ctx.Edition = entry.MediaInfo.Edition
+		}
 	}
 
 	for _, child := range entry.Children {
@@ -268,6 +271,10 @@ func matchSubtitleToVideo(sub *metadata.Entry, videoFiles []*metadata.Entry) boo
 		return false
 	}
 
+	if sub.MediaInfo.Edition == "" {
+		sub.MediaInfo.Edition = match.MediaInfo.Edition
+	}
+
 	if sub.FileInfo.Audio == "" {
 		sub.FileInfo.Audio = match.FileInfo.Audio
 	}
@@ -311,5 +318,8 @@ func deepCopy(dest *metadata.MediaInfo, src metadata.MediaInfo) {
 	}
 	if src.TMDBid != 0 {
 		dest.TMDBid = src.TMDBid
+	}
+	if src.Edition != "" {
+		dest.Edition = src.Edition
 	}
 }

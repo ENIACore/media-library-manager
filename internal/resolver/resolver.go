@@ -389,6 +389,9 @@ func buildVideoFileStem(entry *metadata.Entry) (string, error) {
 		stem += fmt.Sprintf("E%02d", *entry.MediaInfo.Episode)
 	}
 
+	if entry.MediaInfo.Edition != "" {
+		stem += " - " + entry.MediaInfo.Edition
+	}
 	if entry.MediaInfo.Source != "" {
 		stem += " - " + entry.MediaInfo.Source
 	}
