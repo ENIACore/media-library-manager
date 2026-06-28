@@ -99,6 +99,9 @@ func enrichEpisodeFiles(entry *metadata.Entry, ctx metadata.MediaInfo) {
 		if entry.MediaInfo.TMDBid != 0 {
 			ctx.TMDBid = entry.MediaInfo.TMDBid
 		}
+		if entry.MediaInfo.Season != nil {
+			ctx.Season = entry.MediaInfo.Season
+		}
 	default:
 		if entry.MediaInfo.Season != nil {
 			ctx.Season = entry.MediaInfo.Season
