@@ -28,7 +28,7 @@ func subtitle(cfg *config.Config, logger *slog.Logger) {
 	var session *enhancer.Session
 
 	if cached := enhancer.LoadCachedSession(cfg); cached != nil {
-		valid, err := enhancer.VerifySession(cached, cfg, logger)
+		valid, err := enhancer.VerifySession(cached, logger)
 		if err != nil {
 			logger.Warn("session verification failed, falling back to login", "error", err)
 		} else if valid {

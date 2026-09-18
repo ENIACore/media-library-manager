@@ -3,6 +3,7 @@ module github.com/ENIACore/media_library_manager
 go 1.25.5
 
 require (
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/pemistahl/lingua-go v1.4.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	golang.org/x/exp v0.0.0-20221106115401-f9659909a136 // indirect

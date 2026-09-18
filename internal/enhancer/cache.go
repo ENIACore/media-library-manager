@@ -3,6 +3,7 @@ package enhancer
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -43,7 +44,13 @@ func LoadCachedSession(cfg *config.Config) *Session {
 		return nil
 	}
 
-	return &Session{Token: cache.Token, BaseURL: cache.BaseURL}
+	return &Session{
+		Token:     cache.Token,
+		BaseURL:   cache.BaseURL,
+		apiKey:    cfg.OpenSubtitlesApiKey,
+		userAgent: cfg.OpenSubtitlesUserAgent,
+		client:    &http.Client{Timeout: httpTimeout},
+	}
 }
 
 // SaveSession persists the session to the cache file with a 24-hour expiry.

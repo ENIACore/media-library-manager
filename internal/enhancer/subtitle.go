@@ -17,15 +17,13 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
-// ErrUnauthorized is returned by API helpers when the server responds with 401.
+// ErrUnauthorized is returned when the server responds with 401.
 var ErrUnauthorized = errors.New("OpenSubtitles authentication failed (401)")
 
 const (
 	osDefaultBaseURL = "https://api.opensubtitles.com/api/v1"
 	httpTimeout      = 15 * time.Second
 )
-
-var httpClient = &http.Client{Timeout: httpTimeout}
 
 type osLoginBody struct {
 	Username string `json:"username"`
@@ -77,12 +75,14 @@ type osDownloadResponse struct {
 	Remaining int    `json:"remaining"`
 }
 
-// Session holds the authenticated OpenSubtitles session state.
-// The token is a JWT that lasts 24 hours; reuse the session across calls and
-// re-login when it expires. BaseURL may differ from the default for VIP users.
+// Session holds everything needed for authenticated OpenSubtitles API calls.
+// Obtain one via Login and reuse it across FetchSubtitle calls.
 type Session struct {
-	Token   string
-	BaseURL string
+	Token     string
+	BaseURL   string
+	apiKey    string
+	userAgent string
+	client    *http.Client
 }
 
 // Login authenticates with OpenSubtitles and returns a Session for use with FetchSubtitle.
@@ -99,7 +99,8 @@ func Login(cfg *config.Config, logger *slog.Logger) (*Session, error) {
 		return nil, fmt.Errorf("enhancer: OpenSubtitles user agent not set in config")
 	}
 
-	resp, err := osLogin(cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, cfg.OpenSubtitlesUser, cfg.OpenSubtitlesPass)
+	client := &http.Client{Timeout: httpTimeout}
+	resp, err := osLogin(client, osDefaultBaseURL+"/login", cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, cfg.OpenSubtitlesUser, cfg.OpenSubtitlesPass)
 	if err != nil {
 		return nil, fmt.Errorf("enhancer: OpenSubtitles login failed: %w", err)
 	}
@@ -116,25 +117,19 @@ func Login(cfg *config.Config, logger *slog.Logger) (*Session, error) {
 	)
 
 	return &Session{
-		Token:   resp.Token,
-		BaseURL: baseURL,
+		Token:     resp.Token,
+		BaseURL:   baseURL,
+		apiKey:    cfg.OpenSubtitlesApiKey,
+		userAgent: cfg.OpenSubtitlesUserAgent,
+		client:    client,
 	}, nil
 }
 
-// buildBaseURL converts the host returned in the login response into a full URL.
-// Falls back to the documented default if the response is missing the field.
-func buildBaseURL(host string) string {
-	if host == "" {
-		return osDefaultBaseURL
-	}
-	return "https://" + host + "/api/v1"
-}
-
 // VerifySession checks whether the session's JWT is still accepted by the API.
-// Returns true if valid, false on 401. Returns an error for other failures.
-func VerifySession(session *Session, cfg *config.Config, logger *slog.Logger) (bool, error) {
+// Returns true if valid, false on 401, error on other failures.
+func VerifySession(session *Session, logger *slog.Logger) (bool, error) {
 	lg := logger.With("func", "VerifySession")
-	_, err := osGet(session.BaseURL, "/infos/user", cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session.Token, url.Values{})
+	_, err := session.get("/infos/user", url.Values{})
 	if err != nil {
 		if errors.Is(err, ErrUnauthorized) {
 			lg.Debug("cached session is no longer valid")
@@ -146,14 +141,16 @@ func VerifySession(session *Session, cfg *config.Config, logger *slog.Logger) (b
 	return true, nil
 }
 
-// refreshSession invalidates the disk cache, re-authenticates, and updates session in-place.
+// refreshSession invalidates the disk cache, re-authenticates, and updates the token
+// and base URL in-place. The existing client is preserved so injected test clients survive.
 func refreshSession(session *Session, cfg *config.Config, logger *slog.Logger) error {
 	InvalidateCache(cfg)
 	newSess, err := Login(cfg, logger)
 	if err != nil {
 		return err
 	}
-	*session = *newSess
+	session.Token = newSess.Token
+	session.BaseURL = newSess.BaseURL
 	if err := SaveSession(session, cfg); err != nil {
 		logger.Warn("failed to persist refreshed session", "error", err)
 	}
@@ -161,9 +158,9 @@ func refreshSession(session *Session, cfg *config.Config, logger *slog.Logger) e
 }
 
 // FetchSubtitle downloads an English SRT subtitle for entry and writes it to entry.FileInfo.DestPath.
-// entry must have TMDBid set (by verifier/enricher) and DestPath set to the target subtitle path (by detector).
-// session must be obtained once via Login and reused across calls.
-// A 401 response from /subtitles or /download triggers a one-time re-login; the session is updated in-place.
+// entry must have TMDBid set and DestPath set to the target subtitle path.
+// session must be obtained via Login and reused across calls.
+// A 401 from /subtitles or /download triggers a one-time re-login; session is updated in-place.
 func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, logger *slog.Logger) error {
 	lg := logger.With("func", "FetchSubtitle", "source", entry.Source())
 
@@ -176,27 +173,27 @@ func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, 
 
 	reauthed := false
 
-	fileID, err := searchSubtitle(entry, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
+	fileID, err := session.searchSubtitle(entry)
 	if errors.Is(err, ErrUnauthorized) && !reauthed {
 		lg.Warn("session expired during subtitle search, re-authenticating")
 		reauthed = true
 		if rerr := refreshSession(session, cfg, logger); rerr != nil {
 			return fmt.Errorf("enhancer: re-authentication failed: %w", rerr)
 		}
-		fileID, err = searchSubtitle(entry, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
+		fileID, err = session.searchSubtitle(entry)
 	}
 	if err != nil {
 		return fmt.Errorf("enhancer: subtitle search failed for %v: %w", entry.Source(), err)
 	}
 
-	link, remaining, err := requestDownload(fileID, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
+	link, remaining, err := session.requestDownload(fileID)
 	if errors.Is(err, ErrUnauthorized) && !reauthed {
 		lg.Warn("session expired during download request, re-authenticating")
 		reauthed = true
 		if rerr := refreshSession(session, cfg, logger); rerr != nil {
 			return fmt.Errorf("enhancer: re-authentication failed: %w", rerr)
 		}
-		link, remaining, err = requestDownload(fileID, cfg.OpenSubtitlesApiKey, cfg.OpenSubtitlesUserAgent, session)
+		link, remaining, err = session.requestDownload(fileID)
 	}
 	if err != nil {
 		return fmt.Errorf("enhancer: download request failed for %v: %w", entry.Source(), err)
@@ -209,7 +206,7 @@ func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, 
 		return nil
 	}
 
-	if err := downloadSubtitle(link, entry.FileInfo.DestPath); err != nil {
+	if err := downloadSubtitle(link, entry.FileInfo.DestPath, session.client); err != nil {
 		return fmt.Errorf("enhancer: subtitle write failed for %v: %w", entry.Source(), err)
 	}
 
@@ -217,29 +214,52 @@ func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, 
 	return nil
 }
 
-func osLogin(apiKey, userAgent, username, password string) (*osLoginResponse, error) {
+// osLogin POSTs credentials to loginURL and returns the parsed response.
+// loginURL is always osDefaultBaseURL+"/login" in production; tests pass a httptest URL.
+func osLogin(client *http.Client, loginURL, apiKey, userAgent, username, password string) (*osLoginResponse, error) {
 	body, err := json.Marshal(osLoginBody{Username: username, Password: password})
 	if err != nil {
 		return nil, err
 	}
 
-	// Login itself always goes to the default base URL; the response tells us where to go next.
-	data, err := osPost(osDefaultBaseURL, "/login", apiKey, userAgent, "", body)
+	req, err := http.NewRequest(http.MethodPost, loginURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Api-Key", apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", userAgent)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, ErrUnauthorized
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("OpenSubtitles returned status %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	var resp osLoginResponse
-	if err := json.Unmarshal(data, &resp); err != nil {
+	var loginResp osLoginResponse
+	if err := json.Unmarshal(data, &loginResp); err != nil {
 		return nil, fmt.Errorf("failed to parse login response: %w", err)
 	}
-	if resp.Token == "" {
+	if loginResp.Token == "" {
 		return nil, fmt.Errorf("login response missing token")
 	}
-	return &resp, nil
+	return &loginResp, nil
 }
 
-func searchSubtitle(entry *metadata.Entry, apiKey, userAgent string, session *Session) (int, error) {
+func (s *Session) searchSubtitle(entry *metadata.Entry) (int, error) {
 	params := url.Values{}
 	params.Set("languages", "en")
 
@@ -262,7 +282,7 @@ func searchSubtitle(entry *metadata.Entry, apiKey, userAgent string, session *Se
 		return 0, fmt.Errorf("unsupported entry role %v for subtitle fetch", entry.Role.String())
 	}
 
-	data, err := osGet(session.BaseURL, "/subtitles", apiKey, userAgent, session.Token, params)
+	data, err := s.get("/subtitles", params)
 	if err != nil {
 		return 0, err
 	}
@@ -281,6 +301,59 @@ func searchSubtitle(entry *metadata.Entry, apiKey, userAgent string, session *Se
 	}
 
 	return best.Attributes.Files[0].FileID, nil
+}
+
+func (s *Session) requestDownload(fileID int) (string, int, error) {
+	body, err := json.Marshal(osDownloadBody{FileID: fileID})
+	if err != nil {
+		return "", 0, err
+	}
+
+	data, err := s.post("/download", body)
+	if err != nil {
+		return "", 0, err
+	}
+
+	var resp osDownloadResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return "", 0, fmt.Errorf("failed to parse download response: %w", err)
+	}
+	if resp.Link == "" {
+		return "", 0, fmt.Errorf("download response missing link")
+	}
+	return resp.Link, resp.Remaining, nil
+}
+
+// downloadSubtitle fetches link and writes the response to destPath atomically via a temp file.
+// On any failure the temp file is cleaned up and destPath is left untouched.
+func downloadSubtitle(link, destPath string, client *http.Client) error {
+	resp, err := client.Get(link)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("subtitle download returned status %d", resp.StatusCode)
+	}
+
+	tmp := destPath + ".tmp"
+	f, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		f.Close()
+		os.Remove(tmp) // no-op after successful rename
+	}()
+
+	if _, err = io.Copy(f, resp.Body); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, destPath)
 }
 
 // pickBest selects the subtitle with the highest download count, preferring non-hearing-impaired.
@@ -304,71 +377,20 @@ func pickBest(subs []osSubtitle) *osSubtitle {
 	return best
 }
 
-func requestDownload(fileID int, apiKey, userAgent string, session *Session) (string, int, error) {
-	body, err := json.Marshal(osDownloadBody{FileID: fileID})
-	if err != nil {
-		return "", 0, err
-	}
-
-	data, err := osPost(session.BaseURL, "/download", apiKey, userAgent, session.Token, body)
-	if err != nil {
-		return "", 0, err
-	}
-
-	var resp osDownloadResponse
-	if err := json.Unmarshal(data, &resp); err != nil {
-		return "", 0, fmt.Errorf("failed to parse download response: %w", err)
-	}
-	if resp.Link == "" {
-		return "", 0, fmt.Errorf("download response missing link")
-	}
-	return resp.Link, resp.Remaining, nil
-}
-
-func downloadSubtitle(link, destPath string) error {
-	resp, err := httpClient.Get(link)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("subtitle download returned status %d", resp.StatusCode)
-	}
-
-	tmp := destPath + ".tmp"
-	f, err := os.Create(tmp)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		f.Close()
-		os.Remove(tmp) // no-op if rename succeeded
-	}()
-
-	if _, err = io.Copy(f, resp.Body); err != nil {
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp, destPath)
-}
-
-func osGet(baseURL, endpoint, apiKey, userAgent, token string, params url.Values) ([]byte, error) {
+func (s *Session) get(endpoint string, params url.Values) ([]byte, error) {
 	for attempt := 0; ; attempt++ {
-		req, err := http.NewRequest(http.MethodGet, baseURL+endpoint+"?"+params.Encode(), nil)
+		req, err := http.NewRequest(http.MethodGet, s.BaseURL+endpoint+"?"+params.Encode(), nil)
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Api-Key", apiKey)
-		req.Header.Set("User-Agent", userAgent)
+		req.Header.Set("Api-Key", s.apiKey)
+		req.Header.Set("User-Agent", s.userAgent)
 		req.Header.Set("Accept", "application/json")
-		if token != "" {
-			req.Header.Set("Authorization", "Bearer "+token)
+		if s.Token != "" {
+			req.Header.Set("Authorization", "Bearer "+s.Token)
 		}
 
-		resp, err := httpClient.Do(req)
+		resp, err := s.client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -394,21 +416,21 @@ func osGet(baseURL, endpoint, apiKey, userAgent, token string, params url.Values
 	}
 }
 
-func osPost(baseURL, endpoint, apiKey, userAgent, token string, body []byte) ([]byte, error) {
+func (s *Session) post(endpoint string, body []byte) ([]byte, error) {
 	for attempt := 0; ; attempt++ {
-		req, err := http.NewRequest(http.MethodPost, baseURL+endpoint, bytes.NewReader(body))
+		req, err := http.NewRequest(http.MethodPost, s.BaseURL+endpoint, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Api-Key", apiKey)
+		req.Header.Set("Api-Key", s.apiKey)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", userAgent)
-		if token != "" {
-			req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("User-Agent", s.userAgent)
+		if s.Token != "" {
+			req.Header.Set("Authorization", "Bearer "+s.Token)
 		}
 
-		resp, err := httpClient.Do(req)
+		resp, err := s.client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -434,8 +456,16 @@ func osPost(baseURL, endpoint, apiKey, userAgent, token string, body []byte) ([]
 	}
 }
 
-// parseRetryAfter reads the Retry-After header value (integer seconds) and returns
-// the duration to wait. Falls back to 60 seconds if the header is absent or unparseable.
+// buildBaseURL converts the host returned in the login response to a full API URL.
+func buildBaseURL(host string) string {
+	if host == "" {
+		return osDefaultBaseURL
+	}
+	return "https://" + host + "/api/v1"
+}
+
+// parseRetryAfter parses the Retry-After header (integer seconds).
+// Falls back to 60s if absent, negative, or unparseable.
 func parseRetryAfter(header string) time.Duration {
 	if secs, err := strconv.Atoi(header); err == nil && secs > 0 {
 		return time.Duration(secs) * time.Second
