@@ -331,14 +331,23 @@ func downloadSubtitle(link, destPath string) error {
 		return fmt.Errorf("subtitle download returned status %d", resp.StatusCode)
 	}
 
-	f, err := os.Create(destPath)
+	tmp := destPath + ".tmp"
+	f, err := os.Create(tmp)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		f.Close()
+		os.Remove(tmp) // no-op if rename succeeded
+	}()
 
-	_, err = io.Copy(f, resp.Body)
-	return err
+	if _, err = io.Copy(f, resp.Body); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, destPath)
 }
 
 func osGet(baseURL, endpoint, apiKey, userAgent, token string, params url.Values) ([]byte, error) {
