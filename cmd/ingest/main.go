@@ -9,18 +9,31 @@ import (
 	"strings"
 
 	"github.com/ENIACore/media_library_manager/internal/classifier"
-	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/config"
 	"github.com/ENIACore/media_library_manager/internal/enricher"
+	"github.com/ENIACore/media_library_manager/internal/logger"
+	"github.com/ENIACore/media_library_manager/internal/metadata"
 	"github.com/ENIACore/media_library_manager/internal/parser"
 	"github.com/ENIACore/media_library_manager/internal/remuxer"
-	"github.com/ENIACore/media_library_manager/internal/verifier"
 	"github.com/ENIACore/media_library_manager/internal/resolver"
 	"github.com/ENIACore/media_library_manager/internal/transfer"
+	"github.com/ENIACore/media_library_manager/internal/verifier"
 )
 
-func ingest(tempDir string, cfg *config.Config, logger *slog.Logger) {
+func main() {
+	if _, err := exec.LookPath("ffprobe"); err != nil {
+		panic("ffprobe is not installed or not in PATH")
+	}
+	if _, err := exec.LookPath("mkvmerge"); err != nil {
+		panic("mkvmerge is not installed or not in PATH")
+	}
 
+	cfg := config.Load()
+	lg := logger.NewLogger(cfg)
+	ingest(cfg, lg)
+}
+
+func ingest(cfg *config.Config, logger *slog.Logger) {
 	entries, err := os.ReadDir(cfg.TorrentPath)
 	if err != nil {
 		panic("unable to read from torrent path")
@@ -31,13 +44,11 @@ func ingest(tempDir string, cfg *config.Config, logger *slog.Logger) {
 	var processedNames []string
 
 	for i, entry := range entries {
-
-		if overLimit(i, cfg) {
+		if cfg.OverLimit(i) {
 			break
 		}
 
 		root, err := process(entry, cfg, logger)
-
 		if err != nil {
 			numFailure += 1
 			processedNames = append(processedNames, entry.Name())
@@ -50,16 +61,15 @@ func ingest(tempDir string, cfg *config.Config, logger *slog.Logger) {
 
 		output := tree(root.FileInfo.SourcePath)
 		fmt.Println("")
-		fmt.Println("------------- Old Structure") 
+		fmt.Println("------------- Old Structure")
 		fmt.Println(output)
 
 		transfer.Transfer(root, cfg, logger)
-
 		remuxFiles(root, cfg, logger)
 
 		if !root.FileInfo.IsDir {
-      		root.FileInfo.DestPath = filepath.Dir(root.FileInfo.DestPath)
-  		}
+			root.FileInfo.DestPath = filepath.Dir(root.FileInfo.DestPath)
+		}
 		output = tree(root.FileInfo.DestPath)
 		fmt.Println("")
 		fmt.Println("------------- New Structure")
@@ -68,6 +78,7 @@ func ingest(tempDir string, cfg *config.Config, logger *slog.Logger) {
 		processedNames = append(processedNames, entry.Name())
 		numSuccess += 1
 	}
+
 	logger.Info("==================================================")
 	logger.Info("Total Num Success and Failure", "Success", numSuccess, "Failure", numFailure)
 	logger.Info("==================================================")
@@ -76,7 +87,6 @@ func ingest(tempDir string, cfg *config.Config, logger *slog.Logger) {
 }
 
 func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metadata.Entry, error) {
-
 	entryPath := filepath.Join(cfg.TorrentPath, entry.Name())
 	if entry.IsDir() && entry.Name() == filepath.Base(cfg.IncompletePath) {
 		logger.Debug("Skipping temp directory", "name", entry.Name())
@@ -86,7 +96,7 @@ func process(entry os.DirEntry, cfg *config.Config, logger *slog.Logger) (*metad
 	root, err := parser.Parse(entryPath, logger)
 	if err != nil {
 		logger.Error("Parse returned error", "error", err)
-		return nil, err 
+		return nil, err
 	}
 
 	err = classifier.Classify(root, logger)
@@ -130,7 +140,7 @@ func tree(path string) string {
 }
 
 func remuxFiles(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) {
-	entry.FileInfo.SourcePath = entry.FileInfo.DestPath // File now exists at destination
+	entry.FileInfo.SourcePath = entry.FileInfo.DestPath
 	err := remuxer.Remux(entry, cfg, logger)
 	if err != nil {
 		logger.Error("Remux returned error", "error", err)
@@ -144,6 +154,6 @@ func remuxFiles(entry *metadata.Entry, cfg *config.Config, logger *slog.Logger) 
 	}
 
 	for _, child := range entry.Children {
-		remuxFiles(child, cfg, logger)	
+		remuxFiles(child, cfg, logger)
 	}
 }

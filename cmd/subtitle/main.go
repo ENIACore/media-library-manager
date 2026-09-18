@@ -12,11 +12,18 @@ import (
 	"github.com/ENIACore/media_library_manager/internal/detector"
 	"github.com/ENIACore/media_library_manager/internal/enhancer"
 	"github.com/ENIACore/media_library_manager/internal/extractor"
+	"github.com/ENIACore/media_library_manager/internal/logger"
 	"github.com/ENIACore/media_library_manager/internal/metadata"
 )
 
+func main() {
+	cfg := config.Load()
+	lg := logger.NewLogger(cfg)
+	subtitle(cfg, lg)
+}
+
 func subtitle(cfg *config.Config, logger *slog.Logger) {
-	cfg.Interactive = false // If processing subtitles, it is assumed the existing title/year/tmdbid is accurate
+	cfg.Interactive = false
 
 	var session *enhancer.Session
 
@@ -53,14 +60,13 @@ func subtitle(cfg *config.Config, logger *slog.Logger) {
 }
 
 func processLibrary(libraryPath string, count int, session *enhancer.Session, cfg *config.Config, logger *slog.Logger) (int, error) {
-
 	entries, err := os.ReadDir(libraryPath)
 	if err != nil {
 		return count, fmt.Errorf("unable to read library path %q: %w", libraryPath, err)
 	}
 
 	for _, entry := range entries {
-		if overLimit(count, cfg) {
+		if cfg.OverLimit(count) {
 			return count, nil
 		}
 
@@ -76,7 +82,7 @@ func processLibrary(libraryPath string, count int, session *enhancer.Session, cf
 		}
 
 		for _, videoPath := range paths {
-			if overLimit(count, cfg) {
+			if cfg.OverLimit(count) {
 				return count, nil
 			}
 
@@ -121,4 +127,3 @@ func buildEntry(videoPath string, logger *slog.Logger) *metadata.Entry {
 		},
 	}
 }
-

@@ -76,6 +76,12 @@ func New() *Config {
     return cfg
 }
 
+// OverLimit reports whether count has exceeded the configured limit.
+// A limit of 0 means unlimited.
+func (c *Config) OverLimit(count int) bool {
+	return c.Limit != 0 && count > c.Limit
+}
+
 // getEnv retrieves an environment variable value or returns the default if not set.
 func getEnv(key, defaultVal string) string {
     if value := os.Getenv(key); value != "" {
