@@ -105,7 +105,6 @@ func Login(cfg *config.Config, logger *slog.Logger) (*Session, error) {
 	baseURL := buildBaseURL(resp.BaseURL)
 
 	lg.Info("OpenSubtitles login successful",
-		"jwt", resp.Token,
 		"allowed_downloads", resp.User.AllowedDownloads,
 		"allowed_translations", resp.User.AllowedTranslations,
 		"level", resp.User.Level,
