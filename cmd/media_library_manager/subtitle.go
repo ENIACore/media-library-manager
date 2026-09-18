@@ -87,10 +87,11 @@ func processLibrary(libraryPath string, count int, session *enhancer.Session, cf
 			}
 
 			time.Sleep(2 * time.Second)
-			count++
 			if err := enhancer.FetchSubtitle(mediaEntry, session, cfg, logger); err != nil {
 				logger.Error("FetchSubtitle returned error", "error", err)
+				continue
 			}
+			count++
 		}
 	}
 

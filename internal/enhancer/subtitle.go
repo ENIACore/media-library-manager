@@ -25,6 +25,8 @@ const (
 	httpTimeout      = 15 * time.Second
 )
 
+var httpClient = &http.Client{Timeout: httpTimeout}
+
 type osLoginBody struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -324,8 +326,7 @@ func requestDownload(fileID int, apiKey, userAgent string, session *Session) (st
 }
 
 func downloadSubtitle(link, destPath string) error {
-	client := &http.Client{Timeout: httpTimeout}
-	resp, err := client.Get(link)
+	resp, err := httpClient.Get(link)
 	if err != nil {
 		return err
 	}
@@ -355,60 +356,89 @@ func downloadSubtitle(link, destPath string) error {
 }
 
 func osGet(baseURL, endpoint, apiKey, userAgent, token string, params url.Values) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, baseURL+endpoint+"?"+params.Encode(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Api-Key", apiKey)
-	req.Header.Set("User-Agent", userAgent)
-	req.Header.Set("Accept", "application/json")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
+	for attempt := 0; ; attempt++ {
+		req, err := http.NewRequest(http.MethodGet, baseURL+endpoint+"?"+params.Encode(), nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Api-Key", apiKey)
+		req.Header.Set("User-Agent", userAgent)
+		req.Header.Set("Accept", "application/json")
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
 
-	client := &http.Client{Timeout: httpTimeout}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, ErrUnauthorized
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("OpenSubtitles returned status %d", resp.StatusCode)
-	}
+		if resp.StatusCode == http.StatusTooManyRequests && attempt == 0 {
+			wait := parseRetryAfter(resp.Header.Get("Retry-After"))
+			resp.Body.Close()
+			slog.Default().Warn("OpenSubtitles rate limited, retrying", "wait", wait)
+			time.Sleep(wait)
+			continue
+		}
 
-	return io.ReadAll(resp.Body)
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, ErrUnauthorized
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("OpenSubtitles returned status %d", resp.StatusCode)
+		}
+
+		return io.ReadAll(resp.Body)
+	}
 }
 
 func osPost(baseURL, endpoint, apiKey, userAgent, token string, body []byte) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodPost, baseURL+endpoint, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Api-Key", apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", userAgent)
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
+	for attempt := 0; ; attempt++ {
+		req, err := http.NewRequest(http.MethodPost, baseURL+endpoint, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Api-Key", apiKey)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("User-Agent", userAgent)
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
 
-	client := &http.Client{Timeout: httpTimeout}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, ErrUnauthorized
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("OpenSubtitles returned status %d", resp.StatusCode)
-	}
+		if resp.StatusCode == http.StatusTooManyRequests && attempt == 0 {
+			wait := parseRetryAfter(resp.Header.Get("Retry-After"))
+			resp.Body.Close()
+			slog.Default().Warn("OpenSubtitles rate limited, retrying", "wait", wait)
+			time.Sleep(wait)
+			continue
+		}
 
-	return io.ReadAll(resp.Body)
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, ErrUnauthorized
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("OpenSubtitles returned status %d", resp.StatusCode)
+		}
+
+		return io.ReadAll(resp.Body)
+	}
+}
+
+// parseRetryAfter reads the Retry-After header value (integer seconds) and returns
+// the duration to wait. Falls back to 60 seconds if the header is absent or unparseable.
+func parseRetryAfter(header string) time.Duration {
+	if secs, err := strconv.Atoi(header); err == nil && secs > 0 {
+		return time.Duration(secs) * time.Second
+	}
+	return 60 * time.Second
 }
