@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -41,20 +42,26 @@ func subtitle(cfg *config.Config, logger *slog.Logger) {
 		}
 	}
 
-	count := processLibrary(cfg.MoviePath, 0, session, cfg, logger)
-	processLibrary(cfg.ShowPath, count, session, cfg, logger)
+	count, err := processLibrary(cfg.MoviePath, 0, session, cfg, logger)
+	if err != nil {
+		logger.Error("failed to process movie library", "error", err)
+		return
+	}
+	if _, err := processLibrary(cfg.ShowPath, count, session, cfg, logger); err != nil {
+		logger.Error("failed to process show library", "error", err)
+	}
 }
 
-func processLibrary(libraryPath string, count int, session *enhancer.Session, cfg *config.Config, logger *slog.Logger) int {
+func processLibrary(libraryPath string, count int, session *enhancer.Session, cfg *config.Config, logger *slog.Logger) (int, error) {
 
 	entries, err := os.ReadDir(libraryPath)
 	if err != nil {
-		panic("unable to read from library path: " + err.Error())
+		return count, fmt.Errorf("unable to read library path %q: %w", libraryPath, err)
 	}
 
 	for _, entry := range entries {
 		if overLimit(count, cfg) {
-			return count
+			return count, nil
 		}
 
 		entryPath := filepath.Join(libraryPath, entry.Name())
@@ -70,7 +77,7 @@ func processLibrary(libraryPath string, count int, session *enhancer.Session, cf
 
 		for _, videoPath := range paths {
 			if overLimit(count, cfg) {
-				return count
+				return count, nil
 			}
 
 			mediaEntry := buildEntry(videoPath, logger)
@@ -87,7 +94,7 @@ func processLibrary(libraryPath string, count int, session *enhancer.Session, cf
 		}
 	}
 
-	return count
+	return count, nil
 }
 
 func buildEntry(videoPath string, logger *slog.Logger) *metadata.Entry {
