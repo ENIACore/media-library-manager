@@ -49,6 +49,13 @@ func subtitle(cfg *config.Config, logger *slog.Logger) {
 		}
 	}
 
+	if cfg.SubtitlePath != "" {
+		if _, err := processLibrary(cfg.SubtitlePath, 0, session, cfg, logger); err != nil {
+			logger.Error("failed to process path", "error", err)
+		}
+		return
+	}
+
 	count, err := processLibrary(cfg.MoviePath, 0, session, cfg, logger)
 	if err != nil {
 		logger.Error("failed to process movie library", "error", err)

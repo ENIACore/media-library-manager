@@ -27,6 +27,7 @@ type Config struct {
 	TMDBApiKey     string
 
 	// Subtitle mode
+	SubtitlePath           string
 	OpenSubtitlesApiKey    string
 	OpenSubtitlesUserAgent string
 	OpenSubtitlesUser      string
@@ -77,6 +78,7 @@ func New() *Config {
 	flag.BoolVar(&cfg.DryRun, "dry-run", defaults.DryRun, "Run without writing files to disk")
 	flag.StringVar(&cfg.TMDBApiKey, "tmdb-api-key", defaults.TMDBApiKey, "TMDb API read access token or v3 key")
 	flag.IntVar(&cfg.Limit, "limit", defaults.Limit, "Limits number of entries to process (0 = unlimited)")
+	flag.StringVar(&cfg.SubtitlePath, "path", "", "Walk a specific directory for missing subtitles instead of the full library")
 	flag.StringVar(&cfg.OpenSubtitlesApiKey, "os-api-key", defaults.OpenSubtitlesApiKey, "OpenSubtitles REST API key")
 	flag.StringVar(&cfg.OpenSubtitlesUserAgent, "os-user-agent", defaults.OpenSubtitlesUserAgent, "OpenSubtitles user agent")
 	flag.StringVar(&cfg.OpenSubtitlesUser, "os-user", defaults.OpenSubtitlesUser, "OpenSubtitles username")
