@@ -20,6 +20,7 @@ type Config struct {
     TorrentPath 	string
 	IncompletePath 	string
 	Interactive		bool
+	DryRun			bool
 	TMDBApiKey		string
 
 
@@ -44,6 +45,7 @@ func New() *Config {
         ManagerPath: getEnv("ENIACORE_MANAGER_PATH", "/opt/media_manager"),
         LogStdout:   getEnvBool("ENIACORE_LOG_STDOUT", true),
         Interactive: getEnvBool("ENIACORE_INTERACTIVE", true),
+		DryRun:      getEnvBool("ENIACORE_DRY_RUN", true),
 		TMDBApiKey: getEnv("ENIACORE_TMDB_API_KEY", ""),
 		Limit: getEnvInt("ENIACORE_LIMIT", 10),
 		OpenSubtitlesApiKey: getEnv("ENIACORE_OS_API_KEY", ""),
@@ -62,6 +64,7 @@ func New() *Config {
     flag.StringVar(&cfg.ManagerPath, "manager-path", defaults.ManagerPath, "Path to program directory")
     flag.BoolVar(&cfg.LogStdout, "log-stdout", defaults.LogStdout, "Log to standard output")
 	flag.BoolVar(&cfg.Interactive, "interactive", defaults.Interactive, "User can interactively correct program")
+	flag.BoolVar(&cfg.DryRun, "dry-run", defaults.DryRun, "Run without writing files to disk")
 	flag.StringVar(&cfg.TMDBApiKey, "tmdb-api-key", defaults.TMDBApiKey, "TMDb API read access token or v3 key")
 	flag.IntVar(&cfg.Limit, "limit", defaults.Limit, "Limits number of entries to process (ingest and subtitle mode) (0 = unlimited)")
 	flag.StringVar(&cfg.OpenSubtitlesApiKey, "os-api-key", defaults.OpenSubtitlesApiKey, "OpenSubtitles REST API key")

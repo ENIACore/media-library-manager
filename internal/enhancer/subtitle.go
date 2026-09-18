@@ -202,6 +202,11 @@ func FetchSubtitle(entry *metadata.Entry, session *Session, cfg *config.Config, 
 
 	lg.Info("downloading subtitle", "file_id", fileID, "remaining_downloads", remaining, "dest", entry.FileInfo.DestPath)
 
+	if cfg.DryRun {
+		lg.Info("dry run: skipping subtitle write", "dest", entry.FileInfo.DestPath)
+		return nil
+	}
+
 	if err := downloadSubtitle(link, entry.FileInfo.DestPath); err != nil {
 		return fmt.Errorf("enhancer: subtitle write failed for %v: %w", entry.Source(), err)
 	}
