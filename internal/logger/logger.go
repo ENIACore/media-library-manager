@@ -103,12 +103,12 @@ var getSessionTimestamp = sync.OnceValue(func() string {
 // NewLogger creates and returns a structured logger configured to write to multiple log files.
 // Creates separate log files for debug, info, and warn levels in a timestamped session directory.
 // The session timestamp is generated once and reused for all loggers in the process.
-func NewLogger(cfg *config.Config) *slog.Logger {
+func NewLogger(cfg *config.Config, subdir string) *slog.Logger {
 	if cfg.LogStdout {
 		return slog.New(slog.NewTextHandler(os.Stdout, handlerOpts(slog.LevelDebug)))
 	}
 
-	basepath := filepath.Join(cfg.ManagerPath, "logs", getSessionTimestamp())
+	basepath := filepath.Join(cfg.ManagerPath, "logs", subdir, getSessionTimestamp())
 
 	debugFile := getFile(basepath, "debug.log")
 	infoFile := getFile(basepath, "info.log")

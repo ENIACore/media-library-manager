@@ -29,7 +29,7 @@ func main() {
 	}
 
 	cfg := config.Load()
-	lg := logger.NewLogger(cfg)
+	lg := logger.NewLogger(cfg, "ingest")
 	ingest(cfg, lg)
 }
 
