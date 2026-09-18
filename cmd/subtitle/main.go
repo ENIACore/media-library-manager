@@ -98,7 +98,7 @@ func processLibraryStrict(libraryPath string, count int, session *enhancer.Sessi
 			continue
 		}
 
-		for _, mediaEntry := range collectVideoFiles(root) {
+		for _, mediaEntry := range collectSubtitleCandidates(root) {
 			if cfg.OverLimit(count) {
 				return count, nil
 			}
@@ -127,10 +127,12 @@ func processLibraryStrict(libraryPath string, count int, session *enhancer.Sessi
 	return count, nil
 }
 
-// collectVideoFiles returns every video leaf in a classified tree, regardless of role.
-func collectVideoFiles(entry *metadata.Entry) []*metadata.Entry {
+// collectSubtitleCandidates returns every leaf in a classified tree that is a real
+// episode or movie file. Extras (DSFile, BTSFile, BonusFile) and anything else are
+// excluded since OpenSubtitles has no notion of them.
+func collectSubtitleCandidates(entry *metadata.Entry) []*metadata.Entry {
 	if !entry.FileInfo.IsDir {
-		if entry.FileInfo.ContentType == metadata.Video {
+		if entry.Role == metadata.EpisodeFile || entry.Role == metadata.MovieFile {
 			return []*metadata.Entry{entry}
 		}
 		return nil
@@ -138,7 +140,7 @@ func collectVideoFiles(entry *metadata.Entry) []*metadata.Entry {
 
 	var out []*metadata.Entry
 	for _, child := range entry.Children {
-		out = append(out, collectVideoFiles(child)...)
+		out = append(out, collectSubtitleCandidates(child)...)
 	}
 	return out
 }
